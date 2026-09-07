@@ -327,6 +327,23 @@ a.map-pin{display:block; cursor:pointer; transition:transform .15s ease, box-sha
 a.map-pin::after{content:""; position:absolute; inset:-11px; border-radius:50%;}
 a.map-pin:hover, a.map-pin:focus-visible{transform:rotate(-45deg) scale(1.6); box-shadow:0 0 0 5px rgba(255,111,89,0.22);}
 a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
+
+/* ---- 실제 카카오맵 (KakaoMap.tsx) ---- */
+.kakao-map{border-radius:12px; margin-bottom:12px; overflow:hidden; border:1px solid var(--line); background:var(--paper-deep);}
+.kakao-map-loading{display:flex; align-items:center; justify-content:center;}
+.kakao-map-loading .spinner{margin:0;}
+/* CustomOverlay는 기본적으로 좌표를 요소의 정중앙에 맞춘다.
+   그래서 점(dot)만 22px 정사각으로 두고, 이름표는 그 위에 절대배치로 띄운다. */
+.kakao-pin{position:relative; display:block; width:22px; height:22px; text-decoration:none;}
+.kakao-pin-dot{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  border-radius:50%; background:var(--sunset); color:#fff; border:2px solid #fff;
+  font-family:'Space Mono',monospace; font-size:11px; line-height:1;
+  box-shadow:0 2px 6px rgba(27,35,64,0.35); transition:transform .15s ease;}
+.kakao-pin-name{position:absolute; left:50%; bottom:28px; transform:translateX(-50%);
+  background:var(--card); border:1px solid var(--line); border-radius:999px; padding:3px 9px;
+  font-size:11.5px; color:var(--ink); white-space:nowrap; box-shadow:0 2px 8px rgba(27,35,64,0.14);}
+.kakao-pin:hover .kakao-pin-dot, .kakao-pin:focus-visible .kakao-pin-dot{transform:scale(1.25);}
+.kakao-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px; border-radius:50%;}
 .side-note{font-size:12px; color:var(--ink-soft); line-height:1.7;}
 .reco-item{display:flex; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line);}
 .reco-item:first-of-type{border-top:none; padding-top:0;}

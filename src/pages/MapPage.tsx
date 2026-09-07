@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTrip } from "../hooks/useTrip";
 import MapPin from "../components/MapPin";
+import KakaoMap, { type KakaoMapPoint } from "../components/KakaoMap";
 import { hhmm } from "../utils/format";
 
 const PIN_POSITIONS = [
@@ -41,6 +42,14 @@ export default function MapPage() {
   }
 
   const allItems = trip.days.flatMap((d) => d.items);
+  // 실제 지도에 찍을 점들. 방문 순서대로 번호를 붙인다.
+  const mapPoints: KakaoMapPoint[] = allItems.map((item, i) => ({
+    id: `${item.place.content_id}-${i}`,
+    title: item.place.title,
+    latitude: item.place.latitude,
+    longitude: item.place.longitude,
+    label: String(i + 1),
+  }));
   const totalStay = allItems.reduce((s, it) => s + it.stay_min, 0);
   const totalTravel = allItems.reduce((s, it) => s + (it.travel_min_from_prev ?? 0), 0);
 
@@ -80,14 +89,20 @@ export default function MapPage() {
               <span>🟠 숙소</span>
               <span>🔴 도착지</span>
             </div>
-            <div className="map-placeholder big">
-              {allItems.slice(0, 8).map((item, i) => (
-                <MapPin key={item.place.content_id} place={item.place} style={PIN_POSITIONS[i]} />
-              ))}
-            </div>
+            <KakaoMap
+              points={mapPoints}
+              showRoute
+              fallback={
+                <div className="map-placeholder big">
+                  {allItems.slice(0, 8).map((item, i) => (
+                    <MapPin key={item.place.content_id} place={item.place} style={PIN_POSITIONS[i]} />
+                  ))}
+                </div>
+              }
+            />
             <p className="side-note" style={{ marginTop: 12 }}>
-              지도 자체는 아직 카카오맵 SDK가 아니라 미리보기예요. 마커를 누르면 카카오맵에서 그 장소를 바로 열 수
-              있어요.
+              마커를 누르면 카카오맵에서 그 장소를 바로 열 수 있어요. 선은 방문 순서를 나타내며, 실제 주행 경로는
+              아니에요.
             </p>
           </>
         ) : (

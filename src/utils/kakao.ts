@@ -12,7 +12,7 @@ function sanitizeName(name: string): string {
 }
 
 /** 백엔드/목 데이터에 좌표가 비어 있거나 0,NaN 으로 들어오는 경우를 걸러낸다. */
-function hasValidCoords(latitude?: number, longitude?: number): boolean {
+export function hasValidCoords(latitude?: number, longitude?: number): boolean {
   return (
     typeof latitude === "number" &&
     typeof longitude === "number" &&
