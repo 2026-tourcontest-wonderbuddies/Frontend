@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSavedCourses, useSavedPlaces } from "../hooks/useSaved";
 import { useAuth } from "../auth/AuthContext";
+import MapPin from "../components/MapPin";
 import { commitTrip } from "../api/edit";
+import { kakaoPlaceUrl } from "../utils/kakao";
 import type { SavedCourseDTO } from "../api/types";
 
 const PIN_POSITIONS = [
@@ -57,7 +59,7 @@ export default function SavedMapPage() {
         <>
           <div className="map-placeholder big">
             {(places ?? []).slice(0, 6).map((sp, i) => (
-              <div className="map-pin" key={sp.id} style={PIN_POSITIONS[i]} title={sp.place.title} />
+              <MapPin key={sp.id} place={sp.place} style={PIN_POSITIONS[i]} />
             ))}
           </div>
           <div className="saved-list" style={{ marginTop: 20 }}>
@@ -70,7 +72,12 @@ export default function SavedMapPage() {
                     {sp.place.address} · {sp.place.content_type_name}
                   </div>
                 </div>
-                <span className="meta-chip mono">운영 중</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                  <span className="meta-chip mono">운영 중</span>
+                  <a className="btn-outline" href={kakaoPlaceUrl(sp.place)} target="_blank" rel="noopener noreferrer">
+                    카카오맵 ↗
+                  </a>
+                </div>
               </div>
             ))}
           </div>
@@ -78,9 +85,12 @@ export default function SavedMapPage() {
       ) : (
         <>
           <div className="map-placeholder big">
-            {(courses ?? []).slice(0, 6).map((sc, i) => (
-              <div className="map-pin" key={sc.id} style={PIN_POSITIONS[i]} title={sc.title} />
-            ))}
+            {(courses ?? []).slice(0, 6).map((sc, i) => {
+              // 코스 마커는 그 코스의 첫 장소를 대표로 가리킨다.
+              const firstPlace = sc.trip.days[0]?.items[0]?.place;
+              if (!firstPlace) return <div className="map-pin" key={sc.id} style={PIN_POSITIONS[i]} title={sc.title} />;
+              return <MapPin key={sc.id} place={firstPlace} style={PIN_POSITIONS[i]} label={sc.title} />;
+            })}
           </div>
           <div className="saved-list" style={{ marginTop: 20 }}>
             {(courses ?? []).length === 0 && <p style={{ color: "var(--ink-soft)", fontSize: 13 }}>저장한 코스가 없어요.</p>}

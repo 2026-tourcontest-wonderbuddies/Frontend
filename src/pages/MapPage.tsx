@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTrip } from "../hooks/useTrip";
+import MapPin from "../components/MapPin";
 import { hhmm } from "../utils/format";
 
 const PIN_POSITIONS = [
@@ -81,11 +82,12 @@ export default function MapPage() {
             </div>
             <div className="map-placeholder big">
               {allItems.slice(0, 8).map((item, i) => (
-                <div className="map-pin" key={item.place.content_id} style={PIN_POSITIONS[i]} title={item.place.title} />
+                <MapPin key={item.place.content_id} place={item.place} style={PIN_POSITIONS[i]} />
               ))}
             </div>
             <p className="side-note" style={{ marginTop: 12 }}>
-              실제 카카오맵 연동은 준비 중이에요. 지금은 방문 순서만 확인할 수 있어요.
+              지도 자체는 아직 카카오맵 SDK가 아니라 미리보기예요. 마커를 누르면 카카오맵에서 그 장소를 바로 열 수
+              있어요.
             </p>
           </>
         ) : (

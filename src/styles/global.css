@@ -322,6 +322,11 @@ h1.result-title{font-family:'Song Myung',serif; font-size:clamp(26px,3.8vw,42px)
 .side-card h4{font-family:'Song Myung',serif; font-size:16px; margin-bottom:12px;}
 .map-placeholder{height:190px; border-radius:12px; margin-bottom:12px; background:linear-gradient(rgba(27,35,64,0.06) 1px, transparent 1px) 0 0/24px 24px, linear-gradient(90deg, rgba(27,35,64,0.06) 1px, transparent 1px) 0 0/24px 24px, var(--paper-deep); position:relative; overflow:hidden;}
 .map-pin{position:absolute; width:10px; height:10px; border-radius:50% 50% 50% 0; background:var(--sunset); transform:rotate(-45deg);}
+/* 카카오맵으로 나가는 마커: 10px 핀은 손가락으로 누르기엔 작아서 ::after 로 투명한 터치 영역을 넓힌다. */
+a.map-pin{display:block; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;}
+a.map-pin::after{content:""; position:absolute; inset:-11px; border-radius:50%;}
+a.map-pin:hover, a.map-pin:focus-visible{transform:rotate(-45deg) scale(1.6); box-shadow:0 0 0 5px rgba(255,111,89,0.22);}
+a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .side-note{font-size:12px; color:var(--ink-soft); line-height:1.7;}
 .reco-item{display:flex; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line);}
 .reco-item:first-of-type{border-top:none; padding-top:0;}
