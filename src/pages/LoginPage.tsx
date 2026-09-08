@@ -2,8 +2,25 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, authErrorMessage } from "../auth/AuthContext";
 
+// Google Identity Services(GSI)는 별도 타입 패키지 없이 index.html의 <script>로 로드함
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient(config: {
+            client_id: string;
+            scope: string;
+            callback: (resp: { access_token?: string; error?: string }) => void;
+          }): { requestAccessToken: () => void };
+        };
+      };
+    };
+  }
+}
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
@@ -12,6 +29,39 @@ export default function LoginPage() {
   const [password, setPassword] = useState("demo1234");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  function handleGoogleLogin() {
+    if (!window.google) {
+      setError("구글 로그인 스크립트를 아직 불러오는 중이에요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setError("구글 로그인 설정(VITE_GOOGLE_CLIENT_ID)이 없어요.");
+      return;
+    }
+    setError(null);
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: "email profile",
+      callback: async (resp) => {
+        if (!resp.access_token) {
+          setError("구글 로그인이 취소되었거나 실패했어요.");
+          return;
+        }
+        setPending(true);
+        try {
+          await loginWithGoogle(resp.access_token);
+          navigate(from, { replace: true });
+        } catch (err) {
+          setError(authErrorMessage(err, "구글 로그인에 실패했습니다."));
+        } finally {
+          setPending(false);
+        }
+      },
+    });
+    client.requestAccessToken();
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -75,7 +125,7 @@ export default function LoginPage() {
           <button type="button" className="btn-outline" onClick={() => setError("소셜 로그인은 준비 중이에요. 이메일로 로그인해주세요.")}>
             네이버로 로그인
           </button>
-          <button type="button" className="btn-outline" onClick={() => setError("소셜 로그인은 준비 중이에요. 이메일로 로그인해주세요.")}>
+          <button type="button" className="btn-outline" onClick={handleGoogleLogin} disabled={pending}>
             구글로 로그인
           </button>
         </div>
