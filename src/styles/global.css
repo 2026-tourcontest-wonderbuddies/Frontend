@@ -336,6 +336,9 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
    그래서 점(dot)만 22px 정사각으로 두고, 이름표는 그 위에 절대배치로 띄운다. */
 /* 폭을 고정하지 않는다. 여러 날 코스는 "2-3"(Day 2의 3번째)처럼 라벨이 길어진다. */
 .kakao-pin{position:relative; display:inline-block; text-decoration:none;}
+/* 22px 짜리 점은 손가락으로 누르기 어렵다. 보이지 않는 여백을 둘러 터치 영역을 넓힌다.
+   이름표가 hover 로만 보이는 터치 기기에서는 이 여유가 특히 중요하다. */
+.kakao-pin::after{content:""; position:absolute; inset:-11px; border-radius:999px;}
 .kakao-pin-dot{display:flex; align-items:center; justify-content:center;
   min-width:22px; height:22px; padding:0 6px; box-sizing:border-box;
   border-radius:999px; background:var(--sunset); color:#fff; border:2px solid #fff;

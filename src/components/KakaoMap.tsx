@@ -82,6 +82,9 @@ export default function KakaoMap({ points, showRoute = false, height = 420, fall
         position: positions[i],
         content: createPinElement(p),
         zIndex: 3,
+        // 기본값(false)이면 오버레이 위에서 일어난 이벤트를 지도가 가져간다.
+        // 마커가 링크로 동작해야 하므로 오버레이가 이벤트를 갖도록 명시한다.
+        clickable: true,
       });
       overlay.setMap(map);
       return overlay;
