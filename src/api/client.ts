@@ -18,7 +18,9 @@ function authHeader(): Record<string, string> {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return {};
     const session = JSON.parse(raw) as { token?: string };
-    return session.token ? { Authorization: `Bearer ${session.token}` } : {};
+    // 백엔드가 DRF TokenAuthentication(rest_framework.authtoken)을 쓰고 있어서
+    // "Bearer" 아니고 "Token" 형식으로 보내야 인증됨
+    return session.token ? { Authorization: `Token ${session.token}` } : {};
   } catch {
     return {};
   }

@@ -7,6 +7,7 @@ interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
+  loginWithGoogle: (accessToken: string) => Promise<void>;
   signup: (payload: SignupPayload) => Promise<void>;
   logout: () => void;
 }
@@ -50,6 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(session.user);
   }
 
+  async function loginWithGoogle(accessToken: string) {
+    const session = await authApi.loginWithGoogle(accessToken);
+    storeSession(session);
+    setUser(session.user);
+  }
+
   async function signup(payload: SignupPayload) {
     const session = await authApi.signup(payload);
     storeSession(session);
@@ -65,7 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user), login, signup, logout }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated: Boolean(user), login, loginWithGoogle, signup, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
