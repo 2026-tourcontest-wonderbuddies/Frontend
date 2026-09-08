@@ -23,6 +23,37 @@ interface KakaoMapProps {
 }
 
 /**
+ * setBounds 에 넘길 여백(px). 코스가 화면에 꽉 차면 22px 짜리 마커의 양끝이 잘리므로
+ * 여유를 준다. 실측(컨테이너 311px 기준): 0 이면 코스가 화면의 89%를 채워 잘리고,
+ * 20~60 이면 45% 로 안전하게 들어가고, 90 이면 너무 멀어진다.
+ */
+const BOUNDS_PADDING = 40;
+
+/** 코스 하나를 만들 때 쓰는 마커 DOM. CustomOverlay 는 문자열 대신 엘리먼트를 받는다. */
+function createPinElement(point: KakaoMapPoint): HTMLAnchorElement {
+  // innerHTML 로 조립하지 않는 이유: 장소 이름은 서버에서 온 값이라
+  // 문자열로 붙이면 그 안의 HTML 이 그대로 실행될 수 있다(XSS).
+  const anchor = document.createElement("a");
+  anchor.className = "kakao-pin";
+  anchor.href = kakaoPlaceUrl(point);
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  anchor.title = `${point.title} · 카카오맵에서 보기`;
+  anchor.setAttribute("aria-label", `${point.title} 카카오맵에서 보기 (새 창)`);
+
+  const dot = document.createElement("span");
+  dot.className = "kakao-pin-dot";
+  dot.textContent = point.label ?? "";
+
+  const name = document.createElement("span");
+  name.className = "kakao-pin-name";
+  name.textContent = point.title;
+
+  anchor.append(dot, name);
+  return anchor;
+}
+
+/**
  * 카카오맵 SDK로 실제 지도를 그린다.
  * 마커는 CustomOverlay + <a> 로 만들어서, 클릭하면 그대로 카카오맵 장소 링크로 이동한다.
  * 키가 없거나 SDK가 뜨지 않으면 fallback(기존 미리보기 지도)으로 조용히 내려간다.
@@ -47,27 +78,11 @@ export default function KakaoMap({ points, showRoute = false, height = 420, fall
     const map = new maps.Map(container, { center: positions[0], level: 9 });
 
     const overlays = plottable.map((p, i) => {
-      // innerHTML 대신 DOM API로 조립한다. 장소 이름은 서버에서 온 값이라
-      // 문자열로 붙이면 그 안의 HTML이 그대로 실행될 수 있기 때문(XSS).
-      const anchor = document.createElement("a");
-      anchor.className = "kakao-pin";
-      anchor.href = kakaoPlaceUrl(p);
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
-      anchor.title = `${p.title} · 카카오맵에서 보기`;
-      anchor.setAttribute("aria-label", `${p.title} 카카오맵에서 보기 (새 창)`);
-
-      const dot = document.createElement("span");
-      dot.className = "kakao-pin-dot";
-      dot.textContent = p.label ?? "";
-
-      const name = document.createElement("span");
-      name.className = "kakao-pin-name";
-      name.textContent = p.title;
-
-      anchor.append(dot, name);
-
-      const overlay = new maps.CustomOverlay({ position: positions[i], content: anchor, zIndex: 3 });
+      const overlay = new maps.CustomOverlay({
+        position: positions[i],
+        content: createPinElement(p),
+        zIndex: 3,
+      });
       overlay.setMap(map);
       return overlay;
     });
@@ -84,20 +99,42 @@ export default function KakaoMap({ points, showRoute = false, height = 420, fall
         : null;
     line?.setMap(map);
 
-    if (positions.length === 1) {
-      // 점이 하나면 setBounds가 최대 배율까지 당겨버려서 동네만 보인다.
-      map.setCenter(positions[0]);
-      map.setLevel(5);
-    } else {
-      const bounds = new maps.LatLngBounds();
-      positions.forEach((pos) => bounds.extend(pos));
-      map.setBounds(bounds, 60, 40, 40, 40);
+    const bounds = new maps.LatLngBounds();
+    positions.forEach((pos) => bounds.extend(pos));
+
+    function frameCourse() {
+      // relayout() 이 먼저다. 지도는 컨테이너 크기를 생성 시점에 한 번 재고 기억하므로,
+      // 그 뒤 레이아웃이 바뀌면 자기 크기를 잘못 알고 있게 된다. 그 상태로 배율을
+      // 계산하면 어긋나기 때문에, 크기를 다시 재게 한 다음 화면을 맞춘다.
+      map.relayout();
+
+      if (positions.length === 1) {
+        // 점이 하나면 setBounds 가 최대 배율까지 당겨버려서 동네만 보인다.
+        map.setCenter(positions[0]);
+        map.setLevel(5);
+        return;
+      }
+
+      // 배율/중심은 전적으로 setBounds 에 맡긴다.
+      // setBounds 직후의 getBounds() 는 아직 이전 화면 값을 돌려주므로(한 틱 늦다),
+      // 그 값을 읽어 배율을 다시 계산하려 하면 매번 엉뚱한 판단을 하게 된다.
+      map.setBounds(bounds, BOUNDS_PADDING, BOUNDS_PADDING, BOUNDS_PADDING, BOUNDS_PADDING);
     }
 
+    // 최초 1회는 직접 호출한다. ResizeObserver 의 "observe 하면 즉시 한 번 호출"에
+    // 기대면 안 된다 — 그 콜백은 렌더링 파이프라인에 묶여 있어서 탭이 화면에 보이지
+    // 않으면 발화하지 않고, 지도가 생성자 기본 배율에 그대로 멈춘다(실제로 겪었다).
+    frameCourse();
+
+    // 이후 컨테이너 크기가 바뀌면(창 크기 변경, 반응형 레이아웃) 다시 맞춘다.
+    const resizeObserver = new ResizeObserver(() => frameCourse());
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       overlays.forEach((o) => o.setMap(null));
       line?.setMap(null);
-      // 지도 DOM은 SDK가 컨테이너 안에 직접 만든 것이라 리액트가 정리해주지 않는다.
+      // 지도 DOM 은 SDK 가 컨테이너 안에 직접 만든 것이라 리액트가 정리해주지 않는다.
       container.innerHTML = "";
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- pointsKey 가 좌표 변화를 대신 나타낸다
