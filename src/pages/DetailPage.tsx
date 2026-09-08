@@ -109,7 +109,7 @@ export default function DetailPage() {
             ) : null}
           </h1>
           <div className="result-region mono">
-            {regionText} &nbsp;|&nbsp; {allItems.length}개 스팟 &nbsp;|&nbsp; {trip.request.transport_mode === "taxi" ? "택시" : "차량"}
+            {regionText} &nbsp;|&nbsp; {allItems.length}개 스팟 &nbsp;|&nbsp; 차량
           </div>
           <div className="meta-row">
             <span className="meta-chip mono">⏱ 총 {totalHours(trip.days)}시간</span>
@@ -219,6 +219,33 @@ export default function DetailPage() {
                     )}
                   </div>
                 ))}
+
+                {day.lodging && (
+                  <div className="tl-item">
+                    <div className="tl-dot mono">{day.lodging.check_in_time ?? "숙박"}</div>
+                    <div className="tl-card tl-lodging">
+                      <div className="tl-top">
+                        <div className="tl-title">
+                          🛏 {day.lodging.title}
+                          <span className="meta-chip mono" style={{ marginLeft: 8 }}>
+                            {day.lodging.small_category_name}
+                          </span>
+                        </div>
+                        {day.lodging.price_per_night != null && (
+                          <div className="tl-stay mono">
+                            {Math.round(day.lodging.price_per_night / 10000)}만원/박
+                          </div>
+                        )}
+                      </div>
+                      <div className="tl-desc">
+                        {day.lodging.address}
+                        {day.lodging.cooking ? " · 취사 가능" : ""}
+                        {day.lodging.parking ? " · 주차 가능" : ""}
+                        {day.lodging.check_out_time ? ` · 체크아웃 ${day.lodging.check_out_time}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}

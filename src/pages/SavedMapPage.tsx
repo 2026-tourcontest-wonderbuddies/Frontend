@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSavedCourses, useSavedPlaces } from "../hooks/useSaved";
 import { useAuth } from "../auth/AuthContext";
+import MapPin from "../components/MapPin";
+import KakaoMap, { type KakaoMapPoint } from "../components/KakaoMap";
 import { commitTrip } from "../api/edit";
+import { kakaoPlaceUrl } from "../utils/kakao";
 import type { SavedCourseDTO } from "../api/types";
 
 const PIN_POSITIONS = [
@@ -27,6 +30,21 @@ export default function SavedMapPage() {
   }
 
   const isLoading = tab === "places" ? placesLoading : coursesLoading;
+
+  const placePoints: KakaoMapPoint[] = (places ?? []).map((sp) => ({
+    id: sp.id,
+    title: sp.place.title,
+    latitude: sp.place.latitude,
+    longitude: sp.place.longitude,
+    label: "♥",
+  }));
+
+  // 코스 마커는 그 코스의 첫 장소를 대표 좌표로 삼는다.
+  const coursePoints: KakaoMapPoint[] = (courses ?? []).flatMap((sc) => {
+    const first = sc.trip.days[0]?.items[0]?.place;
+    if (!first) return [];
+    return [{ id: sc.id, title: sc.title, latitude: first.latitude, longitude: first.longitude }];
+  });
 
   return (
     <div className="wrap" style={{ padding: "40px 32px 90px" }}>
@@ -55,11 +73,16 @@ export default function SavedMapPage() {
         </div>
       ) : tab === "places" ? (
         <>
-          <div className="map-placeholder big">
-            {(places ?? []).slice(0, 6).map((sp, i) => (
-              <div className="map-pin" key={sp.id} style={PIN_POSITIONS[i]} title={sp.place.title} />
-            ))}
-          </div>
+          <KakaoMap
+            points={placePoints}
+            fallback={
+              <div className="map-placeholder big">
+                {(places ?? []).slice(0, 6).map((sp, i) => (
+                  <MapPin key={sp.id} place={sp.place} style={PIN_POSITIONS[i]} />
+                ))}
+              </div>
+            }
+          />
           <div className="saved-list" style={{ marginTop: 20 }}>
             {(places ?? []).length === 0 && <p style={{ color: "var(--ink-soft)", fontSize: 13 }}>저장한 장소가 없어요.</p>}
             {(places ?? []).map((sp) => (
@@ -70,18 +93,32 @@ export default function SavedMapPage() {
                     {sp.place.address} · {sp.place.content_type_name}
                   </div>
                 </div>
-                <span className="meta-chip mono">운영 중</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                  <span className="meta-chip mono">운영 중</span>
+                  <a className="btn-outline" href={kakaoPlaceUrl(sp.place)} target="_blank" rel="noopener noreferrer">
+                    카카오맵 ↗
+                  </a>
+                </div>
               </div>
             ))}
           </div>
         </>
       ) : (
         <>
-          <div className="map-placeholder big">
-            {(courses ?? []).slice(0, 6).map((sc, i) => (
-              <div className="map-pin" key={sc.id} style={PIN_POSITIONS[i]} title={sc.title} />
-            ))}
-          </div>
+          <KakaoMap
+            points={coursePoints}
+            fallback={
+              <div className="map-placeholder big">
+                {(courses ?? []).slice(0, 6).map((sc, i) => {
+                  const firstPlace = sc.trip.days[0]?.items[0]?.place;
+                  if (!firstPlace) {
+                    return <div className="map-pin" key={sc.id} style={PIN_POSITIONS[i]} title={sc.title} />;
+                  }
+                  return <MapPin key={sc.id} place={firstPlace} style={PIN_POSITIONS[i]} label={sc.title} />;
+                })}
+              </div>
+            }
+          />
           <div className="saved-list" style={{ marginTop: 20 }}>
             {(courses ?? []).length === 0 && <p style={{ color: "var(--ink-soft)", fontSize: 13 }}>저장한 코스가 없어요.</p>}
             {(courses ?? []).map((sc) => {

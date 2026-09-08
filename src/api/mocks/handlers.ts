@@ -5,6 +5,7 @@ import { savedHandlers } from "./handlers/saved";
 import { editHandlers } from "./handlers/edit";
 import { chatHandlers } from "./handlers/chat";
 import { searchHandlers } from "./handlers/search";
+import { lodgingHandlers } from "./handlers/lodging";
 
 export const handlers = [
   ...authHandlers,
@@ -14,4 +15,5 @@ export const handlers = [
   ...editHandlers,
   ...chatHandlers,
   ...searchHandlers,
+  ...lodgingHandlers,
 ];

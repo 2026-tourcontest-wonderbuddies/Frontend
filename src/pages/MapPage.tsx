@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTrip } from "../hooks/useTrip";
+import MapPin from "../components/MapPin";
+import KakaoMap, { type KakaoMapPoint } from "../components/KakaoMap";
 import { hhmm } from "../utils/format";
 
 const PIN_POSITIONS = [
@@ -40,6 +42,18 @@ export default function MapPage() {
   }
 
   const allItems = trip.days.flatMap((d) => d.items);
+  // 실제 지도에 찍을 점들. 번호는 아래 "타임라인" 탭의 번호와 일치시킨다.
+  // 타임라인은 하루 단위로 1부터 다시 세므로, 여러 날 코스는 "2-3"(Day 2의 3번째)으로 표기한다.
+  const isMultiDay = trip.days.length > 1;
+  const mapPoints: KakaoMapPoint[] = trip.days.flatMap((day) =>
+    day.items.map((item, idx) => ({
+      id: `${day.day_index}-${item.order}-${item.place.content_id}`,
+      title: item.place.title,
+      latitude: item.place.latitude,
+      longitude: item.place.longitude,
+      label: isMultiDay ? `${day.day_index}-${idx + 1}` : String(idx + 1),
+    })),
+  );
   const totalStay = allItems.reduce((s, it) => s + it.stay_min, 0);
   const totalTravel = allItems.reduce((s, it) => s + (it.travel_min_from_prev ?? 0), 0);
 
@@ -79,13 +93,20 @@ export default function MapPage() {
               <span>🟠 숙소</span>
               <span>🔴 도착지</span>
             </div>
-            <div className="map-placeholder big">
-              {allItems.slice(0, 8).map((item, i) => (
-                <div className="map-pin" key={item.place.content_id} style={PIN_POSITIONS[i]} title={item.place.title} />
-              ))}
-            </div>
+            <KakaoMap
+              points={mapPoints}
+              showRoute
+              fallback={
+                <div className="map-placeholder big">
+                  {allItems.slice(0, 8).map((item, i) => (
+                    <MapPin key={item.place.content_id} place={item.place} style={PIN_POSITIONS[i]} />
+                  ))}
+                </div>
+              }
+            />
             <p className="side-note" style={{ marginTop: 12 }}>
-              실제 카카오맵 연동은 준비 중이에요. 지금은 방문 순서만 확인할 수 있어요.
+              마커를 누르면 카카오맵에서 그 장소를 바로 열 수 있어요. 선은 방문 순서를 나타내며, 실제 주행 경로는
+              아니에요.
             </p>
           </>
         ) : (

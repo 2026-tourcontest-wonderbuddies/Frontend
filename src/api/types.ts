@@ -34,31 +34,18 @@ export const REGION_LABELS: Record<RegionKey, string> = {
   전역: "제주 전역 무관",
 };
 
-export type TransportMode = "rental_car" | "own_car" | "taxi";
+// 빌더 입력에서 고를 수 있는 권역 5개. RegionKey 자체는 장소 검색 필터가 계속 쓰므로
+// 좁히지 않고, 입력 화면에서만 이 부분집합을 노출한다.
+export const BUILDER_REGION_KEYS: RegionKey[] = [
+  "제주시동부",
+  "제주시서부",
+  "서귀포동부",
+  "서귀포서부",
+  "전역",
+];
 
-export const TRANSPORT_LABELS: Record<TransportMode, string> = {
-  rental_car: "렌터카",
-  own_car: "자가용",
-  taxi: "택시",
-};
-
-export type CompanionType =
-  | "alone"
-  | "couple"
-  | "friend"
-  | "family_kids"
-  | "parents"
-  | "group";
-
-export const COMPANION_LABELS: Record<CompanionType, string> = {
-  alone: "혼자",
-  couple: "연인/배우자",
-  friend: "친구",
-  family_kids: "아이와 가족",
-  parents: "부모님",
-  group: "단체",
-};
-
+// 코스 우선순위는 더 이상 입력받지 않는다. 코스 매칭 후 세 가지 모드를 모두 제시하므로
+// 응답 쪽(TripCandidateDTO.mode)에서만 쓰인다.
 export type CoursePriority = "dist" | "pref" | "relax";
 
 export const PRIORITY_LABELS: Record<CoursePriority, string> = {
@@ -66,12 +53,6 @@ export const PRIORITY_LABELS: Record<CoursePriority, string> = {
   pref: "취향 중심 코스",
   relax: "여유로운 코스",
 };
-
-export type IndoorOutdoorPref = "상관없음" | "실내중심" | "야외중심" | "적절히섞기";
-
-export type FoodRestriction = "없음" | "비건" | "육류제외" | "해산물제외" | "알레르기·기타";
-
-export type FoodCafeBalance = "음식점중심" | "카페중심" | "둘다";
 
 export type FoodPrefKey =
   | "제주향토음식"
@@ -101,38 +82,23 @@ export const FOOD_PREF_LABELS: Record<FoodPrefKey, string> = {
 export type LodgingType = "호텔" | "리조트·콘도" | "펜션·민박" | "게스트하우스" | "상관없음";
 
 export interface TripRequestPayload {
+  // 제주공항 기준. start=수하물 수령 후 공항 밖으로 나오는 시각,
+  // end=돌아가는 날 공항에 도착해야 하는 시각. 출발지/도착지는 입력받지 않는다.
   start_datetime: string;
   end_datetime: string;
-  departure_place_id?: string;
-  arrival_place_id?: string;
-  return_to_departure: boolean;
 
-  transport_mode: TransportMode;
-  companion_type: CompanionType;
+  headcount: number;
   purpose_main: PurposeKey;
   purpose_sub?: PurposeKey;
-  course_priority: CoursePriority;
   region_preference?: RegionKey;
   day_overrides?: DayOverridePayload[];
-
-  mood_tags?: string[];
-  include_places?: string[];
-  exclude_places?: string[];
-  exclude_categories?: string[];
-  walk_light?: boolean;
-  indoor_outdoor_pref?: IndoorOutdoorPref;
 
   free_text_input?: string;
 
   food_pref_1?: FoodPrefKey;
-  food_pref_2?: FoodPrefKey;
-  food_restriction?: FoodRestriction;
-  food_cafe_balance?: FoodCafeBalance;
 
-  lodging_capacity?: number;
   lodging_type?: LodgingType;
   lodging_conditions?: string[];
-  lodging_budget?: number;
   lodging_free_text?: string;
 }
 
@@ -177,7 +143,7 @@ export interface ItineraryDayDTO {
   need_lunch: boolean;
   need_dinner: boolean;
   need_night_spot: boolean;
-  lodging?: PlaceDTO | null;
+  lodging?: LodgingDTO | null; // 여행 전체에 하나를 골라 마지막 날을 뺀 모든 날에 동일 적용
   items: ItineraryItemDTO[];
 }
 
@@ -222,9 +188,9 @@ export interface SignupPayload {
 export interface DayOverridePayload {
   day_index: number;
   purpose_main?: PurposeKey;
-  course_priority?: CoursePriority;
+  purpose_sub?: PurposeKey;
   region_preference?: RegionKey;
-  lodging_arrival_time?: string; // "HH:MM", last day excluded
+  exclude_categories?: string[]; // TourAPI 중분류 이름 배열
 }
 
 // ── Course candidates (recommendation list before a trip is persisted) ────
@@ -247,6 +213,11 @@ export interface TripCandidateDTO {
   description: string;
   badges: string[];
   days: ItineraryDayDTO[];
+}
+
+/** 후보를 확정할 때 함께 보내는 body. 숙소는 확정 *전*에 고른다. */
+export interface SelectCandidatePayload {
+  lodging_content_id?: string;
 }
 
 export interface CandidatesResponse {
@@ -277,6 +248,11 @@ export interface LodgingRecommendationDTO {
   match_reason: string;
   missing_fields: string[];
   booking_url?: string;
+}
+
+export interface LodgingRecommendationsResponse {
+  candidate_id: string;
+  recommendations: LodgingRecommendationDTO[];
 }
 
 // ── Course editing ──────────────────────────────────────────────────────

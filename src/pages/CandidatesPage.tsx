@@ -67,11 +67,18 @@ export default function CandidatesPage() {
   }
 
   const first = data.candidates[0];
+  const isMultiDay = first.days.length > 1;
 
   function handleSelect(candidate: TripCandidateDTO) {
-    selectCandidate.mutate(candidate.id, {
-      onSuccess: (trip) => navigate(`/trip/${trip.id}`),
-    });
+    // 다일 여행은 확정 전에 숙소를 먼저 고른다. 당일치기는 숙박이 없어 바로 확정.
+    if (candidate.days.length > 1) {
+      navigate(`/trips/candidates/${requestId}/lodging/${candidate.id}`);
+      return;
+    }
+    selectCandidate.mutate(
+      { candidateId: candidate.id },
+      { onSuccess: (trip) => navigate(`/trip/${trip.id}`) },
+    );
   }
 
   return (
@@ -95,7 +102,7 @@ export default function CandidatesPage() {
                 onClick={() => handleSelect(c)}
                 disabled={selectCandidate.isPending}
               >
-                선택
+                {isMultiDay ? "선택하고 숙소 고르기" : "선택"}
               </button>
             </div>
 

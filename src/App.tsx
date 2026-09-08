@@ -11,6 +11,7 @@ import DetailPage from "./pages/DetailPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import CandidatesPage from "./pages/CandidatesPage";
+import LodgingPage from "./pages/LodgingPage";
 import MapPage from "./pages/MapPage";
 import EditPage from "./pages/EditPage";
 import ChatPage from "./pages/ChatPage";
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/trips/candidates/:requestId" element={<CandidatesPage />} />
+        <Route path="/trips/candidates/:requestId/lodging/:candidateId" element={<LodgingPage />} />
         <Route path="/trip/:id" element={<DetailPage />} />
         <Route path="/trip/:id/map" element={<MapPage />} />
         <Route path="/trip/:id/edit" element={<EditPage />} />

@@ -12,6 +12,22 @@ npm run dev
 `http://localhost:5173`에서 확인할 수 있습니다. 기본적으로 [MSW](https://mswjs.io)가 `/api/*` 요청을
 가로채 목업 데이터를 돌려주므로, 백엔드 서버 없이도 전체 화면(Home → Builder → Detail, List)이 바로 동작합니다.
 
+## 카카오맵 연동하기
+
+코스 지도(`/trip/:id/map`)와 저장 지도(`/saved/map`)는 카카오맵 JavaScript SDK로 실제 지도를 그립니다.
+동작시키려면 JavaScript 키가 필요합니다.
+
+1. [카카오 개발자센터](https://developers.kakao.com)에서 애플리케이션 추가
+2. **앱 키 > JavaScript 키** 복사
+3. **앱 설정 > 플랫폼 > Web**에 사용할 도메인 등록 (개발 시 `http://localhost:5173`)
+4. `.env.local`에 `VITE_KAKAO_MAP_KEY=복사한_키` 추가 후 `npm run dev` 재시작
+
+키가 없거나 SDK 로딩에 실패하면 지도는 기존 미리보기(격자 + 핀)로 자동 대체되며, 그 상태에서도 마커를
+누르면 카카오맵 장소 페이지로 이동합니다. 화면이 깨지지는 않습니다.
+
+> JavaScript 키는 브라우저에 노출되는 값이라 도메인 등록으로 사용을 제한합니다.
+> 그래도 `.env.local`은 커밋 대상이 아니니(`.gitignore`) 그대로 두세요.
+
 ## 실제 백엔드 연동하기
 
 백엔드에 `POST /api/trips/`, `GET /api/trips/:id/`가 구현되면:
