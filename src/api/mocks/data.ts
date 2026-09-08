@@ -5,6 +5,8 @@ import type {
   DayCase,
   ItineraryDayDTO,
   ItineraryItemDTO,
+  LodgingDTO,
+  LodgingRecommendationDTO,
   PlaceDTO,
   PlaceSearchParams,
   Quadrant,
@@ -13,13 +15,15 @@ import type {
   TripRequestPayload,
   TripResponse,
 } from "../types";
+import { SEED_LODGINGS } from "./lodging-data";
+import { centroid, distanceKm } from "../../utils/geo";
 
 // Small seed pool standing in for the real Place table until the backend
 // exposes /api/places. Enough variety to demo region + purpose matching.
 interface SeedPlace extends PlaceDTO {
   purposes: string[];
   stayMin: number;
-  category?: string; // matches Builder's exclude-category chip values
+  category?: string; // TourAPI 중분류 이름 (일자별 exclude_categories와 매칭)
 }
 
 const SEED_PLACES: SeedPlace[] = [
@@ -36,6 +40,7 @@ const SEED_PLACES: SeedPlace[] = [
     satisfaction_score: 4.54,
     purposes: ["nature", "photo"],
     stayMin: 60,
+    category: "자연경관(산)",
   },
   {
     content_id: "P002",
@@ -92,7 +97,7 @@ const SEED_PLACES: SeedPlace[] = [
     satisfaction_score: 4.45,
     purposes: ["food", "shopping"],
     stayMin: 90,
-    category: "쇼핑",
+    category: "시장",
   },
   {
     content_id: "P006",
@@ -107,6 +112,7 @@ const SEED_PLACES: SeedPlace[] = [
     satisfaction_score: 4.5,
     purposes: ["nature", "photo"],
     stayMin: 70,
+    category: "자연경관(하천·해양)",
   },
   {
     content_id: "P007",
@@ -135,7 +141,7 @@ const SEED_PLACES: SeedPlace[] = [
     satisfaction_score: 4.4,
     purposes: ["food", "shopping"],
     stayMin: 90,
-    category: "쇼핑",
+    category: "시장",
   },
   {
     content_id: "P009",
@@ -150,7 +156,7 @@ const SEED_PLACES: SeedPlace[] = [
     satisfaction_score: 4.48,
     purposes: ["nature", "photo", "activity"],
     stayMin: 60,
-    category: "액티비티",
+    category: "자연경관(하천·해양)",
   },
   {
     content_id: "P010",
@@ -165,7 +171,7 @@ const SEED_PLACES: SeedPlace[] = [
     satisfaction_score: 4.42,
     purposes: ["nature", "culture", "photo"],
     stayMin: 60,
-    category: "체험",
+    category: "자연경관(하천·해양)",
   },
 ];
 
@@ -197,8 +203,10 @@ function resolveDayConditions(payload: TripRequestPayload, dayIndex: number) {
   const override = payload.day_overrides?.find((o) => o.day_index === dayIndex);
   return {
     purposeMain: override?.purpose_main ?? payload.purpose_main,
-    purposeSub: payload.purpose_sub,
+    purposeSub: override?.purpose_sub ?? payload.purpose_sub,
     region: override?.region_preference ?? payload.region_preference,
+    // 제외 카테고리는 일자별 조건에만 존재한다 (공통 입력에서 제거됨).
+    excludeCategories: override?.exclude_categories ?? [],
   };
 }
 
@@ -335,9 +343,8 @@ const MODE_SCORES: Record<CoursePriority, CandidateScores> = {
 const RELAX_BUFFER_MIN = 30;
 
 function purposeFilteredPool(payload: TripRequestPayload, dayIndex: number, excludeIds: Set<string>): SeedPlace[] {
-  const { region } = resolveDayConditions(payload, dayIndex);
+  const { region, excludeCategories } = resolveDayConditions(payload, dayIndex);
   const quadrant = region ? QUADRANT_BY_REGION[region] : undefined;
-  const excludeCategories = payload.exclude_categories ?? [];
 
   return SEED_PLACES.filter((p) => !excludeIds.has(p.content_id))
     .filter((p) => !quadrant || p.quadrant === quadrant)
@@ -474,14 +481,87 @@ export function generateCandidates(payload: TripRequestPayload): CandidatesRespo
   };
 }
 
-export function candidateToTrip(request: TripRequestPayload, candidate: TripCandidateDTO): TripResponse {
+export function candidateToTrip(
+  request: TripRequestPayload,
+  candidate: TripCandidateDTO,
+  lodging?: LodgingDTO | null,
+): TripResponse {
+  const totalDays = candidate.days.length;
+  // 숙소는 여행 전체에 하나. 마지막 날은 돌아가는 날이라 숙박이 없다.
+  const days = candidate.days.map((day) => ({
+    ...day,
+    lodging: lodging && day.day_index < totalDays ? lodging : null,
+  }));
+
   return {
     id: nextTripId(),
     created_at: new Date().toISOString(),
     request,
-    total_days: candidate.days.length,
-    days: candidate.days,
+    total_days: totalDays,
+    days,
   };
+}
+
+// ── Lodging recommendations (GET /api/lodging/recommendations) ─────────────
+// 코스 확정 *전*에 후보를 기준으로 계산한다. 숙박일(마지막 날 제외)들의 마지막 일정
+// 좌표 평균에서 가까운 순으로 Top-3.
+
+const KM_PER_MIN = 0.75; // buildCandidate의 거리 근사와 같은 상수
+
+export function findLodging(contentId: string): LodgingDTO | null {
+  return SEED_LODGINGS.find((l) => l.content_id === contentId) ?? null;
+}
+
+export function generateLodgingRecommendations(
+  request: TripRequestPayload,
+  candidate: TripCandidateDTO,
+): LodgingRecommendationDTO[] {
+  const totalDays = candidate.days.length;
+  if (totalDays < 2) return []; // 당일치기는 숙박 없음
+
+  const needCooking = (request.lodging_conditions ?? []).includes("취사가능");
+  const wantedType = request.lodging_type && request.lodging_type !== "상관없음" ? request.lodging_type : null;
+
+  const pool = SEED_LODGINGS.filter((l) => {
+    if (wantedType && l.small_category_name !== wantedType) return false;
+    if (needCooking && !l.cooking) return false;
+    return true;
+  });
+  if (pool.length === 0) return [];
+
+  // 숙박하는 날들의 마지막 일정 위치
+  const lastStops = candidate.days
+    .filter((d) => d.day_index < totalDays && d.items.length > 0)
+    .map((d) => d.items[d.items.length - 1].place);
+  const anchor = centroid(lastStops);
+
+  const scored = pool.map((lodging) => {
+    const km = anchor ? distanceKm(anchor, lodging) : 0;
+    const travelMin = Math.max(5, Math.round(km / KM_PER_MIN));
+
+    const reasons: string[] = [];
+    if (anchor) reasons.push(`마지막 일정에서 차로 약 ${travelMin}분`);
+    if (needCooking && lodging.cooking) reasons.push("취사 가능");
+    if (wantedType) reasons.push(`${wantedType} 조건 일치`);
+    if (lodging.parking) reasons.push("주차 가능");
+
+    const missing: string[] = [];
+    if (lodging.price_per_night == null) missing.push("1박 요금");
+    if (!lodging.check_in_time) missing.push("체크인 시간");
+
+    return {
+      lodging,
+      travel_min_from_last_stop: travelMin,
+      match_reason: reasons.join(" · "),
+      missing_fields: missing,
+      km,
+    };
+  });
+
+  return scored
+    .sort((a, b) => a.km - b.km)
+    .slice(0, 3)
+    .map(({ km: _km, ...rec }) => rec);
 }
 
 // ── Place lookups used by the edit/chat handlers ───────────────────────────
@@ -524,12 +604,9 @@ export const DEMO_TRIP: TripResponse = {
   request: {
     start_datetime: "2026-09-12T06:00:00+09:00",
     end_datetime: "2026-09-12T19:00:00+09:00",
-    return_to_departure: false,
-    transport_mode: "rental_car",
-    companion_type: "couple",
+    headcount: 2,
     purpose_main: "nature",
     purpose_sub: "photo",
-    course_priority: "pref",
     region_preference: "서귀포동부",
   },
   days: [

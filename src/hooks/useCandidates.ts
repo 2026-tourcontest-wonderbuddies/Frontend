@@ -13,6 +13,14 @@ export function useCandidates(requestId: string | undefined) {
   });
 }
 
+export interface SelectCandidateArgs {
+  candidateId: string;
+  lodgingContentId?: string;
+}
+
 export function useSelectCandidate() {
-  return useMutation({ mutationFn: selectCandidate });
+  return useMutation({
+    mutationFn: ({ candidateId, lodgingContentId }: SelectCandidateArgs) =>
+      selectCandidate(candidateId, lodgingContentId),
+  });
 }

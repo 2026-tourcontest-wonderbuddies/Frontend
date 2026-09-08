@@ -264,7 +264,37 @@ svg.arc-svg{position:absolute; inset:0; transform:rotate(-90deg);}
 .cta-final:hover{transform:translateY(-2px);}
 .cta-final:disabled{opacity:0.5; cursor:not-allowed; transform:none;}
 .form-error{margin-top:14px; color:var(--sunset); font-family:'Space Mono',monospace; font-size:12.5px;}
-@media (max-width:640px){ .cta-final{position:fixed; left:18px; right:18px; bottom:74px; z-index:82; justify-content:center; box-shadow:0 14px 30px rgba(27,35,64,0.35);} }
+
+/* ---------------- BUILDER WIZARD ---------------- */
+.wizard-progress{margin:8px 0 34px;}
+.wizard-progress-head{display:flex; align-items:baseline; gap:12px; margin-bottom:12px;}
+.wizard-progress-head .mono{font-size:12px; color:var(--ink-soft); letter-spacing:1px;}
+.wizard-progress-title{font-family:'Song Myung',serif; font-size:20px;}
+.wizard-progress-bar{display:flex; gap:6px; list-style:none; padding:0; margin:0;}
+.wizard-progress-seg{flex:1;}
+.wizard-progress-seg button{display:block; width:100%; height:5px; border-radius:999px; background:var(--line); transition:background .25s ease;}
+.wizard-progress-seg button:not(:disabled){cursor:pointer;}
+.wizard-progress-seg.done button{background:var(--ink-soft);}
+.wizard-progress-seg.current button{background:var(--sunset);}
+.wizard-progress-seg button:not(:disabled):hover{background:var(--ink);}
+
+.wizard-body{min-height:320px;}
+.wizard-body .step{margin-bottom:0;}
+.wizard-body .step-sub:first-child{margin-top:0;}
+.wizard-subaction{margin-top:30px; padding-top:22px; border-top:1px dashed var(--line);}
+
+.wizard-nav{display:flex; align-items:center; gap:12px; margin-top:34px; padding-top:22px; border-top:1px solid var(--line);}
+.wizard-nav .cta-final{margin-top:0; margin-left:auto;}
+.wizard-nav .btn-outline:disabled{opacity:0.35; cursor:not-allowed;}
+
+@media (max-width:960px){ .preview-desktop-only{display:none;} }
+@media (max-width:640px){
+  .wizard-progress-title{font-size:17px;}
+  .wizard-body{min-height:0;}
+  .wizard-nav{position:fixed; left:0; right:0; bottom:64px; z-index:82; margin:0; padding:12px 18px calc(12px + env(safe-area-inset-bottom)); background:rgba(247,244,237,0.96); backdrop-filter:blur(10px); border-top:1px solid var(--line);}
+  .wizard-nav .cta-final{flex:1; justify-content:center; padding:15px 20px;}
+  #screen-builder .builder{padding-bottom:150px;}
+}
 
 /* ---------------- DETAIL ---------------- */
 .result-header{padding:20px 32px 48px; display:grid; grid-template-columns:1.3fr 0.9fr; gap:44px; align-items:center; border-bottom:1px solid var(--line);}
@@ -433,6 +463,15 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .candidate-badges{display:flex; flex-wrap:wrap; gap:6px;}
 .candidate-badge{font-family:'Space Mono',monospace; font-size:10.5px; background:var(--paper-deep); padding:5px 9px; border-radius:999px; color:var(--ink-soft);}
 
+/* ---------------- LODGING PICK ---------------- */
+.lodging-meta{font-size:11.5px; color:var(--ink-soft); margin-top:-6px;}
+.lodging-flags{display:flex; flex-wrap:wrap; gap:8px;}
+.lodging-flag{font-family:'Space Mono',monospace; font-size:11px; padding:5px 10px; border-radius:999px; border:1px dashed var(--line); color:var(--ink-soft);}
+.lodging-flag.on{border-style:solid; border-color:var(--ink); color:var(--ink);}
+.lodging-warn{font-family:'Space Mono',monospace; font-size:11px; color:var(--sunset); margin-top:2px;}
+.lodging-actions{display:flex; flex-wrap:wrap; gap:12px; margin-top:28px;}
+.tl-card.tl-lodging{border-style:dashed; background:var(--paper-deep);}
+
 /* ---------------- MODAL / SHEET ---------------- */
 .modal-backdrop{position:fixed; inset:0; background:rgba(27,35,64,0.45); z-index:120; display:flex; align-items:flex-end; justify-content:center; padding:0;}
 @media (min-width:641px){ .modal-backdrop{align-items:center; padding:24px;} }
@@ -454,14 +493,19 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .override-summary{background:var(--paper-deep); border-radius:14px; padding:16px; margin-top:18px;}
 .override-summary h4{font-family:'Song Myung',serif; font-size:14px; margin-bottom:10px;}
 
-.quick-pick-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
-.quick-pick-chip{font-family:'Space Mono',monospace; font-size:12px; padding:9px 14px; border-radius:999px; border:1px solid var(--line); background:var(--card);}
-.quick-pick-chip.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
-.quick-pick-search{position:relative; margin-top:10px;}
-.quick-pick-search input{width:100%; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:11px 14px; font-size:13.5px;}
-.quick-pick-results{position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 30px -14px rgba(27,35,64,0.3); z-index:5; overflow:hidden;}
-.quick-pick-results button{display:block; width:100%; text-align:left; padding:10px 14px; font-size:13px;}
-.quick-pick-results button:hover{background:var(--paper-deep);}
+/* ---------------- EXCLUDE-CATEGORY ACCORDION ---------------- */
+.cat-picker{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card);}
+.cat-group + .cat-group{border-top:1px solid var(--line);}
+.cat-major-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 14px;}
+.cat-check{display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13.5px; line-height:1.4;}
+.cat-check input{width:15px; height:15px; accent-color:var(--sunset); cursor:pointer; flex:none;}
+.cat-major-name{font-weight:700;}
+.cat-count{font-size:11px; color:var(--ink-soft);}
+.cat-caret{flex:none; width:26px; height:26px; border-radius:8px; color:var(--ink-soft); font-size:10px; transition:transform .16s ease, background .16s ease;}
+.cat-caret:hover{background:var(--paper-deep);}
+.cat-caret.open{transform:rotate(180deg);}
+.cat-minor-list{display:flex; flex-direction:column; gap:9px; padding:2px 14px 14px 34px; background:var(--paper-deep);}
+.cat-minor{font-size:13px; color:var(--ink-soft);}
 
 /* ---------------- PLACE DETAIL SHEET ---------------- */
 .place-sheet-photo{height:160px; border-radius:14px; margin-bottom:16px; background:linear-gradient(135deg,var(--dawn),var(--sunset));}
