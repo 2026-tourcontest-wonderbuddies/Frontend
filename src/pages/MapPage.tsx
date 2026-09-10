@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useTrip } from "../hooks/useTrip";
+import { useCourse } from "../hooks/useCourses";
 import MapPin from "../components/MapPin";
 import KakaoMap, { type KakaoMapPoint } from "../components/KakaoMap";
 import { hhmm } from "../utils/format";
+import { courseItems, courseStats } from "../utils/course";
 
 const PIN_POSITIONS = [
   { top: "18%", left: "55%" },
@@ -18,7 +19,7 @@ const PIN_POSITIONS = [
 
 export default function MapPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: trip, isLoading, isError } = useTrip(id);
+  const { data: course, isLoading, isError } = useCourse(id);
   const [tab, setTab] = useState<"map" | "timeline">("map");
 
   if (isLoading) {
@@ -30,7 +31,7 @@ export default function MapPage() {
     );
   }
 
-  if (isError || !trip) {
+  if (isError || !course) {
     return (
       <div className="state-panel">
         <span className="serif">코스를 찾을 수 없어요</span>
@@ -41,21 +42,20 @@ export default function MapPage() {
     );
   }
 
-  const allItems = trip.days.flatMap((d) => d.items);
+  const allItems = courseItems(course);
+  const stats = courseStats(course);
   // 실제 지도에 찍을 점들. 번호는 아래 "타임라인" 탭의 번호와 일치시킨다.
   // 타임라인은 하루 단위로 1부터 다시 세므로, 여러 날 코스는 "2-3"(Day 2의 3번째)으로 표기한다.
-  const isMultiDay = trip.days.length > 1;
-  const mapPoints: KakaoMapPoint[] = trip.days.flatMap((day) =>
+  const isMultiDay = course.days.length > 1;
+  const mapPoints: KakaoMapPoint[] = course.days.flatMap((day) =>
     day.items.map((item, idx) => ({
-      id: `${day.day_index}-${item.order}-${item.place.content_id}`,
+      id: String(item.id),
       title: item.place.title,
       latitude: item.place.latitude,
       longitude: item.place.longitude,
       label: isMultiDay ? `${day.day_index}-${idx + 1}` : String(idx + 1),
     })),
   );
-  const totalStay = allItems.reduce((s, it) => s + it.stay_min, 0);
-  const totalTravel = allItems.reduce((s, it) => s + (it.travel_min_from_prev ?? 0), 0);
 
   return (
     <div>
@@ -66,8 +66,8 @@ export default function MapPage() {
         <div className="page-eyebrow">MAP</div>
         <h1 className="page-title">코스 지도</h1>
         <p className="page-sub">
-          {trip.total_days}일 코스 · 총 {allItems.length}곳 · 체류 {Math.round(totalStay / 60)}h {totalStay % 60}m · 이동{" "}
-          {totalTravel}분
+          {course.days.length}일 코스 · 총 {allItems.length}곳 · 체류 {Math.round(stats.stayMin / 60)}h{" "}
+          {stats.stayMin % 60}m · 이동 {stats.travelMin}분
         </p>
       </header>
 
@@ -99,7 +99,7 @@ export default function MapPage() {
               fallback={
                 <div className="map-placeholder big">
                   {allItems.slice(0, 8).map((item, i) => (
-                    <MapPin key={item.place.content_id} place={item.place} style={PIN_POSITIONS[i]} />
+                    <MapPin key={item.id} place={item.place} style={PIN_POSITIONS[i]} />
                   ))}
                 </div>
               }
@@ -111,12 +111,12 @@ export default function MapPage() {
           </>
         ) : (
           <div style={{ maxWidth: 640 }}>
-            {trip.days.map((day) => (
+            {course.days.map((day) => (
               <div key={day.day_index}>
-                {trip.days.length > 1 && <div className="day-heading serif">Day {day.day_index}</div>}
+                {course.days.length > 1 && <div className="day-heading serif">Day {day.day_index}</div>}
                 <div className="timeline">
                   {day.items.map((item, idx) => (
-                    <div className="tl-item" key={item.order}>
+                    <div className="tl-item" key={item.id}>
                       <div className="tl-dot mono">{idx + 1}</div>
                       <div className="tl-card">
                         <div className="tl-top">
@@ -142,11 +142,8 @@ export default function MapPage() {
       </div>
 
       <div className="sticky-actions">
-        <Link className="btn-outline" to={`/trip/${id}`}>
-          타임라인으로
-        </Link>
-        <Link className="btn-primary" to={`/trip/${id}/edit`}>
-          코스 편집
+        <Link className="btn-primary" to={`/trip/${id}`}>
+          코스 상세로
         </Link>
       </div>
     </div>

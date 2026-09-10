@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import TimeDial from "../components/TimeDial";
 import CourseCard from "../components/CourseCard";
 import { useNow, periodFor, type PeriodKey } from "../hooks/useNow";
-import { DEMO_TRIP_ID } from "../api/mocks/data";
 
 const TIME_PILLS = ["6시간(반나절)", "8~10시간", "1박2일~2박3일", "3박4일", "4박5일"];
 
@@ -112,7 +111,7 @@ export default function HomePage() {
               desc="첫날 아침 협재 백사장에서 시작해, 다음날 밤 애월 미디어아트 전시에서 마무리."
             />
             <CourseCard
-              to={`/trip/${DEMO_TRIP_ID}`}
+              to="/builder"
               gradient="linear-gradient(135deg,var(--midday),var(--sunset))"
               badge="당일코스"
               region="서귀포시 · 성산·표선"

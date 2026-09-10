@@ -9,23 +9,12 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1 } },
 });
 
-const useMocks = import.meta.env.VITE_USE_MOCKS !== "false";
-
-async function bootstrap() {
-  if (useMocks) {
-    const { worker } = await import("./api/mocks/browser");
-    await worker.start({ onUnhandledRequest: "bypass" });
-  }
-
-  createRoot(document.getElementById("root")!).render(
-    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </QueryClientProvider>
-    </StrictMode>,
-  );
-}
-
-bootstrap();
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </QueryClientProvider>
+  </StrictMode>,
+);

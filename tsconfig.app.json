@@ -22,5 +22,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  /* src/deferred = 백엔드 API 명세에 대응 엔드포인트가 없어 보류한 화면.
+     옛 계약 타입을 참조하므로 타입체크에서 제외한다. src/deferred/README.md 참고. */
+  "exclude": ["src/deferred"]
 }

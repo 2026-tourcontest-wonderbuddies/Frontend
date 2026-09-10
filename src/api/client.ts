@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+// ?? 로는 빈 문자열(VITE_API_BASE_URL=)이 fallback을 타지 않아 || 를 쓴다.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 export const AUTH_STORAGE_KEY = "tj_auth";
 

@@ -1,41 +1,56 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useCandidates, useSelectCandidate } from "../hooks/useCandidates";
-import { useLodgingRecommendations } from "../hooks/useLodging";
+import {
+  useCourse,
+  useCourseLodgingOptions,
+  useSelectCourse,
+  useSelectCourseLodging,
+} from "../hooks/useCourses";
 import LoadingChecklist from "../components/LoadingChecklist";
-import type { LodgingRecommendationDTO } from "../api/types";
+import { PRIORITY_LABELS, type LodgingCard } from "../api/types";
 
-function fmtPrice(won: number | null | undefined): string {
-  if (won == null) return "요금 미확인";
-  return `${Math.round(won / 10000)}만원 / 박`;
-}
+const CHECK_MARK: Record<LodgingCard["checks"][number]["status"], string> = {
+  yes: "✓",
+  no: "✕",
+  unknown: "?",
+};
 
 export default function LodgingPage() {
-  const { requestId, candidateId } = useParams<{ requestId: string; candidateId: string }>();
+  const { tripId, courseId } = useParams<{ tripId: string; courseId: string }>();
   const navigate = useNavigate();
 
-  const candidates = useCandidates(requestId);
-  const recommendations = useLodgingRecommendations(candidateId);
-  const selectCandidate = useSelectCandidate();
+  const course = useCourse(courseId);
+  const options = useCourseLodgingOptions(courseId);
+  const selectLodging = useSelectCourseLodging();
+  const selectCourse = useSelectCourse();
 
-  const candidate = candidates.data?.candidates.find((c) => c.id === candidateId);
-  const nights = candidate ? Math.max(0, candidate.days.length - 1) : 0;
+  const nights = course.data ? Math.max(0, course.data.days.length - 1) : 0;
 
-  function confirm(lodgingContentId?: string) {
-    if (!candidateId) return;
-    selectCandidate.mutate(
-      { candidateId, lodgingContentId },
-      { onSuccess: (trip) => navigate(`/trip/${trip.id}`) },
+  /** 숙소를 서버에 반영한 뒤 코스를 최종 확정한다(명세 7번 → 3번). */
+  function chooseAndConfirm(contentId: string) {
+    if (!courseId) return;
+    selectLodging.mutate(
+      { courseId, contentId },
+      {
+        onSuccess: () =>
+          selectCourse.mutate(courseId, { onSuccess: () => navigate(`/trip/${courseId}`) }),
+      },
     );
   }
 
-  if (candidates.isLoading || recommendations.isLoading || selectCandidate.isPending) {
+  /** 숙소를 고르지 않고 확정. 서버가 이미 넣어 둔 기본 숙소 스냅샷이 유지된다. */
+  function confirmWithoutChoosing() {
+    if (!courseId) return;
+    selectCourse.mutate(courseId, { onSuccess: () => navigate(`/trip/${courseId}`) });
+  }
+
+  if (course.isLoading || options.isLoading || selectLodging.isPending || selectCourse.isPending) {
     return <LoadingChecklist />;
   }
 
-  if (candidates.isError || !candidate) {
+  if (course.isError || !course.data) {
     return (
       <div className="state-panel">
-        <span className="serif">코스 후보를 찾을 수 없어요</span>
+        <span className="serif">코스를 찾을 수 없어요</span>
         <p>링크가 잘못되었거나 만료됐을 수 있어요.</p>
         <button className="btn-primary" onClick={() => navigate("/builder")}>
           다시 만들기 →
@@ -44,7 +59,8 @@ export default function LodgingPage() {
     );
   }
 
-  const recs: LodgingRecommendationDTO[] = recommendations.data?.recommendations ?? [];
+  const cards = options.data?.lodging_options ?? [];
+  const currentId = options.data?.current_selected?.content_id;
 
   return (
     <div className="candidates-page wrap">
@@ -54,12 +70,12 @@ export default function LodgingPage() {
         {nights}박 일정이에요. 입력하신 숙박 조건과 코스 동선을 함께 보고 골랐어요. 숙소를 고르면 코스가 확정됩니다.
       </p>
       <div className="candidates-summary">
-        <span>📅 {candidate.days.length}일 일정</span>
+        <span>📅 {course.data.days.length}일 일정</span>
         <span>🛏 {nights}박 · 전체 동일 숙소</span>
-        <span>🎯 {candidate.label}</span>
+        <span>🎯 {PRIORITY_LABELS[course.data.mode]}</span>
       </div>
 
-      {recs.length === 0 ? (
+      {cards.length === 0 ? (
         <>
           <div className="side-card" style={{ marginTop: 24, maxWidth: 520 }}>
             <h4>조건에 맞는 숙소를 찾지 못했어요</h4>
@@ -73,7 +89,7 @@ export default function LodgingPage() {
             <button className="btn-outline" onClick={() => navigate("/builder")}>
               조건 다시 입력
             </button>
-            <button className="btn-primary" onClick={() => confirm()}>
+            <button className="btn-primary" onClick={confirmWithoutChoosing}>
               숙소 없이 코스 확정 →
             </button>
           </div>
@@ -81,83 +97,106 @@ export default function LodgingPage() {
       ) : (
         <>
           <div className="candidate-grid">
-            {recs.map(({ lodging, travel_min_from_last_stop, match_reason, missing_fields }) => (
-              <div className="candidate-card" key={lodging.content_id}>
+            {cards.map((card) => (
+              <div className="candidate-card" key={card.content_id}>
                 <div className="candidate-head">
-                  <div className="candidate-label">{lodging.title}</div>
+                  <div className="candidate-label">
+                    {card.title}
+                    {card.content_id === currentId && (
+                      <span className="meta-chip mono" style={{ marginLeft: 8 }}>
+                        현재 선택
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className="btn-primary"
-                    onClick={() => confirm(lodging.content_id)}
-                    disabled={selectCandidate.isPending}
+                    onClick={() => chooseAndConfirm(card.content_id)}
+                    disabled={selectLodging.isPending}
                   >
                     선택
                   </button>
                 </div>
 
                 <div className="lodging-meta mono">
-                  {lodging.small_category_name} · {lodging.address}
+                  {card.category} · {card.address}
                 </div>
 
                 <div className="candidate-stats">
                   <div className="candidate-stat">
-                    <div className="k">1박 요금</div>
-                    <div className="v">{fmtPrice(lodging.price_per_night)}</div>
+                    <div className="k">참고 요금</div>
+                    <div className="v">{card.price_hint || "확인 필요"}</div>
                   </div>
                   <div className="candidate-stat">
                     <div className="k">동선에서</div>
-                    <div className="v">{travel_min_from_last_stop}분</div>
+                    <div className="v">{card.travel_min != null ? `${card.travel_min}분` : "—"}</div>
                   </div>
                   <div className="candidate-stat">
                     <div className="k">체크인</div>
-                    <div className="v">{lodging.check_in_time ?? "—"}</div>
+                    <div className="v">{card.check_in_time || "—"}</div>
                   </div>
                   <div className="candidate-stat">
                     <div className="k">체크아웃</div>
-                    <div className="v">{lodging.check_out_time ?? "—"}</div>
+                    <div className="v">{card.check_out_time || "—"}</div>
                   </div>
                 </div>
 
-                <div className="lodging-flags">
-                  <span className={`lodging-flag${lodging.cooking ? " on" : ""}`}>
-                    {lodging.cooking ? "취사 가능" : "취사 불가"}
-                  </span>
-                  <span className={`lodging-flag${lodging.parking ? " on" : ""}`}>
-                    {lodging.parking ? "주차 가능" : "주차 불가"}
-                  </span>
-                </div>
+                {card.room_type && (
+                  <p className="candidate-desc">
+                    객실 {card.room_type}
+                    {card.room_count != null ? ` · ${card.room_count}실` : ""}
+                    {card.max_guests != null ? ` · 최대 ${card.max_guests}명` : ""}
+                  </p>
+                )}
 
-                {match_reason && <p className="candidate-desc">{match_reason}</p>}
-
-                <div className="candidate-badges">
-                  {lodging.facilities.map((f) => (
-                    <span className="candidate-badge" key={f}>
-                      {f}
-                    </span>
+                <div className="lodging-checks">
+                  {card.checks.map((chk) => (
+                    <div className={`lodging-check ${chk.status}`} key={chk.name}>
+                      <b>
+                        {CHECK_MARK[chk.status]} {chk.name}
+                      </b>
+                      <span>{chk.detail}</span>
+                    </div>
                   ))}
                 </div>
 
-                {missing_fields.length > 0 && (
-                  <div className="lodging-warn">⚠ 확인 필요: {missing_fields.join(", ")}</div>
+                {card.needs_check && card.unknown_fields.length > 0 && (
+                  <div className="lodging-warn">⚠ 확인 필요: {card.unknown_fields.join(", ")}</div>
+                )}
+
+                {card.tripcom_link && (
+                  <a
+                    className="btn-outline"
+                    style={{ display: "block", textAlign: "center", marginTop: 12 }}
+                    href={card.tripcom_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    트립닷컴에서 요금 확인 ↗
+                  </a>
                 )}
               </div>
             ))}
           </div>
 
+          <p className="side-note" style={{ marginTop: 12 }}>
+            표시된 요금은 참고가이며 실시간 가격이 아니에요. 예약과 결제는 트립닷컴에서 진행됩니다.
+          </p>
+
           <div className="lodging-actions">
-            <button className="btn-outline" onClick={() => navigate(-1)}>
+            <button className="btn-outline" onClick={() => navigate(`/trips/${tripId}/courses`)}>
               ← 다른 코스 보기
             </button>
-            <button className="btn-outline" onClick={() => confirm()} disabled={selectCandidate.isPending}>
-              숙소 없이 진행
+            <button className="btn-outline" onClick={confirmWithoutChoosing} disabled={selectCourse.isPending}>
+              추천 숙소 그대로 진행
             </button>
           </div>
         </>
       )}
 
-      {(selectCandidate.isError || recommendations.isError) && (
+      {(selectLodging.isError || selectCourse.isError || options.isError) && (
         <div className="form-error" style={{ marginTop: 20 }}>
-          숙소 정보를 불러오는 중 문제가 발생했어요. 다시 시도해주세요.
+          숙소 정보를 처리하는 중 문제가 발생했어요. 다시 시도해주세요.
         </div>
       )}
     </div>

@@ -26,13 +26,16 @@ export interface BuilderForm {
   dayOverrides: DayOverridePayload[];
 
   // 3 — 취향
-  foodPref1: FoodPrefKey | "";
+  foodPrefs: FoodPrefKey[];
   freeTextInput: string;
 
   // 4 — 숙박 (다일 여행에서만)
   lodgingType: LodgingType | "";
   cooking: string; // "무관" | "필요"
   lodgingFreeText: string;
+
+  // 5 — 숙소 고르기 (다일 여행에서만). 빈 문자열이면 고르지 않고 넘어간 것.
+  lodgingContentId: string;
 }
 
 export function defaultBuilderForm(): BuilderForm {
@@ -46,11 +49,12 @@ export function defaultBuilderForm(): BuilderForm {
     purposeMain: "photo",
     purposeSub: "",
     dayOverrides: [],
-    foodPref1: "",
+    foodPrefs: [],
     freeTextInput: "",
     lodgingType: "상관없음",
     cooking: "무관",
     lodgingFreeText: "",
+    lodgingContentId: "",
   };
 }
 
