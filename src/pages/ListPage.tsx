@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { DEMO_TRIP_ID } from "../api/mocks/data";
 
 interface ListCourse {
   id: string;
@@ -18,7 +17,7 @@ interface ListCourse {
 const COURSES: ListCourse[] = [
   {
     id: "c1",
-    to: `/trip/${DEMO_TRIP_ID}`,
+    to: "/builder",
     region: "서귀포동부",
     duration: "당일코스",
     time: ["낮", "노을"],
@@ -195,6 +194,11 @@ export default function ListPage() {
         <p className="page-sub">
           새벽부터 밤까지, 6시간부터 4박5일까지 — 지금 이 조건에 맞는 제주 코스를 직접 둘러보세요.
         </p>
+        <div className="nocon-banner" style={{ marginTop: 12 }}>
+          ⚠ 백엔드 미연동 — 백엔드에 "공개 코스" 모델이 없어 이 목록은 예시로 넣어둔 고정
+          데이터예요. 아래 검색·정렬·페이지 이동과 카드의 ♡ 저장은 아직 동작하지 않아요.
+        </div>
+
         <div className="search-bar">
           <input className="search-input" type="text" placeholder="지역, 코스명, 키워드로 검색 (예: 노을, 성산, 야시장)" />
           <select className="sort-select">

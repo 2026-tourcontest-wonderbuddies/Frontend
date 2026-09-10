@@ -1,86 +1,202 @@
 # 시간여행 제주 — 프론트엔드 팀 공유 문서
 
-`2026-tourcontest-wonderbuddies/Frontend` 레포에 처음 프론트엔드 초안을 올리며 팀원(특히 백엔드 개발자)에게
-현재 상태를 공유하기 위한 문서입니다.
+## 0. 최근 변경 (실 API 연동)
+
+프론트가 자체 작성한 계약(`API_CONTRACT.md` 구버전) + MSW 목업 위에서 만들어져 있었고,
+그 결과 **화면이 실제로 부르던 API 20개 중 19개가 서버에 없는 주소**였습니다.
+Notion `04. 개발 / API 명세서`를 기준으로 전면 재연동했습니다.
+
+- 기준 문서: <https://app.notion.com/p/3d14958c0857803582a3dabebd95341a?v=3d14958c085780d79bd0000cc6fe2852>
+- **MSW 목업 레이어를 걷어냈습니다.** 이제 항상 `VITE_API_BASE_URL`의 실제 서버를 호출합니다.
+  (`VITE_USE_MOCKS` 환경변수는 없어졌습니다.)
+- 명세에 대응 엔드포인트가 없는 화면(검색·저장·편집·채팅·이메일 가입)은 `src/deferred/`로
+  옮기고 해당 경로에 `ComingSoon`을 띄웁니다. → `src/deferred/README.md`
 
 ## 1. 실행 방법
 
 ```bash
 npm install
+cp .env.example .env.local   # VITE_API_BASE_URL 확인
 npm run dev
 ```
 
 `http://localhost:5173`에서 확인할 수 있습니다.
 
-- 기본값(`VITE_USE_MOCKS=true`)으로 실행하면 [MSW](https://mswjs.io)가 `/api/*` 요청을 가로채 목업 데이터를
-  돌려주므로, **백엔드 서버 없이도 아래 모든 화면이 즉시 동작**합니다.
-- 타입체크 + 프로덕션 빌드 확인: `npm run build`
-- 린트: `npm run lint`
+- **백엔드가 떠 있어야 동작합니다.** `.env.local`의 `VITE_API_BASE_URL`이 가리키는 서버를 씁니다.
+  기본값은 배포 서버(`https://tourcontest-backend.onrender.com/api`)입니다.
+- 로컬 Django로 붙이려면 `VITE_API_BASE_URL=http://127.0.0.1:8000/api`로 바꾸세요.
+  Django `CORS_ALLOWED_ORIGINS`에 `http://localhost:5173`이 이미 들어 있습니다.
+- 타입체크 + 프로덕션 빌드: `npm run build` / 린트: `npm run lint`
 
-## 2. 주요 폴더 구조 및 역할
+## 2. 주요 폴더 구조
 
 ```
 src/
-  api/                  API 클라이언트, 타입, 도메인별 fetch 함수
-    client.ts           공통 fetch 래퍼 (인증 헤더 부착, 에러 처리)
-    auth.ts / trips.ts / candidates.ts / saved.ts / edit.ts / chat.ts / search.ts
-                         도메인별 API 함수 (실제 fetch와 MSW 목업 모두 이 함수를 통해 호출됨)
-    types.ts             프론트-백엔드 공유 타입 정의 (API_CONTRACT.md 기준)
-    mocks/               MSW 목업 서버
-      handlers.ts        도메인별 handler를 모아 등록
-      handlers/          auth, trips, candidates, saved, edit, chat, search — 도메인별 핸들러 분리
-      data.ts / auth-data.ts / lodging-data.ts   목업 시드 데이터
-      persist.ts         브라우저 세션 내 목업 상태 저장(생성한 코스 등 새로고침해도 유지)
-      recompute.ts        일정 수정(day override, 장소 교체) 시 목업 서버에서 일정 재계산
-      browser.ts          MSW worker 초기화
-
-  auth/                 인증 상태 관리
-    AuthContext.tsx      로그인 세션(localStorage 저장), 로그인/회원가입/로그아웃 로직
-    ProtectedRoute.tsx   비로그인 시 /login으로 리다이렉트하는 라우트 가드
-
-  components/           Nav, TabBar, Footer, CourseCard, ChipGroup, TimeDial,
-                         DayOverrideSheet, PlaceDetailSheet, PlaceQuickPicker 등 공용 컴포넌트
-
-  hooks/                react-query 기반 데이터 훅 (useCreateTrip, useTrip, useCandidates,
-                         useSaved, useSearch, useChat, useEdit 등) — 페이지는 이 훅을 통해서만 api/를 호출
-
-  pages/                화면 13개 (아래 3번 표 참고)
-
-  styles/global.css     기존 정적 프로토타입(siganyeohaeng-jeju.html)의 디자인 시스템을 그대로 이식
-  utils/format.ts       날짜/시간 포맷 유틸
+  api/
+    client.ts           공통 fetch 래퍼 (Authorization: Token 부착, 에러 처리)
+    trips.ts            명세 1·2번  (코스 생성, 코스 목록)
+    courses.ts          명세 3~8번  (상세, 장소, 숙소 옵션/선택, 확정, 수정)
+    auth.ts             명세 11번   (구글 로그인)
+    types.ts            명세서 기준 타입 (CourseDetail, LodgingCard, PlaceSummary …)
+  hooks/
+    useCourses.ts       위 API의 react-query 래퍼
+    useCreateTrip.ts
+  utils/course.ts       코스 응답에서 방문 수·체류/이동 시간을 계산 (서버가 안 주는 값)
+  deferred/             명세에 엔드포인트가 없어 보류한 화면 — 타입체크 제외
 ```
 
-**핵심 포인트**: 페이지는 절대 `fetch`를 직접 호출하지 않고, `hooks/` → `api/`(도메인 함수) → `api/client.ts`
-순서로 내려갑니다. 그래서 실제 백엔드로 전환할 때 `api/*.ts` 아래 함수 구현만 그대로 두고(시그니처 동일),
-`.env.local`에서 `VITE_API_BASE_URL` + `VITE_USE_MOCKS=false`만 바꾸면 페이지/훅 코드는 손댈 필요가 없습니다.
+페이지는 `fetch`를 직접 부르지 않고 `hooks/` → `api/` → `api/client.ts` 순서로 내려갑니다.
 
 ## 3. 라우팅(화면) 상태
 
 | 경로 | 화면 | 상태 |
 |---|---|---|
-| `/` | 홈 (시간대 다이얼, 추천 코스 큐레이션) | ✅ 완성 (목업 기준) |
-| `/builder` | 코스 만들기 (`TripRequest` 전체 입력 폼) | ✅ 완성 (목업 기준) |
-| `/trips/candidates/:requestId` | 생성된 후보 코스 선택 | ✅ 완성 (목업 기준) |
-| `/trip/:id` | 코스 상세 (타임라인) | ✅ 완성 (목업 기준) |
-| `/trip/:id/edit` | 코스 수정 (장소 교체, 일정 재계산) | ✅ 완성 (목업 기준) |
-| `/trip/:id/chat` | 코스 관련 채팅 | ✅ 완성 (목업 기준) |
-| `/trip/:id/map` | 코스 지도 보기 | 🟡 화면은 완성, **카카오맵 실연동은 준비 중** (지금은 방문 순서만 텍스트로 확인 가능) |
-| `/search` | 장소 검색 | ✅ 완성 (목업 기준) |
-| `/saved`, `/saved/map` | 저장한 코스 (로그인 필요) | ✅ 완성 (목업 기준) |
-| `/login`, `/signup` | 로그인/회원가입 | 🟡 이메일 로그인/가입은 완성, **소셜 로그인·가입은 준비 중** |
-| `/list` | 추천 코스 전체 목록 | ⚪ **정적 목업 — 의도적으로 실 API 미연동.** 백엔드에 "공개 코스" 모델(`TripRequest`와 독립된 코스 목록)이 아직 없어 이번 범위에서 제외함. 자세한 내용은 `API_CONTRACT.md` 참고 |
+| `/` | 홈 | ✅ 정적 |
+| `/builder` | 코스 만들기 | ✅ `POST /api/trips/` |
+| `/trips/:tripId/courses` | 생성된 코스 3개 중 선택 | ✅ 명세 2·4번 |
+| `/trips/:tripId/courses/:courseId/lodging` | 숙소 선택 후 확정 | ✅ 명세 6·7·3번 |
+| `/trip/:id` | 코스 상세 (타임라인) — `:id`는 **course_id** | ✅ 명세 4번 |
+| `/trip/:id/map` | 코스 지도 | ✅ 명세 4번 + 카카오맵 SDK |
+| `/login` | 구글 로그인 | ✅ 명세 11번 |
+| `/list` | 추천 코스 목록 | ⚪ 정적 목업 — 백엔드에 "공개 코스" 모델이 없음 |
+| `/search` | 장소 검색 | ⚪ 프론트 단독 — 대응 엔드포인트 없음, 시드 10곳을 클라이언트 필터링 |
+| `/saved`, `/saved/map` | 저장함(찜) | ⚪ 프론트 단독 — 대응 엔드포인트 없음, `localStorage`에만 저장 |
+| `/trip/:id/edit`, `/trip/:id/chat`, `/signup` | — | ⛔ 보류 (`ComingSoon`) |
 
-그 외 개별 컴포넌트 단위로 준비 중인 것: `PlaceDetailSheet`의 실제 제휴사 예약 연동(현재는 안내 메시지만 표시).
+## 4. 백엔드 팀에게 확인 요청
 
-## 4. 백엔드 팀에게 전달하는 메시지
+### 명세서 정정이 필요해 보이는 항목
 
-- 백엔드 API가 아직 없는 상태(모든 `views.py`가 빈 스텁)라서, 프론트가 기대하는 REST 계약을 먼저
-  [`API_CONTRACT.md`](./API_CONTRACT.md)로 정의했고, **MSW로 이 계약 전체(`/api/trips/`, `/api/trips/:id/`
-  등)를 가짜 서버로 세팅 완료**했습니다. 덕분에 백엔드 없이도 홈 → 빌더 → 후보 선택 → 상세/수정/채팅 →
-  저장까지 전체 플로우가 프론트 단독으로 동작합니다.
-- 실제 서버가 준비되면 프론트는 `.env.local`에 `VITE_API_BASE_URL` 지정 + `VITE_USE_MOCKS=false`만
-  변경하면 되도록 미리 구조를 잡아뒀습니다(코드 수정 불필요).
-- `API_CONTRACT.md`는 프론트 관점에서 먼저 제안한 초안입니다. 백엔드 모델/구현상 계약과 다르게 갈 수밖에
-  없는 부분이 있다면 알려주세요 — 그에 맞춰 프론트를 조정하겠습니다.
-- 앞으로 실제 API 연동 작업(계약 변경, 목업→실 서버 전환 등)을 진행할 때는 코드를 먼저 수정하지 않고,
-  작업 계획을 팀에 먼저 공유하고 합의된 뒤에 진행할 예정입니다.
+1. **3번 행 `/api/courses/{course_id}/select/`에 ✖️ 아이콘**이 붙어 있습니다. 폐기된 API인가요?
+   백엔드에는 구현되어 있어서 일단 연결해 뒀습니다.
+2. **6번 행 경로에 `/days/{day_index}/`** 가 있는데 백엔드는 `/courses/{id}/lodging-options/`입니다.
+   7번 행 설명("여행 전체 앵커라 Day 단위 아님")과 백엔드가 일치하므로 명세서 오타로 보고 백엔드를 따랐습니다.
+3. **8번 행 Method가 `get`** 인데 백엔드는 `POST` + `{raw_message}` 입니다. 백엔드를 따랐습니다.
+4. **9번 행 `/api/places/{content_id}/` Method가 `post`** 입니다. 장소 상세 조회면 GET이 맞을 것 같습니다.
+   (백엔드에도 아직 없어 미연동)
+
+### 버그
+
+- `POST /api/courses/{id}/modify/` 는 현재 **항상 500**입니다.
+  `apps/nlp/modification_interpreter.py`에서 정의되지 않은 `client` 변수를 호출합니다
+  (`_get_client()`를 쓰려던 것으로 보입니다). 같은 문제가 `generate_result_explanation`에도 있습니다.
+
+### 권한
+
+- 명세 11번은 "모든 API 헤더에 토큰"이라고 되어 있고 프론트도 모든 요청에 붙이고 있습니다.
+  다만 현재 백엔드 `/api/`에는 `DEFAULT_PERMISSION_CLASSES`가 없어 `AllowAny`입니다.
+  누구나 임의의 `trip_id`/`course_id`를 조회·수정할 수 있습니다.
+- `GoogleLoginView.callback_url`이 `http://localhost:3000`으로 하드코딩되어 있습니다.
+  프론트는 5173이고 배포는 onrender 도메인입니다. (access_token 방식이라 지금은 문제 없지만
+  `code` 방식으로 바꾸면 걸립니다.)
+
+### 추가 요청
+
+아래 1~3번은 **프론트 화면 구성이 확정된 사항**이라 서버 지원이 필요합니다.
+
+#### 1. 명세 1번에 `day_overrides` 추가 (일자별 개별 조건)
+
+다일 여행에서 날짜마다 목적·권역·제외 카테고리를 다르게 두는 것이 빌더의 확정 화면 구성입니다.
+현재는 서버에 대응 필드가 없어 사용자가 입력한 값을 보내지 못하고 있습니다.
+
+프론트 타입은 이미 확정돼 있습니다(`src/api/types.ts`의 `DayOverridePayload`).
+명세 1번 request body에 아래 형태로 추가해 주실 수 있을까요?
+
+```json
+"day_overrides": [
+  {
+    "day_index": 2,
+    "purpose_main": "activity",
+    "purpose_sub": "food",
+    "region_preference": "NE",
+    "exclude_categories": ["자연관광"]
+  }
+]
+```
+
+- `day_index`는 1부터 시작합니다 (1일차, 2일차 …).
+- 배열에 없는 날짜는 공통 조건을 그대로 적용합니다.
+- 각 필드는 생략 가능하며, 생략하면 그 항목만 공통값을 씁니다.
+- `region_preference`는 명세 1번과 동일한 `NE | NW | SE | SW | ALL` 코드로 보냅니다.
+- `purpose_main` / `purpose_sub`도 명세 1번과 동일한 값입니다.
+
+#### 2. `exclude_categories`를 삭제하지 말아 주세요
+
+명세 1번 본문에 `"exclude_categories": []  # 삭제 예정`이라고 적혀 있는데, 프론트는 이 값을
+위 1번의 일자별 조건에서 **계속 사용할 예정**입니다. 제외할 TourAPI 중분류를 날짜별로 고르는
+입력이 이미 화면에 있습니다.
+
+여행 전체 단위로 남기든 `day_overrides` 안에만 두든 상관없지만 **어느 쪽으로든 유지가 필요**합니다.
+삭제가 확정이라면 같은 목적을 달성할 대체 수단이 있는지 알려주세요.
+
+#### 3. 코스 생성 전 숙소 추천 엔드포인트 신설
+
+빌더 위저드는 `1 일정 → 2 목적·권역 → 3 취향 → 4 숙박 조건 → 5 숙소 고르기 → 코스 생성`
+순서인데, **스텝 5에 대응하는 API가 명세 1~11번에 없습니다.** 숙소 관련 엔드포인트(명세 6·7번)는
+전부 코스가 만들어진 *뒤*에만 쓸 수 있어서, 스텝 5는 임시 더미 데이터로 돌고 있고 사용자가 고른
+값은 버려집니다.
+
+제안 (형태는 조정 가능합니다):
+
+- `POST /api/lodging/suggest/`
+- request — 명세 1번 필드의 부분집합
+
+```json
+{
+  "start_datetime": "2026-09-10T14:00:00+09:00",
+  "end_datetime": "2026-09-12T17:00:00+09:00",
+  "guests": 4,
+  "region_preference": "SE",
+  "lodging_type": "상관없음",
+  "lodging_need_cooking": false,
+  "lodging_free_text": ""
+}
+```
+
+- response — **명세 6번 응답의 `lodging_options` 배열과 동일한 형태**면 됩니다.
+  프론트가 이미 같은 타입(`LodgingCard`)을 쓰고 있어 그대로 붙습니다.
+  코스가 없는 시점이라 `travel_min`, `travel_min_by_night` 같은 이동시간 필드는
+  `null`이거나 빠져 있어도 됩니다.
+
+**대안**: 이 엔드포인트가 설계상 맞지 않다면, 스텝 5를 없애고 숙소 선택을 코스 생성 후
+`LodgingPage`(명세 6·7번) 한 곳으로 일원화하겠습니다. 어느 쪽이 나은지 회신 부탁드립니다.
+
+> 요청/응답 필드, 화면이 실제로 쓰는 `LodgingCard` 필드 목록, 이 시점에 채울 수 없는 필드
+> (`travel_min` 계열)까지 정리한 **상세 계약은 `API_CONTRACT.md`의 `## 요청 중인 엔드포인트`** 에 있습니다.
+
+#### 4. 명세 1번에 `lodging_content_id` 추가 (3번과 한 묶음)
+
+3번으로 숙소를 추천받아도 **사용자가 고른 숙소를 코스 생성에 반영할 방법이 없습니다.**
+명세 1번 request에 대응 필드가 없어서, 지금은 스텝 5에서 고른 값이 그대로 버려집니다.
+
+```json
+{ "lodging_content_id": "142785" }
+```
+
+- **선택 필드**입니다. 값이 없으면 지금 동작 그대로라 하위 호환이 깨지지 않습니다.
+- 값이 오면 코스 생성 시 그 숙소를 앵커로 고정하고, 생성되는 3개 코스의 각 Day
+  `lodging_snapshot`에 반영해 주세요. 명세 7번 `select-lodging`을 생성 시점에 미리
+  적용한 것과 같은 결과입니다.
+
+3번만 있고 4번이 없으면 "보여주기만 하고 코스에는 반영되지 않는" 반쪽이 되므로,
+**두 건을 함께 검토해 주시면 좋겠습니다.**
+
+함께 정해야 할 것:
+
+1. 추천 개수는 top3 고정인가요, `limit` 파라미터를 받나요?
+2. 조건에 맞는 숙소가 0건이면 200 + 빈 배열로 봐도 될까요?
+3. `lodging_content_id`가 유효하지 않은 값이면 400인가요, 무시하고 기본 동작인가요?
+4. 고른 숙소가 생성된 코스 동선과 지나치게 멀면 코스를 숙소에 맞춰 조정하나요?
+5. 4번으로 미리 정한 뒤에도 `LodgingPage`에서 숙소를 바꾸는 흐름(명세 6·7번)은 계속 유효한가요?
+
+#### 그 외
+
+- 코스 상세 응답에 **요청 조건(목적·권역) 에코**가 있으면 좋겠습니다.
+  지금 상세 화면은 사용자가 뭘 요청했는지 표시할 방법이 없습니다.
+- 명세에 없는 5개 기능(장소 검색, 저장/찜, 코스 수동 편집, 챗봇, 이메일 가입)을 명세서에 추가할지
+  결정이 필요합니다. 화면은 이미 만들어져 있습니다.
+  이 중 **장소 검색과 저장/찜은 화면을 살려 두려고 프론트 단독으로 돌리고 있습니다** —
+  검색은 프론트에 박아둔 시드 10곳만 나오고, 저장함은 브라우저 localStorage 라 기기를 옮기면
+  사라집니다. 아래 엔드포인트가 생기면 바로 갈아끼울 수 있게 해뒀습니다.
+  - `GET /api/places/search?q&category&region`
+  - `GET/POST/DELETE /api/saved/places`, `/api/saved/courses`

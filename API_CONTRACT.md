@@ -1,358 +1,216 @@
-# 시간여행 제주 — 프론트-백엔드 API 계약 (제안, v0.1)
+# API 계약
 
-이 문서는 프론트엔드(`web/`)가 기대하는 API 형태를 먼저 정의한 것입니다. 백엔드 레포(`Backend`)에는
-아직 `views.py`/`urls.py`가 비어 있어 실제 엔드포인트가 없으므로, 프론트는 우선 이 계약대로
-MSW(Mock Service Worker)를 붙여 개발하고 있습니다. **백엔드 구현 시 이 문서를 기준으로 맞춰주시거나,
-불가능한 부분은 알려주시면 프론트를 조정하겠습니다.**
+> **이 문서는 더 이상 계약의 기준이 아닙니다.**
+>
+> 기준은 Notion `04. 개발 / API 명세서` 데이터베이스입니다.
+> <https://app.notion.com/p/3d14958c0857803582a3dabebd95341a?v=3d14958c085780d79bd0000cc6fe2852>
+>
+> 예전 버전의 이 문서는 백엔드와 무관하게 프론트에서 자체 설계한 계약을 담고 있었고,
+> 그 결과 화면이 실제로 부르던 API 20개 중 19개가 서버에 없는 주소였습니다.
+> 스키마·필드 정의는 반드시 위 Notion 명세서를 보세요. 아래는 프론트 구현 상태 요약입니다.
 
-기준이 된 백엔드 모델: `apps/trips/models.py`(`TripRequest`, `ItineraryDay`, `ItineraryItem`),
-`apps/places/models.py`(`Place`).
+## 기본 규약
 
----
-
-## 1. `POST /api/trips/` — 코스 생성 (Builder 제출)
-
-Builder 화면에서 사용자가 입력한 조건을 그대로 `TripRequest`에 대응시켜 전송합니다.
-백엔드는 `course_builder.py`의 빔서치+매크로 평가를 실행해 완성된 일정을 바로 응답으로 돌려줍니다
-(비동기 큐 없이 동기 처리 가정 — 만약 처리 시간이 길어 비동기가 필요하면 `202 Accepted` +
-polling용 `GET /api/trips/{id}/status/` 형태로 바뀔 수 있음을 백엔드와 협의 필요).
-
-### Request Body
-
-```ts
-interface TripRequestPayload {
-  // --- 1차 필수 입력 (Hard Constraints) ---
-  start_datetime: string;          // ISO 8601, 여행 시작(제주 도착) 일시
-  end_datetime: string;            // ISO 8601, 여행 종료(제주 출발) 일시
-  departure_place_id?: string;     // 출발지(공항 등) content_id. 비워도 됨
-  arrival_place_id?: string;       // 최종 도착지. return_to_departure가 true면 출발지와 동일하게 처리
-  return_to_departure: boolean;
-
-  transport_mode: "rental_car" | "own_car" | "taxi";
-  companion_type: "alone" | "couple" | "friend" | "family_kids" | "parents" | "group";
-  purpose_main: PurposeKey;
-  purpose_sub?: PurposeKey;
-  course_priority: "dist" | "pref" | "relax";
-  region_preference?: RegionKey;   // 단일 선택 (모델이 단일 CharField)
-  day_overrides?: DayOverridePayload[]; // 다일 여행에서 특정 날짜만 목적/우선순위/권역/숙소도착시각을 다르게 설정
-
-  // --- 2차 선택 입력 (Soft Constraints) ---
-  mood_tags?: string[];            // 최대 3개
-  include_places?: string[];       // 이상적으로는 content_id 배열. 장소검색 API가 아직 없어
-                                    // 프론트는 현재 자유 텍스트(장소명)를 그대로 보냄 — 알려진 한계, 4번 참고
-  exclude_places?: string[];       // 위와 동일
-  exclude_categories?: string[];   // 예: ["박물관", "액티비티"]
-  walk_light?: boolean;
-  indoor_outdoor_pref?: "상관없음" | "실내중심" | "야외중심" | "적절히섞기";
-
-  // --- 3차 자유 텍스트 ---
-  free_text_input?: string;
-
-  // --- 음식 ---
-  food_pref_1?: FoodPrefKey;
-  food_pref_2?: FoodPrefKey;
-  food_restriction?: "없음" | "비건" | "육류제외" | "해산물제외" | "알레르기·기타";
-  food_cafe_balance?: "음식점중심" | "카페중심" | "둘다";  // purpose_main/sub가 'food'일 때만 유효
-
-  // --- 숙박 (다일 여행에서만) ---
-  lodging_capacity?: number;
-  lodging_type?: "호텔" | "리조트·콘도" | "펜션·민박" | "게스트하우스" | "상관없음";
-  lodging_conditions?: string[];   // 예: ["주차가능", "취사가능"]
-  lodging_budget?: number;         // 1박 예산, 참고용
-  lodging_free_text?: string;
-}
-
-type PurposeKey = "nature" | "food" | "photo" | "culture" | "activity" | "shopping";
-type RegionKey =
-  | "제주시동부" | "제주시서부" | "제주시내"
-  | "서귀포동부" | "서귀포서부" | "전역";
-type FoodPrefKey =
-  | "제주향토음식" | "고기구이" | "해산물요리" | "회물회초밥" | "한식"
-  | "면요리" | "분식간편식" | "일식" | "중식" | "양식세계음식";
-
-interface DayOverridePayload {
-  day_index: number;               // 1부터
-  purpose_main?: PurposeKey;
-  course_priority?: "dist" | "pref" | "relax";
-  region_preference?: RegionKey;
-  lodging_arrival_time?: string;   // "HH:MM", 기본값 15:00. 마지막 날은 설정하지 않음
-}
-```
-
-### Response Body — `TripResponse` (200)
-
-```ts
-interface TripResponse {
-  id: string;
-  created_at: string;
-  request: TripRequestPayload;      // 제출한 조건 echo (재확인/공유용)
-  total_days: number;
-  days: ItineraryDayDTO[];
-}
-
-interface ItineraryDayDTO {
-  day_index: number;                 // 1부터
-  day_case: "A" | "B" | "C" | "D";   // 입도일/중간일차/출도일/당일치기
-  avail_hours: number;
-  target_slots: number;
-  need_lunch: boolean;
-  need_dinner: boolean;
-  need_night_spot: boolean;
-  lodging?: PlaceDTO | null;         // 그 날 숙박 (Lodging, 코스 완성 후 매칭)
-  items: ItineraryItemDTO[];
-}
-
-interface ItineraryItemDTO {
-  order: number;                     // 0부터
-  slot_type: "GENERAL" | "RESTAURANT" | "CAFE" | "SNACK";
-  place: PlaceDTO;
-  arrive_at: string;                 // ISO 8601
-  depart_at: string;                 // ISO 8601
-  stay_min: number;
-  travel_min_from_prev?: number | null;
-  hours_uncertain?: boolean;         // 영업시간 확인불가 표시
-  pref_score?: number | null;        // 감사(audit)용, 화면엔 옵션 표시
-  adjusted_qual?: number | null;
-}
-
-interface PlaceDTO {
-  content_id: string;
-  title: string;
-  address: string;
-  longitude: number;
-  latitude: number;
-  overview?: string;
-  content_type_name: string;         // 관광지/문화시설/쇼핑/음식점
-  small_category_name?: string;
-  quadrant: "NE" | "NW" | "SE" | "SW";
-  satisfaction_score?: number | null;
-}
-```
-
-### 에러
-
-- `400` — 유효성 오류. `{ "field_errors": { "start_datetime": ["필수 값입니다"] } }` 형태 제안
-- `422`/`200 with empty days` — 조건에 맞는 코스를 만들 수 없는 경우 처리 방식은 백엔드와 협의 필요
-  (현재 프론트는 `days`가 비어 있으면 "조건을 완화해보세요" 안내를 표시하도록 구현)
-
----
-
-## 2. `GET /api/trips/{id}/` — 코스 상세 조회
-
-Detail 화면 진입/새로고침/공유링크용. 응답은 `TripResponse`와 동일.
-
-- `404` — 존재하지 않는 id
-
----
-
-## 3. 인증 (전체 신규 — 백엔드에 accounts 앱 자체가 없음)
-
-기획 명세서(`TripJeju_기능명세서`) 1번 "계정 기반 여행 계획 동기화" 반영. 지금은 프론트가 MSW로만
-흉내내고 있고, 백엔드에는 `django.contrib.auth`도 아직 붙어있지 않다. 정식 구현 시 JWT 또는
-세션 기반으로 바꾸면 되고, 아래는 프론트가 기대하는 최소 형태다.
-
-| 엔드포인트 | 설명 |
+| 항목 | 값 |
 |---|---|
-| `POST /api/auth/signup` | body: `{ email, password, name }` → `{ user, token }` (201) |
-| `POST /api/auth/login` | body: `{ email, password }` → `{ user, token }` (200) / 실패 시 `401 { detail }` |
-| `POST /api/auth/logout` | 204 |
-| `GET /api/auth/me` | `Authorization: Bearer {token}` 필요 → `User` |
+| 베이스 URL | `VITE_API_BASE_URL` (예: `https://tourcontest-backend.onrender.com/api`) |
+| 인증 헤더 | `Authorization: Token {key}` — DRF `TokenAuthentication` (Bearer 아님) |
+| 토큰 발급 | `POST /api/auth/google/` 응답의 `key` |
+| 토큰 보관 | `localStorage["tj_auth"]` = `{ user, token }` |
+| 트레일링 슬래시 | **필수.** Django `APPEND_SLASH`가 켜져 있어 POST는 리다이렉트되지 않습니다 |
+| 시각 포맷 | ISO 8601 + 오프셋. 서버 `TIME_ZONE`이 UTC라 `+09:00`을 반드시 붙입니다 |
 
-```ts
-interface User { id: string; email: string; name: string; }
+구현: `src/api/client.ts`
+
+## 연동된 엔드포인트
+
+명세서 번호 → 프론트 함수 대응표. 요청/응답 스키마는 명세서 각 행의 본문을 보세요.
+
+| 명세 # | 엔드포인트 | 프론트 함수 | 쓰는 화면 |
+|---|---|---|---|
+| 1 | `POST /api/trips/` | `createTrip()` `src/api/trips.ts` | BuilderPage |
+| 2 | `GET /api/trips/{trip_id}/courses/` | `getTripCourses()` `src/api/trips.ts` | CoursesPage |
+| 3 | `POST /api/courses/{course_id}/select/` | `selectCourse()` `src/api/courses.ts` | CoursesPage, LodgingPage |
+| 4 | `GET /api/courses/{course_id}/` | `getCourse()` `src/api/courses.ts` | CoursesPage, DetailPage, MapPage, LodgingPage |
+| 5 | `GET /api/courses/{course_id}/places/` | `getCoursePlaces()` `src/api/courses.ts` | (아직 화면 없음) |
+| 6 | `GET /api/courses/{course_id}/lodging-options/` | `getCourseLodgingOptions()` `src/api/courses.ts` | LodgingPage |
+| 7 | `POST /api/courses/{course_id}/select-lodging/` | `selectCourseLodging()` `src/api/courses.ts` | LodgingPage |
+| 8 | `POST /api/courses/{course_id}/modify/` | `modifyCourse()` `src/api/courses.ts` | (아직 화면 없음) |
+| 11 | `POST /api/auth/google/` | `loginWithGoogle()` `src/api/auth.ts` | LoginPage |
+
+명세 9·10번(`/api/places/{content_id}/`, `/ask/`)은 백엔드에도 아직 없어 미연동입니다.
+
+### 명세서와 백엔드가 다른 지점 (백엔드 실제 라우트를 따름)
+
+| 명세 # | 명세서 | 백엔드 실제 | 프론트 |
+|---|---|---|---|
+| 6 | `/courses/{id}/days/{day_index}/lodging-options/` | `/courses/{id}/lodging-options/` | 백엔드 따름 (숙소는 여행 전체 앵커라 Day 단위가 아님 — 명세 7번 설명과 일치) |
+| 8 | Method `get` | `POST` + body `{raw_message}` | 백엔드 따름 |
+| 9 | Method `post` | 미구현 | 미연동 |
+
+## 화면 흐름
+
+```
+BuilderPage
+  └ POST /api/trips/            → { trip_id, course_ids: {dist, pref, relax} }
+       (스텝 5에서 고른 숙소와 일자별 개별 조건은 대응 필드가 없어 전송되지 않음)
+       ↓ /trips/{trip_id}/courses
+CoursesPage
+  ├ GET /api/trips/{trip_id}/courses/    → 코스 3개의 id
+  └ GET /api/courses/{id}/ × 3           → 각 코스 상세 (카드 지표는 여기서 계산)
+       ↓ 숙소 추천이 있으면 /trips/{trip_id}/courses/{course_id}/lodging
+LodgingPage
+  ├ GET  /api/courses/{id}/lodging-options/
+  ├ POST /api/courses/{id}/select-lodging/  { content_id }
+  └ POST /api/courses/{id}/select/
+       ↓ /trip/{course_id}
+DetailPage / MapPage
+  └ GET /api/courses/{course_id}/
 ```
 
-로그인/회원가입 자체는 비로그인 사용자도 접근 가능하지만, **코스 추천 생성 요청(`POST /api/trips/candidates/`), 코스 저장, 코스 수정은 로그인 필요** (명세서 2.1, 11.1 권한 규칙).
+라우트의 `:id` / `:courseId`는 **course_id**, `:tripId`는 **trip_id**입니다.
 
----
+## 백엔드가 안 주는 값 (프론트에서 계산하거나 표시하지 않음)
 
-## 4. 코스 추천 후보 (기존 `POST /api/trips/`를 2단계로 분리)
-
-명세서 7.2.1 "추천 코스 목록 선택"에 맞춰, 코스 생성은 이제 **후보 3개 제안 → 사용자가 1개 선택**
-흐름으로 바뀐다. 기존 `POST /api/trips/`(1번 섹션)는 이 흐름이 필요 없는 단순 케이스를 위해 유지해도 되고,
-아래로 완전히 대체해도 된다 — 백엔드 팀과 협의 필요.
-
-| 엔드포인트 | 설명 |
+| 값 | 처리 |
 |---|---|
-| `POST /api/trips/candidates/` | body = `TripRequestPayload` (1번 섹션과 동일) → `CandidatesResponse` (동선효율/취향중심/여유로운 3개 후보, 아직 저장되지 않음) |
-| `POST /api/trips/candidates/{candidateId}/select/` | 후보 하나를 확정 → 실제 `TripResponse` 발급(id 생성, 이후 `GET /api/trips/{id}/`로 조회 가능) |
+| 코스 라벨 | `mode`(dist/pref/relax) → `PRIORITY_LABELS` |
+| 방문 수 / 총 소요시간 / 이동시간 | `days[].items[]`에서 계산 (`src/utils/course.ts`) |
+| 총 이동거리, 여유시간, 5점 척도 점수, 배지 | 데이터 없음 → 미표시. `final_score`로 대체 |
+| 여행 요청 조건(목적·권역) | 코스 응답에 없음 → 상세 화면은 `mode`와 숙소 스냅샷의 `region`을 표시 |
+| 일자별 개별 조건(`day_overrides`) | 서버에 필드 없음 → 추가 요청 중(`TEAM_SHARE.md`). 필드가 생기면 `buildPayload()`에서 그대로 전송 |
+| 코스 생성 전 숙소 추천 | 대응 엔드포인트 없음(명세 1~11) → 위저드 스텝 5는 `mockLodgingOptions.ts` 더미. 신설 요청 중 |
 
-```ts
-interface CandidatesResponse {
-  request_id: string;
-  candidates: TripCandidateDTO[];
-}
+## 미연동 기능
 
-interface TripCandidateDTO {
-  id: string;
-  mode: "dist" | "pref" | "relax";
-  label: string;                     // "동선 효율 추천" 등
-  visit_count: number;
-  total_duration_min: number;
-  total_distance_km: number;
-  slack_min: number;
-  scores: { move_eff: number; pref_fit: number; slack: number }; // 1~5, 별점 표시용
-  description: string;
-  badges: string[];                  // "운영정보 확인필요 1건" 등
-  days: ItineraryDayDTO[];           // 선택 전 미리보기용, 1번 섹션의 ItineraryDayDTO와 동일 구조
+장소 검색, 저장(찜), 코스 수동 편집, 챗봇, 이메일 로그인·회원가입은 명세서에 대응
+엔드포인트가 없습니다.
+
+- **코스 수동 편집, 챗봇, 이메일 회원가입** — 보류. 화면 코드는 `src/deferred/`에 있고
+  해당 라우트는 `ComingSoon`을 띄웁니다.
+- **장소 검색, 저장(찜)** — 화면은 살아 있고 서버 없이 프론트 단독으로 동작합니다.
+  검색은 `src/data/places.ts`의 시드 10곳을 클라이언트에서 필터링하고,
+  저장함은 `src/store/saved.ts`가 `localStorage`에만 씁니다(기기·브라우저 단위).
+
+자세한 내용과 서버가 생겼을 때 갈아끼우는 방법은 `src/deferred/README.md`를 보세요.
+
+## 요청 중인 엔드포인트 (코스 생성 전 숙소 추천)
+
+빌더 위저드에서 숙박 조건을 받은 뒤 **코스를 만들기 전에** 추천 숙소를 보여주고,
+사용자가 고른 숙소를 기준으로 코스를 생성하려 합니다. 현재 명세로는 불가능합니다.
+
+- 명세 1번 `POST /api/trips/` 응답이 `{ trip_id, course_ids }`라 **코스 3개는 이 호출 한 번에 이미 생성**됩니다.
+  코스가 없는 시점은 위저드 안뿐이고, 그때는 `trip_id`도 `course_id`도 없습니다.
+- 유일한 숙소 API인 명세 6번은 경로에 `course_id`가 필수라 그 시점에 호출할 수 없습니다.
+
+화면(`src/components/builder/StepLodgingPick.tsx`)은 더미 데이터로 먼저 만들어 뒀습니다.
+아래 두 가지가 생기면 더미를 훅으로 교체하는 것만으로 연동됩니다.
+
+### (A) 신규 — 조건 기반 숙소 추천
+
+```
+POST /api/lodging/suggest/
+```
+
+> 경로는 `TEAM_SHARE.md`의 `## 4 > 추가 요청 > 3번`으로 백엔드 팀에 요청한 것과 같습니다.
+> 이 문서는 그 요청의 상세 계약이며, 경로가 바뀌면 두 문서를 함께 고쳐야 합니다.
+
+Request body는 **명세 1번 request의 부분집합**입니다. 빌더가 이미 들고 있는 값이라 새로 받을 입력이 없습니다.
+
+```jsonc
+{
+  "start_datetime": "2026-09-10T14:00:00+09:00",  // 필수
+  "end_datetime":   "2026-09-13T18:00:00+09:00",  // 필수 (박 수 계산용)
+  "guests": 2,                                    // 필수
+  "region_preference": "NE",                      // 선택. 없으면 제주 전역
+  "lodging_type": "호텔",                          // 선택. "상관없음" 허용
+  "lodging_need_cooking": false,                  // 선택
+  "lodging_free_text": "조용하고 바다 보이는 곳"      // 선택
 }
 ```
 
-후보가 0개면 `200 { request_id, candidates: [] }`로 응답하고, 프론트는 "코스를 찾지 못했어요" 안내와
-조건 완화 도움말을 보여준다(명세서 7.2 예외 처리).
+Response — 카드 스키마는 **명세 6번의 `LodgingCard`를 그대로 재사용**해 주세요.
+프론트가 명세 6번용 렌더링을 재사용할 수 있고, 백엔드도 기존 직렬화기를 그대로 쓸 수 있습니다.
 
----
-
-## 5. 코스 수정 (직접 편집 + 재계산)
-
-명세서 9.1. 변경 지점 이후 일정만 재계산하는 것이 핵심 규칙이다.
-
-`POST /api/trips/{id}/edit/`
-
-```ts
-interface EditRequestPayload {
-  day_index: number;
-  op: "reorder" | "swap" | "remove" | "add" | "lock" | "stay_time";
-  item_order?: number;      // 대상 아이템의 현재 order
-  direction?: "up" | "down"; // op="reorder"
-  new_place_id?: string;     // op="swap" | "add"
-  stay_min?: number;         // op="stay_time"
-}
-
-interface EditResponse {
-  trip: TripResponse;                  // 재계산된 전체 코스
-  violations: ConstraintViolationDTO[]; // 운영시간 초과 등, 있으면 프론트가 안내 시트를 띄움
-}
-
-interface ConstraintViolationDTO {
-  type: "hours_exceeded" | "schedule_overrun" | "travel_time_insufficient";
-  place_title?: string;
-  detail: string;
+```jsonc
+{
+  "lodging_options": [ /* LodgingCard × 최대 3 */ ]
 }
 ```
 
-프론트의 되돌리기/다시 실행(명세서 9.1.2)은 서버 없이 클라이언트가 이전 응답들을 메모리에 쌓아뒀다가
-전환하는 방식으로 구현한다 — 별도 API 불필요.
+박 수는 프론트가 이미 폼에서 알고 있어 응답에 넣지 않아도 됩니다.
 
----
+**GET이 아니라 POST인 이유**: `lodging_free_text`가 자유서술이라 쿼리스트링에 부적절하고,
+명세 1번과 body를 공유하면 백엔드 검증 로직을 재사용할 수 있습니다.
 
-## 6. 챗봇 코스 수정
+#### 이 시점에 채울 수 없는 필드
 
-명세서 9.2. **챗봇은 장소 선정·시간 계산을 직접 하지 않고, 의도만 구조화해서 추천엔진(5번 섹션과 같은 재계산 로직)에 넘긴다.**
+코스가 없으니 "동선의 마지막 스톱에서 몇 분"이라는 기준점이 존재하지 않습니다.
+지리 앵커는 `region_preference`가 대신합니다.
 
-`POST /api/trips/{id}/chat/`
-
-```ts
-interface ChatRequestPayload {
-  message?: string;      // 자유 문장
-  quick_fix?: "lock_place" | "swap_place" | "add_place" | "exclude_category"
-            | "indoor_focus" | "outdoor_focus" | "walk_light" | "add_slack";
-}
-
-interface ChatResponse {
-  messages: ChatMessageDTO[];   // 이번 요청으로 추가된 대화 메시지(사용자+챗봇 응답)
-  trip: TripResponse | null;    // 재계산 성공 시 갱신된 코스, 실패 시 null
-  violations: ConstraintViolationDTO[];
-}
-
-interface ChatMessageDTO {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  created_at: string;
-  structured_intent?: { type: string; summary: string }; // 챗봇이 해석한 구조화된 의도
-}
-```
-
-지금 프론트 목업은 실제 LLM 없이 **키워드 매칭**으로 의도를 흉내낸다. 실제 LLM 연동 시 이 응답 형태만
-맞춰주면 프론트 변경은 최소화된다.
-
----
-
-## 7. 숙소 추천
-
-명세서 5번. `GET /api/lodging/recommendations?tripId={id}` → Top-3.
-
-```ts
-interface LodgingDTO {
-  content_id: string;
-  title: string;
-  address: string;
-  longitude: number;
-  latitude: number;
-  small_category_name: "호텔" | "리조트·콘도" | "펜션·민박" | "게스트하우스" | "상관없음";
-  parking: boolean;
-  cooking: boolean;
-  facilities: string[];
-  price_per_night?: number | null;
-  check_in_time?: string;
-  check_out_time?: string;
-}
-
-interface LodgingRecommendationDTO {
-  lodging: LodgingDTO;
-  travel_min_from_last_stop: number;
-  match_reason: string;
-  missing_fields: string[];   // 확인 필요 정보 (명세서 5.1 Unknown 처리)
-  booking_url?: string;       // 제휴 예약 링크 (12번 기능)
-}
-```
-
----
-
-## 8. 장소 검색
-
-명세서 10번. `GET /api/places/search?q=&category=&region=` → `PlaceDTO[]` (1번 섹션과 동일 타입).
-Builder의 "포함/제외 장소" 입력도 이 검색으로 정확한 `content_id`를 받아오도록 나중에 교체 예정 —
-지금은 자유 텍스트로 임시 처리 중(10번 한계 참고).
-
----
-
-## 9. 저장 (장소 · 코스)
-
-명세서 11번. 전부 로그인 필요.
-
-| 엔드포인트 | 설명 |
+| 필드 | 이 엔드포인트에서 |
 |---|---|
-| `GET/POST/DELETE /api/saved/places` | `SavedPlaceDTO` 목록 조회/추가/삭제 |
-| `GET/POST/DELETE /api/saved/courses` | `SavedCourseDTO` 목록 조회/추가/삭제 (저장 시점 스냅샷 보관) |
+| `travel_min`, `travel_min_total` | `null` |
+| `travel_min_by_night` | `[]` |
 
-```ts
-interface SavedPlaceDTO { id: string; place: PlaceDTO; saved_at: string; }
-interface SavedCourseDTO { id: string; title: string; trip: TripResponse; saved_at: string; }
+#### 화면이 실제로 쓰는 필드
+
+화면을 먼저 만들어 확인한 결과입니다. **아래만 채워 주셔도 화면은 완성됩니다.**
+
+| 구분 | 필드 |
+|---|---|
+| 필수 | `content_id`, `title`, `category`, `address` |
+| 카드 본문 | `price_hint`, `room_type`, `check_in_time`, `check_out_time` |
+| 조건 충족 표시 | `checks[]` (`name`, `detail`, `status`) |
+| 보조 | `query_fit`, `needs_check`, `unknown_fields` |
+| **현재 미사용** | `region`, `lat`, `lon`, `grade`, `room_count`, `max_guests`, `tripcom_*` |
+
+`tripcom_*`은 예약 단계용이라 이 화면(고르기)에서는 표시하지 않습니다. 빈 문자열이어도 됩니다.
+
+### (B) 명세 1번 확장 — 고른 숙소를 코스 생성에 반영
+
+`POST /api/trips/` request body에 선택 필드 하나를 추가해 주세요.
+
+```jsonc
+{ "lodging_content_id": "142785" }   // 선택. (A)에서 고른 숙소
 ```
 
----
+값이 오면 코스 생성 시 그 숙소를 앵커로 고정하고, 생성되는 3개 코스의 각 Day
+`lodging_snapshot`에 반영합니다. 명세 7번 `select-lodging`을 생성 시점에 미리 적용한 것과 같습니다.
+**값이 없으면 현재 동작 그대로**라 하위 호환이 깨지지 않습니다.
 
-## 10. 향후 확장 제안 (이번 범위엔 미구현)
+이 필드가 없으면 (A)는 "보여주기만 하고 코스에는 반영되지 않는" 반쪽이 됩니다. A와 B는 한 묶음입니다.
 
-| 엔드포인트 | 용도 | 비고 |
-|---|---|---|
-| `GET /api/places/{content_id}/` | 장소 상세 단건 조회 | 지도/추천 카드 등에서 필요해지면 추가 |
-| `GET /api/courses/` | 공개 큐레이션 코스 목록 (List 화면용) | 백엔드에 "공개 코스" 개념 자체가 없음(`ItineraryDay`는 특정 `TripRequest`에 종속). List 화면은 이번 범위에서 프론트 정적 목업으로 유지, 이 모델이 생기면 연동 예정 |
+### 함께 정해야 할 것
 
-**12. 제휴 예약**: `LodgingRecommendationDTO.booking_url`을 계약에 이미 넣어뒀지만, 실제로는 숙소 추천 UI 자체를
-아직 만들지 않아서 이번 범위에서는 장소 상세(`PlaceDetailSheet`)에 "제휴 예약" 버튼만 붙였습니다(음식점
-카테고리에서만 노출). 클릭하면 실제 외부 URL로 이동하지 않고 "준비 중" 안내만 보여줍니다 — 실제 제휴사
-URL이 정해지면 그 값을 `booking_url`에 채워서 그대로 열면 됩니다.
+백엔드에 물어본 미결 항목은 `TEAM_SHARE.md`의 `## 4 > 추가 요청 > 4번`에 모아 뒀습니다.
+답이 오는 대로 이 문서의 계약을 확정하고, 명세서에 12·13번으로 추가 부탁드립니다.
 
----
+프론트 쪽에서 미리 정해 둔 것:
 
-## 11. 알려진 한계 / 백엔드팀 확인 필요 사항
+- 당일치기(0박)에서는 빌더가 숙박 단계를 노출하지 않으므로 **(A)를 호출하지 않습니다.**
+  서버가 이 경우를 어떻게 처리하든 화면에는 영향이 없습니다.
+- (A)가 빈 배열을 주면 스텝 5는 안내 문구를 띄우고 **고르지 않은 채로 넘어갈 수 있게** 할 예정입니다.
+  숙소 선택은 지금도 필수가 아니라 코스 생성을 막지 않습니다.
+  (빈 목록 처리는 연동 시점에 넣습니다 — 현재 더미는 항상 3건이라 아직 구현하지 않았습니다.)
 
-1. **`region_preference`가 단일 문자열**이라 Builder는 다중선택 대신 단일선택으로 구현했습니다.
-   여러 권역을 동시에 원하는 사용자 케이스가 있다면 배열로 바꾸는 걸 고려해주세요.
-2. **`include_places`/`exclude_places`는 모델상 `content_id` 리스트**지만, 장소 검색 API가 없어
-   프론트는 현재 사용자가 입력한 장소명(자유 텍스트)을 그대로 배열로 보냅니다. 백엔드에서
-   `title`로 fuzzy match 하거나, 검색 API를 추가해주시면 정확한 매칭이 가능합니다.
-3. **코스 생성 처리 시간**이 얼마나 걸릴지 몰라서 일단 동기 응답으로 가정했습니다. 오래 걸리면
-   비동기 처리(작업 큐 + polling 또는 웹소켓)로 바꿔야 합니다.
-4. **List 화면용 "공개 코스" 모델이 없습니다.** 필요하면 `ItineraryDay`/`ItineraryItem`을 재사용해
-   "공개 여부" 플래그를 단 별도 모델을 제안드릴 수 있습니다.
-5. **인증 시스템이 전부 없습니다.** `django.contrib.auth` 또는 별도 accounts 앱과 세션/토큰 발급이
-   필요합니다. 지금 프론트의 `User`/`AuthSession` 타입은 최소 형태이니 실제 구현 시 조정 가능합니다.
-6. **숙박 유형 명칭이 문서마다 다릅니다.** 이 계약은 `apps/places/models.py`의 `Lodging.small_category_name`
-   표기(호텔/리조트·콘도/펜션·민박/게스트하우스)를 기준으로 통일했습니다. 실제 데이터의 카테고리 값과
-   다르면 프론트 라벨을 맞춰드리겠습니다.
-7. **코스 편집·챗봇의 "변경 지점 이후만 재계산"** 로직은 지금 프론트 목업에서는 전체 재계산으로
-   단순화되어 있습니다. 실제 빔서치 엔진에서 부분 재계산을 지원하는지 확인이 필요합니다.
+## 남은 갭
+
+- **`day_overrides` 미지원**: 명세 1번에 대응 필드가 없어 일자별 개별 조건을 전송하지 못합니다.
+  프론트는 화면 구성을 확정했고 타입(`DayOverridePayload`, `src/api/types.ts`)도 있어서,
+  서버에 필드가 추가되면 `buildPayload()`에 한 줄만 넣으면 됩니다.
+  (`region_preference`는 한글 `RegionKey`라 `REGION_CODE_BY_KEY` 변환이 필요합니다.)
+  덧붙여 명세 1번의 `exclude_categories`가 "삭제 예정"으로 표기돼 있는데, 일자별 조건에서
+  계속 쓸 값이라 **유지를 요청**해 뒀습니다.
+- **위저드 스텝 5 '숙소 고르기'**: 백엔드 숙소 흐름은 전부 코스 생성 후(명세 6 → 7)라
+  코스 생성 전 조건만으로 숙소를 추천하는 API가 없습니다. 그래서 스텝 5는
+  `mockLodgingOptions.ts` 더미로 동작하고 고른 `lodgingContentId`는 전송되지 않습니다.
+  엔드포인트 신설을 요청해 뒀고, 생기면 더미 파일을 지우고 실 API로 교체합니다.
+- **`food_pref_2`, `food_cafe_balance`**: 명세 1번의 선택 필드지만 빌더에 입력 UI가 없어
+  보내지 않습니다. `food_cafe_balance`는 `"음식점중심"` / `"카페중심"`만 엔진이 인식합니다.
+- **권역 5분할 → 4사분면**: 빌더 UI의 한글 권역을 `REGION_CODE_BY_KEY`(`src/api/types.ts`)로
+  변환해 보냅니다. 경계 정의가 실제로 일치하는지는 백엔드 확인이 필요합니다.
+- **`POST /api/courses/{id}/modify/`**: 백엔드에서 항상 500이 납니다
+  (`apps/nlp/modification_interpreter.py`의 미정의 `client` 변수). 화면 연결 전 수정 필요.
+- **권한**: 명세 11번은 "모든 API에 토큰 필요"라고 하지만, 현재 백엔드 `/api/`는
+  `AllowAny`라 누구나 임의의 `trip_id`/`course_id`를 조회할 수 있습니다.

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useTrip } from "../hooks/useTrip";
-import { PURPOSE_LABELS, REGION_LABELS } from "../api/types";
-import { dayDateLabel, hhmm, slotLabel } from "../utils/format";
-import type { ItineraryDayDTO, PlaceDTO, TripResponse } from "../api/types";
+import { useCourse } from "../hooks/useCourses";
 import { useAuth } from "../auth/AuthContext";
-import { useSaveCourse } from "../hooks/useSaved";
-import Modal from "../components/Modal";
+import { toggleSavedCourse, useIsCourseSaved } from "../store/saved";
+import { PRIORITY_LABELS } from "../api/types";
+import { dayDateLabel, hhmm, slotLabel } from "../utils/format";
+import type { PlaceSummary } from "../api/types";
+import { courseItems, courseLodging, courseStartIso, courseStats } from "../utils/course";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
 
 const STOP_ANGLES = [
@@ -31,18 +31,15 @@ const PIN_POSITIONS = [
   { top: "80%", left: "55%" },
 ];
 
-function totalHours(days: ItineraryDayDTO[]): number {
-  return Math.round(days.reduce((sum, d) => sum + d.avail_hours, 0));
-}
-
+/** 라우트의 :id 는 명세 4번의 course_id 다. */
 export default function DetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: trip, isLoading, isError } = useTrip(id);
-  const { isAuthenticated } = useAuth();
-  const saveCourse = useSaveCourse();
-  const [selectedPlace, setSelectedPlace] = useState<PlaceDTO | null>(null);
-  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const { data: course, isLoading, isError } = useCourse(id);
+  const { user } = useAuth();
+  const courseId = Number(id);
+  const isSaved = useIsCourseSaved(user?.id, courseId);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceSummary | null>(null);
 
   if (isLoading) {
     return (
@@ -54,7 +51,7 @@ export default function DetailPage() {
     );
   }
 
-  if (isError || !trip) {
+  if (isError || !course) {
     return (
       <div className="state-panel">
         <span className="serif">코스를 찾을 수 없어요</span>
@@ -66,37 +63,30 @@ export default function DetailPage() {
     );
   }
 
-  const firstDay = trip.days[0];
-  const allItems = trip.days.flatMap((d) => d.items);
-  const purposeText = PURPOSE_LABELS[trip.request.purpose_main];
-  const regionText = trip.request.region_preference ? REGION_LABELS[trip.request.region_preference] : "제주 전역";
+  const firstDay = course.days.find((d) => d.items.length > 0) ?? course.days[0];
+  const allItems = courseItems(course);
+  const lodging = courseLodging(course);
+  const stats = courseStats(course);
+  const startIso = courseStartIso(course);
+  // 백엔드는 요청 조건(목적·권역)을 코스 응답에 담지 않는다. 숙소 스냅샷의 권역을 대신 쓴다.
+  const regionText = lodging?.region ?? "제주";
+  const modeText = PRIORITY_LABELS[course.mode];
   const titleFirst = allItems[0]?.place.title ?? "";
   const titleLast = allItems[allItems.length - 1]?.place.title ?? "";
-  const courseTitle = titleLast && titleFirst !== titleLast ? `${titleFirst}에서 ${titleLast}까지` : titleFirst;
-
-  function handleSaveClick() {
-    if (!isAuthenticated) {
-      navigate("/login", { state: { from: `/trip/${id}` } });
-      return;
-    }
-    saveCourse.reset();
-    setShowSaveConfirm(true);
-  }
-
-  function confirmSave(t: TripResponse) {
-    saveCourse.mutate({ trip: t, title: courseTitle });
-  }
+  // 저장함 목록에 쓸 한 줄 제목. 코스에는 이름 필드가 없어 첫·마지막 방문지로 만든다.
+  const savedTitle =
+    titleLast && titleFirst !== titleLast ? `${titleFirst} → ${titleLast}` : titleFirst || modeText;
 
   return (
     <div>
       <div className="crumb">
-        <Link to="/">홈</Link> / <Link to="/builder">코스 매칭</Link> / {regionText}
+        <Link to="/">홈</Link> / <Link to="/builder">코스 매칭</Link> / {modeText}
       </div>
 
       <header className="result-header">
         <div>
           <div className="match-badge">
-            ✓ {trip.total_days}일 코스 · {purposeText} 조건과 매칭됨
+            ✓ {course.days.length}일 코스 · {modeText}
           </div>
           <h1 className="result-title">
             {titleFirst}
@@ -112,20 +102,41 @@ export default function DetailPage() {
             {regionText} &nbsp;|&nbsp; {allItems.length}개 스팟 &nbsp;|&nbsp; 차량
           </div>
           <div className="meta-row">
-            <span className="meta-chip mono">⏱ 총 {totalHours(trip.days)}시간</span>
-            <span className="meta-chip mono">📅 {trip.total_days}일 일정</span>
-            {firstDay && <span className="meta-chip mono">🎯 목표 {firstDay.target_slots}곳/일</span>}
+            <span className="meta-chip mono">
+              ⏱ 체류 {Math.round(stats.stayMin / 60)}시간 · 이동 {stats.travelMin}분
+            </span>
+            <span className="meta-chip mono">📅 {course.days.length}일 일정</span>
+            <span className="meta-chip mono">🎯 추천 점수 {course.final_score.toFixed(1)}</span>
           </div>
           <div className="actions">
-            <button type="button" className="btn-primary" onClick={handleSaveClick}>
-              이 코스 저장하기
-            </button>
-            <Link className="btn-outline" to={`/trip/${id}/map`}>
+            <Link className="btn-primary" to={`/trip/${id}/map`}>
               지도에서 열기
             </Link>
-            <Link className="btn-outline" to={`/trip/${id}/edit`}>
-              코스 편집
-            </Link>
+            {user && (
+              <button
+                type="button"
+                className="btn-outline"
+                aria-pressed={isSaved}
+                onClick={() =>
+                  toggleSavedCourse(user.id, {
+                    course_id: courseId,
+                    title: savedTitle,
+                    spot_count: allItems.length,
+                    stay_min: stats.stayMin,
+                    travel_min: stats.travelMin,
+                    first_place: allItems[0]
+                      ? {
+                          title: allItems[0].place.title,
+                          latitude: allItems[0].place.latitude,
+                          longitude: allItems[0].place.longitude,
+                        }
+                      : undefined,
+                  })
+                }
+              >
+                {isSaved ? "♥ 저장됨" : "♡ 저장함에 담기"}
+              </button>
+            )}
           </div>
         </div>
         <div>
@@ -134,7 +145,7 @@ export default function DetailPage() {
             <div className="mini-face" />
             {(firstDay?.items ?? []).slice(0, 8).map((item, i) => (
               <div
-                key={item.order}
+                key={item.id}
                 className="mini-stop"
                 style={{
                   transform: `translate(-50%,-50%) translate(${STOP_ANGLES[i].x}px,${STOP_ANGLES[i].y}px)`,
@@ -144,9 +155,11 @@ export default function DetailPage() {
             <div className="mini-center">
               <div className="t">{regionText.split(" ")[0]}</div>
               <div className="s">
-                {firstDay ? `${hhmm(firstDay.items[0]?.arrive_at ?? trip.request.start_datetime)} → ${hhmm(
-                  firstDay.items[firstDay.items.length - 1]?.depart_at ?? trip.request.end_datetime,
-                )}` : ""}
+                {firstDay && firstDay.items.length > 0
+                  ? `${hhmm(firstDay.items[0].arrive_at)} → ${hhmm(
+                      firstDay.items[firstDay.items.length - 1].depart_at,
+                    )}`
+                  : ""}
               </div>
             </div>
           </div>
@@ -175,22 +188,27 @@ export default function DetailPage() {
           <div className="section-label">TIMELINE</div>
           <div className="section-title serif">시간 순서대로 보는 코스</div>
 
-          {trip.days.map((day) => (
+          {course.days.map((day) => (
             <div key={day.day_index}>
-              {trip.days.length > 1 && (
+              {course.days.length > 1 && (
                 <>
                   <div className="day-heading serif">
-                    Day {day.day_index} · {dayDateLabel(trip.request.start_datetime, day.day_index)}
+                    Day {day.day_index}
+                    {startIso ? ` · ${dayDateLabel(startIso, day.day_index)}` : ""}
                   </div>
-                  <div className="day-subheading mono">가용 {day.avail_hours}시간 · 목표 {day.target_slots}곳</div>
+                  <div className="day-subheading mono">
+                    가용 {day.avail_hours}시간 · 목표 {day.target_slots}곳
+                  </div>
                 </>
               )}
               {day.items.length === 0 && (
-                <div className="day-subheading mono">이 조건에 맞는 장소를 더 찾지 못했어요. 권역을 넓혀보세요.</div>
+                <div className="day-subheading mono">
+                  이 조건에 맞는 장소를 더 찾지 못했어요. 권역을 넓혀보세요.
+                </div>
               )}
               <div className="timeline">
                 {day.items.map((item, idx) => (
-                  <div className="tl-item" key={item.order}>
+                  <div className="tl-item" key={item.id}>
                     <div className="tl-dot mono">{hhmm(item.arrive_at)}</div>
                     <div
                       className="tl-card"
@@ -206,10 +224,17 @@ export default function DetailPage() {
                               {slotLabel(item.slot_type)}
                             </span>
                           )}
+                          {item.hours_uncertain && (
+                            <span className="meta-chip mono" style={{ marginLeft: 8 }}>
+                              운영시간 확인 필요
+                            </span>
+                          )}
                         </div>
-                        <div className="tl-stay mono">체류 {item.stay_min}분</div>
+                        <div className="tl-stay mono">체류 {item.place.stay_time_minutes}분</div>
                       </div>
-                      <div className="tl-desc">{item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}</div>
+                      <div className="tl-desc">
+                        {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
+                      </div>
                     </div>
                     {idx < day.items.length - 1 && (
                       <div className="tl-transit">
@@ -220,29 +245,37 @@ export default function DetailPage() {
                   </div>
                 ))}
 
-                {day.lodging && (
+                {day.lodging_snapshot && (
                   <div className="tl-item">
-                    <div className="tl-dot mono">{day.lodging.check_in_time ?? "숙박"}</div>
+                    <div className="tl-dot mono">{day.lodging_snapshot.check_in_time || "숙박"}</div>
                     <div className="tl-card tl-lodging">
                       <div className="tl-top">
                         <div className="tl-title">
-                          🛏 {day.lodging.title}
+                          🛏 {day.lodging_snapshot.title}
                           <span className="meta-chip mono" style={{ marginLeft: 8 }}>
-                            {day.lodging.small_category_name}
+                            {day.lodging_snapshot.category}
                           </span>
                         </div>
-                        {day.lodging.price_per_night != null && (
-                          <div className="tl-stay mono">
-                            {Math.round(day.lodging.price_per_night / 10000)}만원/박
-                          </div>
-                        )}
+                        <div className="tl-stay mono">{day.lodging_snapshot.price_hint}</div>
                       </div>
                       <div className="tl-desc">
-                        {day.lodging.address}
-                        {day.lodging.cooking ? " · 취사 가능" : ""}
-                        {day.lodging.parking ? " · 주차 가능" : ""}
-                        {day.lodging.check_out_time ? ` · 체크아웃 ${day.lodging.check_out_time}` : ""}
+                        {day.lodging_snapshot.address}
+                        {day.lodging_snapshot.room_type ? ` · ${day.lodging_snapshot.room_type}` : ""}
+                        {day.lodging_snapshot.check_out_time
+                          ? ` · 체크아웃 ${day.lodging_snapshot.check_out_time}`
+                          : ""}
                       </div>
+                      {day.lodging_snapshot.tripcom_link && (
+                        <a
+                          href={day.lodging_snapshot.tripcom_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="side-note"
+                          style={{ display: "inline-block", marginTop: 6 }}
+                        >
+                          트립닷컴에서 요금 확인 ↗
+                        </a>
+                      )}
                     </div>
                   </div>
                 )}
@@ -257,83 +290,24 @@ export default function DetailPage() {
             <Link to={`/trip/${id}/map`} style={{ display: "block" }}>
               <div className="map-placeholder">
                 {allItems.slice(0, 8).map((item, i) => (
-                  <div className="map-pin" key={item.place.content_id} style={PIN_POSITIONS[i]} />
+                  <div className="map-pin" key={item.id} style={PIN_POSITIONS[i]} />
                 ))}
               </div>
             </Link>
-            <div className="side-note">{allItems.length}개 스팟 · <Link to={`/trip/${id}/map`}>전체 지도 보기 →</Link></div>
-          </div>
-          <div className="side-card">
-            <h4>함께 보면 좋은 코스</h4>
-            <Link className="reco-item" to="/list" style={{ textDecoration: "none", color: "inherit" }}>
-              <div className="reco-thumb" />
-              <div className="reco-text">
-                <div className="rt">동문재래 야시장, 딱 4시간 코스</div>
-                <div className="rm mono">밤 · 도보</div>
-              </div>
-            </Link>
-            <Link className="reco-item" to="/list" style={{ textDecoration: "none", color: "inherit" }}>
-              <div className="reco-thumb" />
-              <div className="reco-text">
-                <div className="rt">협재 아침 바다에서 애월 밤 카페까지</div>
-                <div className="rm mono">아침+밤 · 숙박 1회</div>
-              </div>
-            </Link>
+            <div className="side-note">
+              {allItems.length}개 스팟 · <Link to={`/trip/${id}/map`}>전체 지도 보기 →</Link>
+            </div>
           </div>
         </aside>
       </div>
 
       <div className="sticky-actions">
-        <Link className="btn-outline" to={`/trip/${id}/map`}>
+        <Link className="btn-primary" to={`/trip/${id}/map`}>
           지도에서 열기
         </Link>
-        <button type="button" className="btn-primary" onClick={handleSaveClick}>
-          이 코스 저장하기
-        </button>
       </div>
 
       {selectedPlace && <PlaceDetailSheet place={selectedPlace} onClose={() => setSelectedPlace(null)} />}
-
-      {showSaveConfirm && (
-        <Modal title="코스를 저장하시겠습니까?" onClose={() => setShowSaveConfirm(false)}>
-          <p style={{ marginBottom: 20 }}>저장한 코스는 저장 목록에서 다시 열 수 있습니다.</p>
-          {saveCourse.isError && (
-            <div className="form-error" style={{ marginBottom: 14 }}>
-              저장에 실패했어요. 다시 시도해주세요.
-            </div>
-          )}
-          {saveCourse.isSuccess ? (
-            <div style={{ display: "flex", gap: 10 }}>
-              <Link className="btn-outline" to="/saved" style={{ flex: 1, textAlign: "center" }}>
-                저장 목록에서 확인
-              </Link>
-              <button type="button" className="btn-primary" style={{ flex: 1 }} onClick={() => setShowSaveConfirm(false)}>
-                닫기
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                type="button"
-                className="btn-outline"
-                style={{ flex: 1 }}
-                onClick={() => setShowSaveConfirm(false)}
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                style={{ flex: 1 }}
-                onClick={() => confirmSave(trip)}
-                disabled={saveCourse.isPending}
-              >
-                {saveCourse.isPending ? "저장 중…" : "저장"}
-              </button>
-            </div>
-          )}
-        </Modal>
-      )}
     </div>
   );
 }

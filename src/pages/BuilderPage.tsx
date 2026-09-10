@@ -7,23 +7,25 @@ import StepSchedule, { TRIP_LENGTH_CHIPS } from "../components/builder/StepSched
 import StepPurpose from "../components/builder/StepPurpose";
 import StepTaste from "../components/builder/StepTaste";
 import StepLodging from "../components/builder/StepLodging";
-import { useCreateCandidates } from "../hooks/useCandidates";
+import StepLodgingPick from "../components/builder/StepLodgingPick";
+import { useCreateTrip } from "../hooks/useCreateTrip";
 import { useAuth } from "../auth/AuthContext";
 import { addDays, fmtHour } from "../utils/date";
 import { defaultBuilderForm, type BuilderForm } from "../types/builderForm";
 import {
   PURPOSE_LABELS,
+  REGION_CODE_BY_KEY,
   REGION_LABELS,
-  type FoodPrefKey,
-  type LodgingType,
   type PurposeKey,
-  type TripRequestPayload,
+  type TripCreateRequest,
 } from "../api/types";
 
 const PENDING_TRIP_KEY = "tj_pending_trip";
-const COOKING_OPTION = "취사가능";
 
-type StepKey = "schedule" | "purpose" | "taste" | "lodging";
+type StepKey = "schedule" | "purpose" | "taste" | "lodging" | "lodgingPick";
+
+/** 다일 여행에서만 노출되는 스텝. 당일치기면 통째로 빠진다. */
+const MULTI_DAY_ONLY: StepKey[] = ["lodging", "lodgingPick"];
 
 interface StepDef {
   key: StepKey;
@@ -35,6 +37,7 @@ const ALL_STEPS: StepDef[] = [
   { key: "purpose", title: "어디서 무엇을 하고 싶으세요?" },
   { key: "taste", title: "취향을 알려주세요" },
   { key: "lodging", title: "숙박 조건" },
+  { key: "lodgingPick", title: "숙소를 골라주세요" },
 ];
 
 /** 스텝별 필수 검증. 빈 배열이면 통과. */
@@ -56,7 +59,7 @@ function stepErrors(form: BuilderForm, key: StepKey): string[] {
 
 export default function BuilderPage() {
   const navigate = useNavigate();
-  const createCandidates = useCreateCandidates();
+  const createTrip = useCreateTrip();
   const { isAuthenticated } = useAuth();
 
   const [form, setForm] = useState<BuilderForm>(defaultBuilderForm);
@@ -66,19 +69,13 @@ export default function BuilderPage() {
   const patch = (p: Partial<BuilderForm>) => setForm((f) => ({ ...f, ...p }));
 
   const isMultiDay = form.nights > 0;
-  const totalDays = form.nights + 1;
   const endDate = useMemo(() => addDays(form.startDate, form.nights), [form.startDate, form.nights]);
 
-  // 당일치기면 숙박 스텝 자체가 빠져 3스텝이 된다.
-  const steps = useMemo(() => (isMultiDay ? ALL_STEPS : ALL_STEPS.filter((s) => s.key !== "lodging")), [isMultiDay]);
-
-  // 여행 길이가 줄면 존재하지 않는 날짜의 일자별 조건을 버린다.
-  useEffect(() => {
-    setForm((f) => {
-      const kept = f.dayOverrides.filter((o) => o.day_index <= totalDays);
-      return kept.length === f.dayOverrides.length ? f : { ...f, dayOverrides: kept };
-    });
-  }, [totalDays]);
+  // 당일치기면 숙박 관련 스텝이 빠져 3스텝이 된다.
+  const steps = useMemo(
+    () => (isMultiDay ? ALL_STEPS : ALL_STEPS.filter((s) => !MULTI_DAY_ONLY.includes(s.key))),
+    [isMultiDay],
+  );
 
   // 숙박 스텝이 사라져 step이 배열 밖을 가리키지 않도록 클램프.
   useEffect(() => {
@@ -111,23 +108,32 @@ export default function BuilderPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function buildPayload(): TripRequestPayload {
+  function buildPayload(): TripCreateRequest {
     return {
-      start_datetime: `${form.startDate}T${fmtHour(form.startHour)}:00`,
-      end_datetime: `${endDate}T${fmtHour(form.endHour === 24 ? 0 : form.endHour)}:00`,
-      headcount: Number(form.headcount),
+      // 서버 TIME_ZONE이 UTC라서 오프셋을 빼면 9시간 밀린다. KST를 명시한다.
+      start_datetime: `${form.startDate}T${fmtHour(form.startHour)}:00+09:00`,
+      end_datetime: `${endDate}T${fmtHour(form.endHour === 24 ? 0 : form.endHour)}:00+09:00`,
+      guests: Number(form.headcount),
       purpose_main: form.purposeMain as PurposeKey,
       purpose_sub: form.purposeSub || undefined,
-      region_preference: form.region || undefined,
-      day_overrides: form.dayOverrides.length
-        ? form.dayOverrides.filter((o) => o.day_index <= totalDays)
-        : undefined,
+      region_preference: form.region ? REGION_CODE_BY_KEY[form.region] : undefined,
       free_text_input: form.freeTextInput || undefined,
-      food_pref_1: (form.foodPref1 as FoodPrefKey) || undefined,
-      lodging_type: isMultiDay ? (form.lodgingType as LodgingType) || undefined : undefined,
-      lodging_conditions: isMultiDay ? (form.cooking === "필요" ? [COOKING_OPTION] : []) : undefined,
+      food_pref_1: form.foodPrefs[0] || undefined,
+      food_pref_2: form.foodPrefs[1] || undefined,
+      lodging_type: isMultiDay ? form.lodgingType || undefined : undefined,
+      lodging_need_cooking: isMultiDay ? form.cooking === "필요" : undefined,
       lodging_free_text: isMultiDay ? form.lodgingFreeText || undefined : undefined,
+      // [백엔드 연결 이전] 위저드에서 고른 숙소(form.lodgingContentId)는 아직 보내지 않는다.
+      // 명세 1번 request에 대응 필드가 없어서다. 백엔드에 `lodging_content_id` 추가를
+      // 요청한 뒤 여기에 한 줄 넣으면 된다. (StepPurpose.tsx의 day_overrides와 같은 상황)
     };
+  }
+
+  function submit(payload: TripCreateRequest) {
+    createTrip.mutate(payload, {
+      // 명세 1번은 코스 본문이 아니라 id 3개만 준다. 후보 화면이 trip_id로 상세를 받아온다.
+      onSuccess: (res) => navigate(`/trips/${res.trip_id}/courses`),
+    });
   }
 
   function handleSubmit() {
@@ -141,9 +147,7 @@ export default function BuilderPage() {
       return;
     }
 
-    createCandidates.mutate(payload, {
-      onSuccess: (res) => navigate(`/trips/candidates/${res.request_id}`),
-    });
+    submit(payload);
   }
 
   // If the user got redirected to /login mid-submit, resume automatically
@@ -154,17 +158,14 @@ export default function BuilderPage() {
     if (!raw) return;
     sessionStorage.removeItem(PENDING_TRIP_KEY);
     try {
-      const payload = JSON.parse(raw) as TripRequestPayload;
-      createCandidates.mutate(payload, {
-        onSuccess: (res) => navigate(`/trips/candidates/${res.request_id}`),
-      });
+      submit(JSON.parse(raw) as TripCreateRequest);
     } catch {
       // ignore malformed pending payload
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  if (createCandidates.isPending) {
+  if (createTrip.isPending) {
     return <LoadingChecklist />;
   }
 
@@ -186,6 +187,7 @@ export default function BuilderPage() {
             {currentStep.key === "purpose" && <StepPurpose form={form} patch={patch} />}
             {currentStep.key === "taste" && <StepTaste form={form} patch={patch} />}
             {currentStep.key === "lodging" && <StepLodging form={form} patch={patch} />}
+            {currentStep.key === "lodgingPick" && <StepLodgingPick form={form} patch={patch} />}
           </div>
 
           {currentErrors.map((e) => (
@@ -202,7 +204,7 @@ export default function BuilderPage() {
               <button
                 className="cta-final"
                 onClick={handleSubmit}
-                disabled={blockedFields.length > 0 || createCandidates.isPending}
+                disabled={blockedFields.length > 0 || createTrip.isPending}
               >
                 이 조건으로 코스 매칭받기 →
               </button>
@@ -213,7 +215,7 @@ export default function BuilderPage() {
             )}
           </div>
 
-          {createCandidates.isError && (
+          {createTrip.isError && (
             <div className="form-error">코스를 만드는 중 문제가 발생했어요. 조건을 확인하고 다시 시도해주세요.</div>
           )}
           {isLastStep && !isAuthenticated && (
@@ -246,10 +248,6 @@ export default function BuilderPage() {
                   {form.purposeMain ? PURPOSE_LABELS[form.purposeMain] : "미선택"}
                   {form.purposeSub ? ` · ${PURPOSE_LABELS[form.purposeSub]}` : ""}
                 </b>
-              </div>
-              <div className="sum-row">
-                <span>일자별 맞춤</span>
-                <b className="mono">{form.dayOverrides.length ? `${form.dayOverrides.length}일` : "없음"}</b>
               </div>
             </div>
           </div>

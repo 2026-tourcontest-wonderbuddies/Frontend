@@ -159,7 +159,7 @@ export interface FieldErrors {
   field_errors?: Record<string, string[]>;
 }
 
-// ── Auth (mock — backend has no auth app yet) ──────────────────────────────
+// ── Auth (Google 로그인은 명세 11번 POST /api/auth/google/ 로 연동됨) ──────────
 
 export interface User {
   id: string;
@@ -338,4 +338,186 @@ export interface PlaceSearchParams {
   q?: string;
   category?: string;
   region?: RegionKey;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Notion API 명세서 (04. 개발 / API 명세서) 기준 타입.
+// [백엔드 연결 이전] 위쪽 타입들은 아직 백엔드가 없는 기능(저장/검색/채팅/수동편집)이 계속 쓰므로 남겨둔다.
+// 새로 연동하는 화면은 이 아래 타입만 쓴다.
+// ══════════════════════════════════════════════════════════════════════════
+
+/** 백엔드 TripRequest.REGION_CHOICES */
+export type RegionCode = Quadrant | "ALL";
+
+/** 빌더 UI의 한글 권역(5분할) → 백엔드 4사분면 코드 */
+export const REGION_CODE_BY_KEY: Record<RegionKey, RegionCode> = {
+  제주시동부: "NE",
+  제주시서부: "NW",
+  제주시내: "NW",
+  서귀포동부: "SE",
+  서귀포서부: "SW",
+  전역: "ALL",
+};
+
+/** 명세 1번 · POST /api/trips/ request body */
+export interface TripCreateRequest {
+  start_datetime: string; // "2026-09-10T14:00:00+09:00"
+  end_datetime: string;
+  guests: number;
+  purpose_main: PurposeKey;
+  purpose_sub?: PurposeKey;
+  region_preference?: RegionCode;
+  free_text_input?: string;
+  food_pref_1?: string;
+  food_pref_2?: string;
+  // [백엔드 연결 이전] 명세엔 있지만 프론트에 아직 입력 UI가 없어 항상 undefined로 보낸다.
+  food_cafe_balance?: string;
+  lodging_type?: string;
+  lodging_need_cooking?: boolean;
+  lodging_free_text?: string;
+}
+
+/** 명세 1번 · 응답. 코스 본문이 아니라 3개 코스의 id만 온다. */
+export interface TripCreateResponse {
+  trip_id: number;
+  course_ids: Record<CoursePriority, number>;
+}
+
+/** 명세 2번 · GET /api/trips/{trip_id}/courses/ */
+export interface CourseSummary {
+  id: number;
+  mode: CoursePriority;
+  is_selected: boolean;
+  final_score: number;
+  created_at: string;
+}
+
+export interface TripCoursesResponse {
+  trip_id: number;
+  courses: CourseSummary[];
+}
+
+/** 명세 4번 · 코스 상세 안의 place */
+export interface PlaceSummary {
+  content_id: string;
+  title: string;
+  content_type_name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  overview: string;
+  hours_raw: string;
+  fees: string;
+  parking: string;
+  stay_time_minutes: number;
+}
+
+export interface CourseItem {
+  id: number;
+  order: number;
+  place: PlaceSummary;
+  slot_type: SlotType;
+  arrive_at: string;
+  depart_at: string;
+  travel_min_from_prev: number | null;
+  locked: boolean;
+  hours_uncertain: boolean;
+}
+
+/** 숙소 카드의 조건 충족 표시 한 줄 */
+export interface LodgingCheck {
+  name: string;
+  detail: string;
+  status: "yes" | "no" | "unknown";
+}
+
+/**
+ * 명세 4·6번 · 숙소 스냅샷 카드.
+ * 요금은 숫자가 아니라 문자열 힌트(price_hint)이고, 실시간 가격이 아니다.
+ */
+export interface LodgingCard {
+  content_id: string;
+  title: string;
+  address: string;
+  region: string;
+  category: string;
+  lat: number;
+  lon: number;
+  grade: number | null;
+  room_type: string;
+  room_count: number | null;
+  max_guests: number | null;
+  price_hint: string;
+  check_in_time: string;
+  check_out_time: string;
+  checks: LodgingCheck[];
+  needs_check: boolean;
+  unknown_fields: string[];
+  query_fit: string | null;
+  travel_min: number | null;
+  travel_min_total: number | null;
+  travel_min_by_night: number[];
+  tripcom_link: string;
+  tripcom_link_type: string;
+  tripcom_tracked: boolean;
+  tripcom_zone_id: string;
+}
+
+export interface CourseDay {
+  id: number;
+  day_index: number;
+  day_case: DayCase;
+  avail_hours: number;
+  target_slots: number;
+  need_lunch: boolean;
+  need_dinner: boolean;
+  need_night_spot: boolean;
+  lodging_snapshot: LodgingCard | null;
+  lodging_options_snapshot: LodgingCard[];
+  items: CourseItem[];
+}
+
+/** 명세 4번 · GET /api/courses/{course_id}/ */
+export interface CourseDetail {
+  id: number;
+  mode: CoursePriority;
+  is_selected: boolean;
+  final_score: number;
+  created_at: string;
+  days: CourseDay[];
+}
+
+/** 명세 5번 · GET /api/courses/{course_id}/places/ */
+export interface CoursePlacesResponse {
+  course_id: number;
+  places: PlaceSummary[];
+}
+
+/**
+ * 명세 6번 · 추천 숙소 목록.
+ * 숙소가 없는 코스는 current_selected 키 자체가 빠져서 온다.
+ */
+export interface LodgingOptionsResponse {
+  current_selected?: LodgingCard | null;
+  lodging_options: LodgingCard[];
+}
+
+/** 명세 3번 · POST /api/courses/{course_id}/select/ */
+export interface SelectCourseResponse {
+  course_id: number;
+  is_selected: boolean;
+}
+
+/** 명세 7번 · POST /api/courses/{course_id}/select-lodging/ */
+export interface SelectLodgingResponse {
+  course_id: number;
+  selected_content_id: string;
+  days_updated: number;
+}
+
+/** 명세 8번 · POST /api/courses/{course_id}/modify/ */
+export interface ModifyCourseResponse {
+  log_id: number;
+  parsed_delta: unknown;
+  message: string;
 }

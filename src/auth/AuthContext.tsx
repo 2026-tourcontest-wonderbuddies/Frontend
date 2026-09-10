@@ -1,14 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { AUTH_STORAGE_KEY, ApiError } from "../api/client";
 import * as authApi from "../api/auth";
-import type { AuthSession, LoginPayload, SignupPayload, User } from "../api/types";
+import type { AuthSession, User } from "../api/types";
 
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
-  login: (payload: LoginPayload) => Promise<void>;
   loginWithGoogle: (accessToken: string) => Promise<void>;
-  signup: (payload: SignupPayload) => Promise<void>;
   logout: () => void;
 }
 
@@ -45,35 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  async function login(payload: LoginPayload) {
-    const session = await authApi.login(payload);
-    storeSession(session);
-    setUser(session.user);
-  }
-
   async function loginWithGoogle(accessToken: string) {
     const session = await authApi.loginWithGoogle(accessToken);
     storeSession(session);
     setUser(session.user);
   }
 
-  async function signup(payload: SignupPayload) {
-    const session = await authApi.signup(payload);
-    storeSession(session);
-    setUser(session.user);
-  }
-
+  /** 서버에 로그아웃 엔드포인트가 없다(명세에 미포함). 로컬 세션만 지운다. */
   function logout() {
     storeSession(null);
     setUser(null);
-    authApi.logout().catch(() => {
-      // best-effort — client-side session is already cleared
-    });
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: Boolean(user), login, loginWithGoogle, signup, logout }}
+      value={{ user, isAuthenticated: Boolean(user), loginWithGoogle, logout }}
     >
       {children}
     </AuthContext.Provider>

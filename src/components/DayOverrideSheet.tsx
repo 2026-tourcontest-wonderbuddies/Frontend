@@ -65,6 +65,9 @@ export default function DayOverrideSheet({
 
   return (
     <Modal title="일자별 조건 설정" onClose={onClose} wide>
+      <div className="nocon-banner">
+        ⚠ 백엔드 미연동 — 여기서 설정한 값은 아직 서버로 전송되지 않아요.
+      </div>
       <p style={{ marginBottom: 16 }}>
         날짜마다 여행 목적·희망 권역·제외 카테고리를 다르게 설정할 수 있어요. 설정하지 않은 날짜는 공통 조건을
         그대로 씁니다.
