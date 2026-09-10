@@ -191,6 +191,8 @@ export interface DayOverridePayload {
   purpose_sub?: PurposeKey;
   region_preference?: RegionKey;
   exclude_categories?: string[]; // TourAPI 중분류 이름 배열
+  start_hour?: number; // 0~23. 그 날 활동 시작 시각. 1일차는 start_datetime과 중복이라 생략
+  end_hour?: number; // 1~24. 그 날 활동 종료 시각. 마지막 날은 end_datetime과 중복이라 생략
 }
 
 // ── Course candidates (recommendation list before a trip is persisted) ────

@@ -96,7 +96,8 @@ src/
 
 #### 1. 명세 1번에 `day_overrides` 추가 (일자별 개별 조건)
 
-다일 여행에서 날짜마다 목적·권역·제외 카테고리를 다르게 두는 것이 빌더의 확정 화면 구성입니다.
+다일 여행에서 날짜마다 목적·권역·제외 카테고리, 그리고 **하루 활동 시간대**를 다르게 두는 것이
+빌더의 확정 화면 구성입니다.
 현재는 서버에 대응 필드가 없어 사용자가 입력한 값을 보내지 못하고 있습니다.
 
 프론트 타입은 이미 확정돼 있습니다(`src/api/types.ts`의 `DayOverridePayload`).
@@ -109,7 +110,9 @@ src/
     "purpose_main": "activity",
     "purpose_sub": "food",
     "region_preference": "NE",
-    "exclude_categories": ["자연관광"]
+    "exclude_categories": ["자연관광"],
+    "start_hour": 9,
+    "end_hour": 21
   }
 ]
 ```
@@ -119,6 +122,11 @@ src/
 - 각 필드는 생략 가능하며, 생략하면 그 항목만 공통값을 씁니다.
 - `region_preference`는 명세 1번과 동일한 `NE | NW | SE | SW | ALL` 코드로 보냅니다.
 - `purpose_main` / `purpose_sub`도 명세 1번과 동일한 값입니다.
+- `start_hour` / `end_hour`는 **그 날의 활동 시간대**입니다(정시 단위, 0~24).
+  다일 여행은 `start_datetime`·`end_datetime`만으로는 1일차 시작과 마지막 날 종료밖에 알 수 없어
+  2일차 이후 하루를 몇 시부터 몇 시까지 쓰는지가 비어 있었습니다. 이 두 필드가 그 구멍을 메웁니다.
+- 1일차의 `start_hour`와 마지막 날의 `end_hour`는 `start_datetime`·`end_datetime`과 중복이라 보내지 않습니다.
+  그 사이 날짜는 사용자가 따로 정하지 않으면 프론트가 기본값 **09~21시**로 채워 보냅니다.
 
 #### 2. `exclude_categories`를 삭제하지 말아 주세요
 

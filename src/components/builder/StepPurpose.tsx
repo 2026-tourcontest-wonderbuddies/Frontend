@@ -2,6 +2,7 @@ import { useState } from "react";
 import ChipGroup from "../ChipGroup";
 import DayOverrideSheet from "../DayOverrideSheet";
 import { pickOptions, toOptions } from "../../utils/options";
+import { resolveDayHours } from "../../utils/date";
 import { BUILDER_REGION_KEYS, PURPOSE_LABELS, REGION_LABELS, type PurposeKey, type RegionKey } from "../../api/types";
 import type { StepProps } from "../../types/builderForm";
 
@@ -56,6 +57,7 @@ export default function StepPurpose({ form, patch }: StepProps) {
       {showDayOverrides && (
         <DayOverrideSheet
           totalDays={totalDays}
+          dayHours={resolveDayHours(form.nights, form.startHour, form.endHour, form.dayHours)}
           commonPurpose={form.purposeMain}
           commonPurposeSub={form.purposeSub}
           commonRegion={form.region}

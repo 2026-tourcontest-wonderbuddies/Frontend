@@ -215,12 +215,18 @@ h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px);
 .time-box{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 8px;}
 .time-box .lbl{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft); padding:0 6px;}
 .stepper-btn{width:28px; height:28px; border-radius:8px; border:1px solid var(--line); font-family:'Space Mono',monospace; font-size:14px;}
-.stepper-btn:hover{border-color:var(--ink);}
+.stepper-btn:not(:disabled):hover{border-color:var(--ink);}
+.stepper-btn:disabled{opacity:0.35; cursor:not-allowed;}
 .time-val{font-family:'Space Mono',monospace; font-size:16px; font-weight:700; min-width:56px; text-align:center;}
 .time-arrow{font-family:'Space Mono',monospace; color:var(--ink-soft);}
 .presets{display:flex; gap:8px; margin-left:40px; margin-top:14px; flex-wrap:wrap;}
 .preset{font-family:'Space Mono',monospace; font-size:11.5px; padding:7px 12px; border-radius:999px; border:1px dashed var(--line); color:var(--ink-soft);}
 .preset:hover{border-color:var(--sunset); color:var(--sunset);}
+.day-hours-list{display:flex; flex-direction:column; gap:10px; margin-left:40px; margin-top:20px;}
+.day-hours-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+.day-hours-label{font-family:'Space Mono',monospace; font-size:12.5px; font-weight:700; min-width:52px;}
+.day-hours-hint{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft);}
+.day-hours-note{margin-left:40px;}
 .date-inputs{display:flex; align-items:center; gap:12px; margin-left:40px; margin-top:16px; flex-wrap:wrap;}
 .date-box{display:flex; flex-direction:column; gap:6px;}
 .date-box .lbl{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft);}
@@ -244,7 +250,7 @@ h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px);
 .subsection-title{font-family:'Song Myung',serif; font-size:15.5px; margin-bottom:4px;}
 .subsection-sub{font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-soft); margin-bottom:14px;}
 .lodging-pick-list{display:grid; gap:14px; margin:18px 0 0 40px;}
-@media (max-width:640px){ .step-sub,.chip-row,.time-inputs,.presets,.date-inputs,.field-row,.toggle-row,.tag-input-row,.subsection,.lodging-pick-list{margin-left:0;} }
+@media (max-width:640px){ .step-sub,.chip-row,.time-inputs,.presets,.date-inputs,.field-row,.toggle-row,.tag-input-row,.subsection,.lodging-pick-list,.day-hours-list,.day-hours-note{margin-left:0;} }
 
 .preview{position:sticky; top:96px;}
 @media (max-width:960px){ .preview{position:static;} }
@@ -557,3 +563,11 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .nocon-tag{display:flex; width:fit-content; align-items:center; gap:6px; font-family:'Space Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:0.5px; background:var(--nocon); color:#fff; padding:4px 10px; border-radius:999px; margin-bottom:10px;}
 .nocon-note{font-family:'Space Mono',monospace; font-size:11.5px; line-height:1.7; color:var(--nocon); margin-top:10px;}
 .nocon-banner{display:block; font-family:'Space Mono',monospace; font-size:11.5px; line-height:1.7; color:var(--nocon); background:rgba(217,45,32,0.06); border-left:3px solid var(--nocon); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:16px;}
+
+/* 모바일에서는 한 줄에 시작·종료가 다 들어가지 않아 일자 라벨을 윗줄로 분리한다. */
+@media (max-width:640px){
+  .day-hours-list{gap:18px;}
+  .day-hours-row{gap:8px;}
+  .day-hours-row .time-arrow{display:none;}
+  .day-hours-label{width:100%; min-width:0;}
+}

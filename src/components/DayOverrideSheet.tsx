@@ -3,6 +3,7 @@ import Modal from "./Modal";
 import ChipGroup from "./ChipGroup";
 import CategoryExcludePicker from "./CategoryExcludePicker";
 import { pickOptions, toOptions } from "../utils/options";
+import { fmtHour, type DayHours } from "../utils/date";
 import {
   BUILDER_REGION_KEYS,
   PURPOSE_LABELS,
@@ -17,6 +18,8 @@ const REGION_OPTIONS = pickOptions(REGION_LABELS, BUILDER_REGION_KEYS);
 
 interface DayOverrideSheetProps {
   totalDays: number;
+  /** 1스텝에서 정한 일자별 활동 시각. 여기서는 요약에 표시만 한다. */
+  dayHours: DayHours[];
   commonPurpose: PurposeKey | "";
   commonPurposeSub: PurposeKey | "";
   commonRegion: RegionKey | "";
@@ -27,6 +30,7 @@ interface DayOverrideSheetProps {
 
 export default function DayOverrideSheet({
   totalDays,
+  dayHours,
   commonPurpose,
   commonPurposeSub,
   commonRegion,
@@ -62,6 +66,7 @@ export default function DayOverrideSheet({
   const purposeMain = current?.purpose_main ?? commonPurpose;
   const purposeSub = current?.purpose_sub ?? commonPurposeSub;
   const excludeCategories = current?.exclude_categories ?? [];
+  const hours = dayHours.find((h) => h.dayIndex === activeDay);
 
   return (
     <Modal title="일자별 조건 설정" onClose={onClose} wide>
@@ -123,6 +128,12 @@ export default function DayOverrideSheet({
 
       <div className="override-summary">
         <h4>{activeDay}일차 현재 설정 요약</h4>
+        <div className="sum-row">
+          <span>여행 시간</span>
+          <b className="mono">
+            {hours ? `${fmtHour(hours.startHour)} ~ ${fmtHour(hours.endHour)}` : "미설정"}
+          </b>
+        </div>
         <div className="sum-row">
           <span>여행 목적</span>
           <b className="mono">
