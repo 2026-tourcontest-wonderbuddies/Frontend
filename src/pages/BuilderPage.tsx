@@ -10,7 +10,7 @@ import StepLodging from "../components/builder/StepLodging";
 import StepLodgingPick from "../components/builder/StepLodgingPick";
 import { useCreateTrip } from "../hooks/useCreateTrip";
 import { useAuth } from "../auth/AuthContext";
-import { addDays, fmtHour } from "../utils/date";
+import { addDays, fmtHour, resolveDayHours } from "../utils/date";
 import { defaultBuilderForm, type BuilderForm } from "../types/builderForm";
 import {
   PURPOSE_LABELS,
@@ -47,6 +47,13 @@ function stepErrors(form: BuilderForm, key: StepKey): string[] {
     if (!form.startDate) errors.push("출발일을 선택해주세요.");
     if (form.nights === 0 && form.endHour <= form.startHour) {
       errors.push("당일치기는 종료 시각이 시작 시각보다 늦어야 해요.");
+    }
+    if (form.nights > 0) {
+      for (const d of resolveDayHours(form.nights, form.startHour, form.endHour, form.dayHours)) {
+        if (d.endHour <= d.startHour) {
+          errors.push(`${d.dayIndex}일차는 종료 시각이 시작 시각보다 늦어야 해요.`);
+        }
+      }
     }
     const n = Number(form.headcount);
     if (!Number.isFinite(n) || n < 1) errors.push("인원 수는 1명 이상이어야 해요.");
@@ -109,10 +116,12 @@ export default function BuilderPage() {
   }
 
   function buildPayload(): TripCreateRequest {
+    // 24시는 그 날 00:00이 아니라 다음 날 00:00이다. 날짜를 하루 넘겨야 마지막 날이 사라지지 않는다.
+    const endsAtMidnight = form.endHour === 24;
     return {
       // 서버 TIME_ZONE이 UTC라서 오프셋을 빼면 9시간 밀린다. KST를 명시한다.
       start_datetime: `${form.startDate}T${fmtHour(form.startHour)}:00+09:00`,
-      end_datetime: `${endDate}T${fmtHour(form.endHour === 24 ? 0 : form.endHour)}:00+09:00`,
+      end_datetime: `${endsAtMidnight ? addDays(endDate, 1) : endDate}T${fmtHour(endsAtMidnight ? 0 : form.endHour)}:00+09:00`,
       guests: Number(form.headcount),
       purpose_main: form.purposeMain as PurposeKey,
       purpose_sub: form.purposeSub || undefined,

@@ -5,7 +5,7 @@ import type {
   PurposeKey,
   RegionKey,
 } from "../api/types";
-import { defaultStartDate } from "../utils/date";
+import { defaultStartDate, type DayHoursOverride } from "../utils/date";
 
 /**
  * 빌더 위저드의 전체 입력 상태. 스텝을 오가도 값이 보존되도록 셸(BuilderPage)이 통째로 들고,
@@ -15,8 +15,9 @@ export interface BuilderForm {
   // 1 — 일정
   startDate: string;
   nights: number;
-  startHour: number;
-  endHour: number;
+  startHour: number; // 1일차 시작 — 제주공항 밖으로 나오는 시각
+  endHour: number; // 마지막 날 종료 — 공항에 도착해야 하는 시각
+  dayHours: DayHoursOverride[]; // 그 사이 일자별 활동 시각. 손댄 날만 담긴다.
   headcount: string; // <input type="number">의 값이라 string으로 두고 제출 시 Number()
 
   // 2 — 목적·권역
@@ -44,6 +45,7 @@ export function defaultBuilderForm(): BuilderForm {
     nights: 3,
     startHour: 9,
     endHour: 18,
+    dayHours: [],
     headcount: "2",
     region: "서귀포동부",
     purposeMain: "photo",

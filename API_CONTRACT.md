@@ -197,6 +197,9 @@ Response — 카드 스키마는 **명세 6번의 `LodgingCard`를 그대로 재
 ## 남은 갭
 
 - **`day_overrides` 미지원**: 명세 1번에 대응 필드가 없어 일자별 개별 조건을 전송하지 못합니다.
+  여기에는 목적·권역·제외 카테고리뿐 아니라 **일자별 활동 시각(`start_hour`/`end_hour`)** 도 포함됩니다.
+  `start_datetime`·`end_datetime`는 1일차 시작과 마지막 날 종료라서, 다일 여행의 중간 일자
+  활동 시간대는 이 필드가 생기기 전까지 서버에 전달되지 않습니다(빌더 1스텝에서 입력은 받고 있습니다).
   프론트는 화면 구성을 확정했고 타입(`DayOverridePayload`, `src/api/types.ts`)도 있어서,
   서버에 필드가 추가되면 `buildPayload()`에 한 줄만 넣으면 됩니다.
   (`region_preference`는 한글 `RegionKey`라 `REGION_CODE_BY_KEY` 변환이 필요합니다.)
