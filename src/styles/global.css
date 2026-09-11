@@ -5,6 +5,8 @@
   --card:#FFFFFF;
   /* 백엔드 미연동 구간 표시용. 브랜드 코럴(--sunset)과 헷갈리지 않도록 순수 적색을 쓴다. */
   --nocon:#D92D20;
+  /* 지도 마커 범례(🟢 방문지 / 🔴 도착지)용. 기존 팔레트엔 초록·순적색이 없어서 추가한다. */
+  --marker-visit:#2FA84F; --marker-end:#E14B4B;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
@@ -372,6 +374,11 @@ h1.result-title{font-family:'Song Myung',serif; font-size:clamp(26px,3.8vw,42px)
 .side-card h4{font-family:'Song Myung',serif; font-size:16px; margin-bottom:12px;}
 .map-placeholder{height:190px; border-radius:12px; margin-bottom:12px; background:linear-gradient(rgba(27,35,64,0.06) 1px, transparent 1px) 0 0/24px 24px, linear-gradient(90deg, rgba(27,35,64,0.06) 1px, transparent 1px) 0 0/24px 24px, var(--paper-deep); position:relative; overflow:hidden;}
 .map-pin{position:absolute; width:10px; height:10px; border-radius:50% 50% 50% 0; background:var(--sunset); transform:rotate(-45deg);}
+/* 마커 색상: 🔵 출발지 · 🟢 방문지 · 🟠 숙소 · 🔴 도착지 (지도 범례와 맞춘다) */
+.map-pin--start{background:var(--midday);}
+.map-pin--visit{background:var(--marker-visit);}
+.map-pin--lodging{background:var(--sunset);}
+.map-pin--end{background:var(--marker-end);}
 /* 카카오맵으로 나가는 마커: 10px 핀은 손가락으로 누르기엔 작아서 ::after 로 투명한 터치 영역을 넓힌다. */
 a.map-pin{display:block; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;}
 a.map-pin::after{content:""; position:absolute; inset:-11px; border-radius:50%;}
@@ -394,6 +401,11 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
   border-radius:999px; background:var(--sunset); color:#fff; border:2px solid #fff;
   font-family:'Space Mono',monospace; font-size:11px; line-height:1;
   box-shadow:0 2px 6px rgba(27,35,64,0.35); transition:transform .15s ease;}
+/* 마커 색상: 🔵 출발지 · 🟢 방문지 · 🟠 숙소 · 🔴 도착지 (지도 범례와 맞춘다) */
+.kakao-pin-dot--start{background:var(--midday);}
+.kakao-pin-dot--visit{background:var(--marker-visit);}
+.kakao-pin-dot--lodging{background:var(--sunset);}
+.kakao-pin-dot--end{background:var(--marker-end);}
 /* 이름표는 마커가 몰려 있으면 서로 겹쳐 읽을 수 없게 된다.
    그래서 기본은 숨기고 hover/focus 때만 띄운다. 방문 순서 번호는 항상 보이고,
    번호 ↔ 장소 대응은 옆의 '타임라인' 탭에서 확인할 수 있다. */

@@ -4,7 +4,7 @@ import { useCourse } from "../hooks/useCourses";
 import MapPin from "../components/MapPin";
 import KakaoMap, { type KakaoMapPoint } from "../components/KakaoMap";
 import { hhmm } from "../utils/format";
-import { courseItems, courseStats } from "../utils/course";
+import { courseItems, courseLodging, courseStats } from "../utils/course";
 
 const PIN_POSITIONS = [
   { top: "18%", left: "55%" },
@@ -47,15 +47,35 @@ export default function MapPage() {
   // 실제 지도에 찍을 점들. 번호는 아래 "타임라인" 탭의 번호와 일치시킨다.
   // 타임라인은 하루 단위로 1부터 다시 세므로, 여러 날 코스는 "2-3"(Day 2의 3번째)으로 표기한다.
   const isMultiDay = course.days.length > 1;
-  const mapPoints: KakaoMapPoint[] = course.days.flatMap((day) =>
+  const visitPoints: KakaoMapPoint[] = course.days.flatMap((day) =>
     day.items.map((item, idx) => ({
       id: String(item.id),
       title: item.place.title,
       latitude: item.place.latitude,
       longitude: item.place.longitude,
       label: isMultiDay ? `${day.day_index}-${idx + 1}` : String(idx + 1),
+      kind: "visit" as const,
     })),
   );
+  // 첫 방문지 = 출발지, 마지막 방문지 = 도착지. 숙소는 여행 전체에 하나뿐이라 따로 붙인다.
+  if (visitPoints.length > 0) {
+    visitPoints[0] = { ...visitPoints[0], kind: "start" };
+    visitPoints[visitPoints.length - 1] = { ...visitPoints[visitPoints.length - 1], kind: "end" };
+  }
+  const lodging = courseLodging(course);
+  const mapPoints: KakaoMapPoint[] = lodging
+    ? [
+        ...visitPoints,
+        {
+          id: `lodging-${lodging.content_id}`,
+          title: lodging.title,
+          latitude: lodging.lat,
+          longitude: lodging.lon,
+          label: "숙소",
+          kind: "lodging",
+        },
+      ]
+    : visitPoints;
 
   return (
     <div>
@@ -98,8 +118,13 @@ export default function MapPage() {
               showRoute
               fallback={
                 <div className="map-placeholder big">
-                  {allItems.slice(0, 8).map((item, i) => (
-                    <MapPin key={item.id} place={item.place} style={PIN_POSITIONS[i]} />
+                  {allItems.slice(0, 8).map((item, i, arr) => (
+                    <MapPin
+                      key={item.id}
+                      place={item.place}
+                      style={PIN_POSITIONS[i]}
+                      kind={i === 0 ? "start" : i === arr.length - 1 ? "end" : "visit"}
+                    />
                   ))}
                 </div>
               }
