@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { PlaceSearchQuery, PlaceSearchResponse } from "./types";
+import type { PlaceDetail, PlaceSearchQuery, PlaceSearchResponse } from "./types";
 
 /** [daeun 전용 신규] GET /api/places/search/ — 이름/유형/권역으로 장소 검색 */
 export function searchPlaces(params: PlaceSearchQuery) {
@@ -11,4 +11,12 @@ export function searchPlaces(params: PlaceSearchQuery) {
   query.set("page_size", String(params.page_size ?? 20));
 
   return apiClient.get<PlaceSearchResponse>(`/places/search/?${query.toString()}`);
+}
+
+/**
+ * GET /api/places/{content_id}/ — 장소 상세.
+ * 명세서 Method는 POST로 적혀 있으나 백엔드는 GET만 허용한다(Allow: GET, HEAD, OPTIONS).
+ */
+export function getPlaceDetail(contentId: string) {
+  return apiClient.get<PlaceDetail>(`/places/${contentId}/`);
 }

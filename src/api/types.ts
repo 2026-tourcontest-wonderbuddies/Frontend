@@ -555,3 +555,33 @@ export interface PlaceSearchQuery {
   page?: number;
   page_size?: number;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 장소 상세. GET /api/places/{content_id}/
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * 목록(SearchPlace)과 겹치지만 menu/featured_menu가 없고,
+ * overview_summary·restroom·대/중분류·stay_time_minutes가 더 온다.
+ */
+export interface PlaceDetail {
+  content_id: string;
+  title: string;
+  address: string;
+  content_type_name: string;
+  large_category_name: string;
+  middle_category_name: string;
+  small_category_name: string;
+  overview: string;
+  /** 서버가 만든 요약문. 클라이언트 summarizeOverview()보다 우선한다. */
+  overview_summary: string;
+  hours_raw: string;
+  closed_days_raw: string;
+  fees: string;
+  parking: string;
+  contact: string;
+  restroom: string;
+  stay_time_minutes: number;
+  latitude: number;
+  longitude: number;
+}
