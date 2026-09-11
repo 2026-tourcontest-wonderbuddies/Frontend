@@ -8,10 +8,22 @@ export function dateLabel(iso: string): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
-export function dayDateLabel(tripStartIso: string, dayIndex: number): string {
+const WEEKDAYS = "일월화수목금토";
+
+function dayDate(tripStartIso: string, dayIndex: number): Date {
   const start = new Date(tripStartIso);
-  const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + (dayIndex - 1));
-  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  return new Date(start.getFullYear(), start.getMonth(), start.getDate() + (dayIndex - 1));
+}
+
+export function dayDateLabel(tripStartIso: string, dayIndex: number): string {
+  const d = dayDate(tripStartIso, dayIndex);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAYS[d.getDay()]}`;
+}
+
+/** 일자 탭용 짧은 표기. "10.17 금" */
+export function dayDateShort(tripStartIso: string, dayIndex: number): string {
+  const d = dayDate(tripStartIso, dayIndex);
+  return `${d.getMonth() + 1}.${d.getDate()} ${WEEKDAYS[d.getDay()]}`;
 }
 
 const SLOT_LABELS: Record<string, string> = {
