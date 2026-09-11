@@ -548,7 +548,7 @@ export interface PlaceSearchResponse {
   has_more: boolean;
 }
 
-export interface PlaceSearchParams {
+export interface PlaceSearchQuery {
   q?: string;
   category?: string;
   region?: RegionCode;

@@ -98,7 +98,13 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
               <div className="override-label">
                 {f.icon} {f.label}
               </div>
-              <div ref={(el) => (valueRefs.current[f.key] = el)}>{f.value}</div>
+              <div
+                ref={(el) => {
+                  valueRefs.current[f.key] = el;
+                }}
+              >
+                {f.value}
+              </div>
             </div>
           ))}
 

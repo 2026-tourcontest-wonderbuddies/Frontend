@@ -1,8 +1,8 @@
 import { apiClient } from "./client";
-import type { PlaceSearchParams, PlaceSearchResponse } from "./types";
+import type { PlaceSearchQuery, PlaceSearchResponse } from "./types";
 
 /** [daeun 전용 신규] GET /api/places/search/ — 이름/유형/권역으로 장소 검색 */
-export function searchPlaces(params: PlaceSearchParams) {
+export function searchPlaces(params: PlaceSearchQuery) {
   const query = new URLSearchParams();
   if (params.q) query.set("q", params.q);
   if (params.category) query.set("category", params.category);
