@@ -67,11 +67,12 @@ export default function CoursesPage() {
   }
 
   const totalDays = courses[0].days.length;
-  const hasLodging = courses.some((c) => c.days.some((d) => d.lodging_options_snapshot.length > 0));
+  // 코스 상세에 더 이상 숙소 스냅샷이 없어서 숙박 여부는 일정 길이로 판단한다(1박 이상이면 숙소 단계).
+  const hasLodging = totalDays > 1;
 
   function handleSelect(course: CourseDetail) {
-    // 숙소 추천이 있는 코스는 확정 전에 숙소를 먼저 고른다(명세 6·7번).
-    if (course.days.some((d) => d.lodging_options_snapshot.length > 0)) {
+    // 숙박이 있는 코스는 확정 전에 숙소를 먼저 고른다(명세 6·7번).
+    if (course.days.length > 1) {
       navigate(`/trips/${tripId}/courses/${course.id}/lodging`);
       return;
     }
