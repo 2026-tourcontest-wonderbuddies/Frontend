@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
-import PlaceSearchDetailSheet from "../components/PlaceSearchDetailSheet";
+import PlaceDetailSheet from "../components/PlaceDetailSheet";
 import ChipGroup from "../components/ChipGroup";
 import { useAuth } from "../auth/AuthContext";
 import { usePlaceSearchResults, usePlaceSuggestions } from "../hooks/usePlaceSearch";
@@ -187,7 +187,7 @@ export default function SearchPage() {
         </button>
       )}
 
-      {selected && <PlaceSearchDetailSheet place={selected} onClose={() => setSelected(null)} />}
+      {selected && <PlaceDetailSheet place={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }

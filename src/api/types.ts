@@ -400,18 +400,11 @@ export interface TripCoursesResponse {
   courses: CourseSummary[];
 }
 
-/** 명세 4번 · 코스 상세 안의 place */
-export interface PlaceSummary {
-  content_id: string;
-  title: string;
-  content_type_name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  overview: string;
-  hours_raw: string;
-  fees: string;
-  parking: string;
+/**
+ * 명세 4번 · 코스 상세 안의 place.
+ * 장소 검색(SearchPlace)과 동일한 필드 + 권장 체류시간(stay_time_minutes).
+ */
+export interface PlaceSummary extends SearchPlace {
   stay_time_minutes: number;
 }
 

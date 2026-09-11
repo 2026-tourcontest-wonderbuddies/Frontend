@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Modal from "../components/Modal";
+import PlaceDetailSheet from "../components/PlaceDetailSheet";
+import type { SearchPlace } from "../api/types";
 import {
   courseSummaryText,
   removeSavedCourse,
@@ -22,6 +24,7 @@ export default function SavedPage() {
   const places = useSavedPlaces(user?.id);
   const courses = useSavedCourses(user?.id);
   const [target, setTarget] = useState<DeleteTarget | null>(null);
+  const [selected, setSelected] = useState<SearchPlace | null>(null);
 
   function confirmDelete() {
     if (!target || !user) return;
@@ -78,12 +81,12 @@ export default function SavedPage() {
           <div className="saved-list">
             {places.map((sp) => (
               <div className="saved-row" key={sp.id}>
-                <div>
+                <button type="button" className="saved-row-link" onClick={() => setSelected(sp.place)}>
                   <div className="saved-row-title">{sp.place.title}</div>
                   <div className="saved-row-sub mono">
                     {sp.place.content_type_name} · {sp.place.address}
                   </div>
-                </div>
+                </button>
                 <button type="button" className="btn-outline" onClick={() => setTarget({ kind: "place", item: sp })}>
                   삭제
                 </button>
@@ -130,6 +133,8 @@ export default function SavedPage() {
           </div>
         </Modal>
       )}
+
+      {selected && <PlaceDetailSheet place={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
