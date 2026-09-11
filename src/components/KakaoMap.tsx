@@ -2,6 +2,8 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { useKakaoSdk } from "../hooks/useKakaoSdk";
 import { hasValidCoords, kakaoPlaceUrl } from "../utils/kakao";
 
+export type KakaoMapPointKind = "start" | "visit" | "lodging" | "end";
+
 export interface KakaoMapPoint {
   /** 리스트 key 겸 마커 식별자 */
   id: string;
@@ -10,6 +12,8 @@ export interface KakaoMapPoint {
   longitude?: number;
   /** 마커 안에 찍을 글자. 코스 순서 번호 등. 없으면 점만 찍는다. */
   label?: string;
+  /** 마커 색상. 없으면 기본색(방문지)으로 찍는다. */
+  kind?: KakaoMapPointKind;
 }
 
 interface KakaoMapProps {
@@ -42,7 +46,7 @@ function createPinElement(point: KakaoMapPoint): HTMLAnchorElement {
   anchor.setAttribute("aria-label", `${point.title} 카카오맵에서 보기 (새 창)`);
 
   const dot = document.createElement("span");
-  dot.className = "kakao-pin-dot";
+  dot.className = `kakao-pin-dot kakao-pin-dot--${point.kind ?? "visit"}`;
   dot.textContent = point.label ?? "";
 
   const name = document.createElement("span");
@@ -90,10 +94,16 @@ export default function KakaoMap({ points, showRoute = false, height = 420, fall
       return overlay;
     });
 
+    // 숙소는 방문 순서에 속하지 않으므로 경로선에는 넣지 않는다.
+    const routePositions = plottable
+      .map((p, i) => ({ p, pos: positions[i] }))
+      .filter(({ p }) => p.kind !== "lodging")
+      .map(({ pos }) => pos);
+
     const line =
-      showRoute && positions.length > 1
+      showRoute && routePositions.length > 1
         ? new maps.Polyline({
-            path: positions,
+            path: routePositions,
             strokeWeight: 3,
             strokeColor: "#FF6F59",
             strokeOpacity: 0.85,
