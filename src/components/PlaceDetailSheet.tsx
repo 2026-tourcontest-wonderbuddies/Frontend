@@ -1,10 +1,12 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Modal from "./Modal";
-import type { SearchPlace } from "../api/types";
+import { getPlaceDetail } from "../api/places";
+import type { PlaceDetail, SearchPlace } from "../api/types";
 
 interface PlaceDetailSheetProps {
   /** 코스 상세(PlaceSummary)에서 열 때는 stay_time_minutes(권장 체류시간)도 같이 온다. */
-  place: SearchPlace & { stay_time_minutes?: number };
+  place: SearchPlace & Partial<PlaceDetail>;
   onClose: () => void;
 }
 
@@ -43,8 +45,21 @@ interface FactField {
 }
 
 export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetProps) {
-  const hours = hasValue(place.hours_raw) ? hoursLines(place.hours_raw) : [];
-  const isRestaurant = place.content_type_name === "음식점";
+  // 목록에서 넘어온 값으로 즉시 그리고, 상세가 도착하면 그 위에 덮는다.
+  // 실패해도 목록 값이 남으므로 로딩·에러 UI가 필요 없다.
+  const { data: detail } = useQuery({
+    queryKey: ["place", place.content_id],
+    queryFn: () => getPlaceDetail(place.content_id),
+    // 전역 default에 staleTime이 없어, 안 주면 창 포커스마다 다시 부른다. 장소 정보는 안 변한다.
+    staleTime: Infinity,
+  });
+  // 상세엔 menu/featured_menu가 없어 목록에서 받은 값이 그대로 살아남는다.
+  const p: SearchPlace & Partial<PlaceDetail> = { ...place, ...detail };
+
+  const hours = hasValue(p.hours_raw) ? hoursLines(p.hours_raw) : [];
+  const isRestaurant = p.content_type_name === "음식점";
+  const menu = hasValue(p.menu) ? p.menu : "";
+  const featuredMenu = hasValue(p.featured_menu) ? p.featured_menu : "";
 
   // 운영시간이 한 줄뿐이면(예: "상시 개방") 다른 항목처럼 측정 대상에 넣어 짧으면 같이 짝지어준다.
   // 두 줄 이상(시설별로 따로 안내되는 경우)이면 가독성을 위해 항상 한 행 전체를 쓴다.
@@ -52,17 +67,17 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   const multiLineHours = hours.length > 1 ? hours : [];
 
   const fields: FactField[] = [
-    { key: "address", icon: "📍", label: "주소", value: hasValue(place.address) ? place.address : "" },
-    { key: "parking", icon: "🅿️", label: "주차", value: hasValue(place.parking) ? place.parking : "" },
-    { key: "contact", icon: "📞", label: "연락처", value: hasValue(place.contact) ? place.contact : "" },
+    { key: "address", icon: "📍", label: "주소", value: hasValue(p.address) ? p.address : "" },
+    { key: "parking", icon: "🅿️", label: "주차", value: hasValue(p.parking) ? p.parking : "" },
+    { key: "contact", icon: "📞", label: "연락처", value: hasValue(p.contact) ? p.contact : "" },
     { key: "hours", icon: "🕐", label: "운영시간", value: singleLineHours },
-    { key: "closed", icon: "🚫", label: "휴무일", value: hasValue(place.closed_days_raw) ? place.closed_days_raw : "" },
-    { key: "fees", icon: "💰", label: "이용요금", value: hasValue(place.fees) ? place.fees : "" },
+    { key: "closed", icon: "🚫", label: "휴무일", value: hasValue(p.closed_days_raw) ? p.closed_days_raw : "" },
+    { key: "fees", icon: "💰", label: "이용요금", value: hasValue(p.fees) ? p.fees : "" },
     {
       key: "stay",
       icon: "⏱️",
       label: "권장 체류",
-      value: place.stay_time_minutes != null ? `${place.stay_time_minutes}분` : "",
+      value: p.stay_time_minutes != null ? `${p.stay_time_minutes}분` : "",
     },
   ].filter((f) => f.value);
 
@@ -80,16 +95,16 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
     }
     setWideKeys(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [place.content_id, fields.map((f) => f.value).join("|")]);
+  }, [p.content_id, fields.map((f) => f.value).join("|")]);
 
   return (
-    <Modal title={place.title} onClose={onClose}>
+    <Modal title={p.title} onClose={onClose}>
       <div className="place-detail-sheet">
         <div className="place-sheet-photo" />
 
         <p style={{ marginBottom: 16 }}>
-          {place.content_type_name}
-          {place.small_category_name ? ` · ${place.small_category_name}` : ""}
+          {p.content_type_name}
+          {p.small_category_name ? ` · ${p.small_category_name}` : ""}
         </p>
 
         <div className="place-fact-grid">
@@ -120,14 +135,19 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
 
         <div className="override-section">
           <div className="override-label">📝 장소 소개</div>
-          <p>{summarizeOverview(place.overview) || "이 장소에 대한 설명이 아직 없어요."}</p>
+          {/* 서버 요약(overview_summary)이 있으면 그대로 쓴다. 이미 요약문이라 100자 컷을 또 먹이면 뭉개진다. */}
+          <p>
+            {p.overview_summary ||
+              summarizeOverview(p.overview) ||
+              "이 장소에 대한 설명이 아직 없어요."}
+          </p>
         </div>
 
-        {isRestaurant && (place.menu || place.featured_menu) && (
+        {isRestaurant && (menu || featuredMenu) && (
           <div className="override-section">
             <div className="override-label">🍽️ 메뉴</div>
-            {place.featured_menu && <p>대표 메뉴: {place.featured_menu}</p>}
-            {place.menu && <p>{place.menu}</p>}
+            {featuredMenu && <p>대표 메뉴: {featuredMenu}</p>}
+            {menu && <p>{menu}</p>}
           </div>
         )}
 
