@@ -523,3 +523,40 @@ export interface ModifyCourseResponse {
   parsed_delta: unknown;
   message: string;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 장소 검색 (daeun 전용 신규 기능, 명세서에는 없음). GET /api/places/search/
+// ══════════════════════════════════════════════════════════════════════════
+
+/** GET /api/places/search/ 응답 한 건 */
+export interface SearchPlace {
+  content_id: string;
+  title: string;
+  content_type_name: string;
+  small_category_name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  overview: string;
+  contact: string;
+  hours_raw: string;
+  closed_days_raw: string;
+  fees: string;
+  parking: string;
+  menu: string;
+  featured_menu: string;
+}
+
+export interface PlaceSearchResponse {
+  results: SearchPlace[];
+  total: number;
+  has_more: boolean;
+}
+
+export interface PlaceSearchParams {
+  q?: string;
+  category?: string;
+  region?: RegionCode;
+  page?: number;
+  page_size?: number;
+}

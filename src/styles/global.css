@@ -144,6 +144,15 @@ h1.page-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,36px); 
 .search-bar{margin-top:26px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
 .search-input{flex:1; min-width:200px; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:13px 20px; font-family:'Space Mono',monospace; font-size:13px; color:var(--ink);}
 .search-input::placeholder{color:var(--ink-soft);}
+.search-dropdown{position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; z-index:20; box-shadow:0 8px 24px rgba(0,0,0,.08);}
+.search-dropdown-item{display:flex; justify-content:space-between; align-items:center; width:100%; padding:11px 18px; text-align:left; border-bottom:1px solid var(--line);}
+.search-dropdown-item:last-child{border-bottom:none;}
+.search-dropdown-item:hover{background:var(--paper-deep);}
+.region-chip-grid .chip-row{display:grid; grid-template-columns:repeat(3,max-content); justify-content:start; gap:14px 28px;}
+@media (max-width:760px){ .region-chip-grid .chip-row{grid-template-columns:repeat(2,max-content);} }
+
+/* 장소 검색 페이지(+ 그 안에서 뜨는 상세보기 모달)만 글씨체를 하나로 통일한다. 다른 화면은 그대로 둔다. */
+.search-page, .search-page *{font-family:'Noto Sans KR',sans-serif !important;}
 .sort-select{background:var(--card); border:1px solid var(--line); border-radius:999px; padding:13px 18px; font-family:'Space Mono',monospace; font-size:12.5px; color:var(--ink);}
 
 .layout{padding:40px 32px 90px; display:grid; grid-template-columns:250px 1fr; gap:36px;}
@@ -427,7 +436,7 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .saved-list{display:flex; flex-direction:column; gap:10px;}
 .saved-row{display:flex; align-items:center; justify-content:space-between; gap:16px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 20px;}
 .saved-row-link{flex:1; text-align:left;}
-.saved-row-title{font-family:'Song Myung',serif; font-size:15.5px; margin-bottom:4px;}
+.saved-row-title{font-family:'Noto Sans KR',sans-serif; font-weight:700; font-size:15.5px; margin-bottom:4px; color:var(--ink);}
 .saved-row-sub{font-size:11px; color:var(--ink-soft);}
 
 /* ---------------- CHAT ---------------- */
@@ -520,6 +529,12 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 /* ---------------- PLACE DETAIL SHEET ---------------- */
 .place-sheet-photo{height:160px; border-radius:14px; margin-bottom:16px; background:linear-gradient(135deg,var(--dawn),var(--sunset));}
 .place-fact-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; font-family:'Space Mono',monospace; font-size:12.5px;}
+.fact-span-2{grid-column:1/-1;}
+.place-search-detail .override-label{
+  font-weight:700; color:var(--ink); font-size:14px; letter-spacing:normal; text-transform:none; margin-bottom:4px;
+}
+.place-search-detail .place-fact-grid{font-size:14px; grid-auto-flow:dense;}
+.fact-item p{margin-bottom:2px;}
 .qa-entry{background:var(--paper-deep); border-radius:12px; padding:12px 14px; margin-bottom:10px;}
 .qa-q{font-weight:700; color:var(--ink); font-size:12.5px; margin-bottom:4px;}
 .qa-a{font-size:12px; color:var(--ink-soft); line-height:1.6;}

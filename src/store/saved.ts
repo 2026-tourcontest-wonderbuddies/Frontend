@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { SearchPlace } from "../data/places";
+import type { SearchPlace } from "../api/types";
 
 /**
  * [백엔드 연결 이전] 저장함(찜)은 백엔드 API 명세에 대응 엔드포인트가 없다.
