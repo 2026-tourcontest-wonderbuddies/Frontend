@@ -513,13 +513,13 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .day-tab.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
 .day-tab.customized::after{content:' ●'; color:var(--sunset);}
 /* 코스 상세 일자 탭: 웹은 정사각형에 가깝게, 모바일은 가로 꽉 차게 */
-.day-tabs-full .day-tab{padding:11px 20px; border-radius:13px; text-align:left; line-height:1.3;}
+.day-tabs-full .day-tab{padding:11px 30px; border-radius:13px; text-align:left; line-height:1.3;}
 .day-tab-case{display:block; font-size:10px; letter-spacing:1px; opacity:0.7;}
 .day-tab-main{display:block; font-family:'Noto Sans KR',sans-serif; font-size:13.5px; font-weight:500; margin-top:2px;}
 @media (max-width:640px){
   .day-tabs-full{flex-wrap:nowrap;}
   .day-tabs-full .day-tab{flex:1; min-width:0; padding:9px 4px; border-radius:11px; text-align:center;}
-  .day-tabs-full .day-tab-case,.day-tabs-full .day-tab-date{display:none;}
+  .day-tabs-full .day-tab-case{display:none;}
   .day-tabs-full .day-tab-main{font-family:'Space Mono',monospace; font-size:11px; font-weight:400; margin-top:0;}
 }
 .override-section{margin-bottom:20px;}

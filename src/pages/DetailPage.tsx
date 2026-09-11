@@ -4,7 +4,7 @@ import { useCourse } from "../hooks/useCourses";
 import { useAuth } from "../auth/AuthContext";
 import { toggleSavedCourse, useIsCourseSaved } from "../store/saved";
 import { PRIORITY_LABELS } from "../api/types";
-import { dayCaseLabel, dayDateLabel, dayDateShort, hhmm, slotLabel } from "../utils/format";
+import { dayCaseLabel, dayDateLabel, hhmm, slotLabel } from "../utils/format";
 import type { PlaceSummary } from "../api/types";
 import { courseItems, courseLodging, courseStartIso, courseStats } from "../utils/course";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
@@ -194,12 +194,7 @@ export default function DetailPage() {
                   onClick={() => setDayIdx(i)}
                 >
                   <span className="day-tab-case">{dayCaseLabel(d.day_case)}</span>
-                  <span className="day-tab-main">
-                    DAY {d.day_index}
-                    {startIso && (
-                      <span className="day-tab-date"> · {dayDateShort(startIso, d.day_index)}</span>
-                    )}
-                  </span>
+                  <span className="day-tab-main">DAY {d.day_index}</span>
                 </button>
               ))}
             </div>

@@ -20,12 +20,6 @@ export function dayDateLabel(tripStartIso: string, dayIndex: number): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAYS[d.getDay()]}`;
 }
 
-/** 일자 탭용 짧은 표기. "10.17 금" */
-export function dayDateShort(tripStartIso: string, dayIndex: number): string {
-  const d = dayDate(tripStartIso, dayIndex);
-  return `${d.getMonth() + 1}.${d.getDate()} ${WEEKDAYS[d.getDay()]}`;
-}
-
 const SLOT_LABELS: Record<string, string> = {
   GENERAL: "",
   RESTAURANT: "식사",
