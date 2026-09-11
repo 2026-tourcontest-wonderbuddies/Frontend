@@ -124,7 +124,7 @@ export default function CoursesPage() {
                 </div>
                 <div className="candidate-stat">
                   <div className="k">추천 점수</div>
-                  <div className="v">{c.final_score.toFixed(1)}</div>
+                  <div className="v">{c.final_score === null ? "—" : c.final_score.toFixed(1)}</div>
                 </div>
               </div>
 

@@ -390,7 +390,8 @@ export interface CourseSummary {
   id: number;
   mode: CoursePriority;
   is_selected: boolean;
-  final_score: number;
+  // 명세서 예시엔 숫자만 있지만 서버가 null을 주는 코스가 실제로 있다(trip 20). 미표시로 처리한다.
+  final_score: number | null;
   created_at: string;
 }
 
@@ -484,7 +485,7 @@ export interface CourseDetail {
   id: number;
   mode: CoursePriority;
   is_selected: boolean;
-  final_score: number;
+  final_score: number | null;
   created_at: string;
   days: CourseDay[];
 }
