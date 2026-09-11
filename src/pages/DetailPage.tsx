@@ -4,7 +4,7 @@ import { useCourse } from "../hooks/useCourses";
 import { useAuth } from "../auth/AuthContext";
 import { toggleSavedCourse, useIsCourseSaved } from "../store/saved";
 import { PRIORITY_LABELS } from "../api/types";
-import { dayDateLabel, hhmm, slotLabel } from "../utils/format";
+import { dayCaseLabel, dayDateLabel, dayDateShort, hhmm, slotLabel } from "../utils/format";
 import type { PlaceSummary } from "../api/types";
 import { courseItems, courseLodging, courseStartIso, courseStats } from "../utils/course";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
@@ -40,6 +40,7 @@ export default function DetailPage() {
   const courseId = Number(id);
   const isSaved = useIsCourseSaved(user?.id, courseId);
   const [selectedPlace, setSelectedPlace] = useState<PlaceSummary | null>(null);
+  const [dayIdx, setDayIdx] = useState(0);
 
   if (isLoading) {
     return (
@@ -63,7 +64,7 @@ export default function DetailPage() {
     );
   }
 
-  const firstDay = course.days.find((d) => d.items.length > 0) ?? course.days[0];
+  const day = course.days[dayIdx] ?? course.days[0];
   const allItems = courseItems(course);
   const lodging = courseLodging(course);
   const stats = courseStats(course);
@@ -145,7 +146,7 @@ export default function DetailPage() {
           <div className="mini-dial-wrap">
             <div className="mini-dial" />
             <div className="mini-face" />
-            {(firstDay?.items ?? []).slice(0, 8).map((item, i) => (
+            {day.items.slice(0, 8).map((item, i) => (
               <div
                 key={item.id}
                 className="mini-stop"
@@ -157,9 +158,9 @@ export default function DetailPage() {
             <div className="mini-center">
               <div className="t">{regionText.split(" ")[0]}</div>
               <div className="s">
-                {firstDay && firstDay.items.length > 0
-                  ? `${hhmm(firstDay.items[0].arrive_at)} → ${hhmm(
-                      firstDay.items[firstDay.items.length - 1].depart_at,
+                {day.items.length > 0
+                  ? `${hhmm(day.items[0].arrive_at)} → ${hhmm(
+                      day.items[day.items.length - 1].depart_at,
                     )}`
                   : ""}
               </div>
@@ -168,122 +169,124 @@ export default function DetailPage() {
         </div>
       </header>
 
-      <section className="best-time">
-        <div className="wrap best-time-inner">
-          <div className="best-time-label">
-            이 코스, 언제 가면
-            <br />
-            가장 좋을까요?
-          </div>
-          <div className="months">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-              <div key={m} className={`month${[4, 5, 9, 10].includes(m) ? " best" : ""}`}>
-                {m}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <div className="main-detail wrap">
         <div>
           <div className="section-label">TIMELINE</div>
           <div className="section-title serif">시간 순서대로 보는 코스</div>
 
-          {course.days.map((day) => (
-            <div key={day.day_index}>
-              {course.days.length > 1 && (
-                <>
-                  <div className="day-heading serif">
-                    Day {day.day_index}
-                    {startIso ? ` · ${dayDateLabel(startIso, day.day_index)}` : ""}
-                  </div>
-                  <div className="day-subheading mono">
-                    가용 {day.avail_hours}시간 · 목표 {day.target_slots}곳
-                  </div>
-                </>
-              )}
-              {day.items.length === 0 && (
-                <div className="day-subheading mono">
-                  이 조건에 맞는 장소를 더 찾지 못했어요. 권역을 넓혀보세요.
-                </div>
-              )}
-              <div className="timeline">
-                {day.items.map((item, idx) => (
-                  <div className="tl-item" key={item.id}>
-                    <div className="tl-dot mono">{hhmm(item.arrive_at)}</div>
-                    <div
-                      className="tl-card"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedPlace(item.place)}
-                    >
-                      <div className="tl-top">
-                        <div className="tl-title">
-                          {item.place.title}
-                          {slotLabel(item.slot_type) && (
-                            <span className="meta-chip mono" style={{ marginLeft: 8 }}>
-                              {slotLabel(item.slot_type)}
-                            </span>
-                          )}
-                          {item.hours_uncertain && (
-                            <span className="meta-chip mono" style={{ marginLeft: 8 }}>
-                              운영시간 확인 필요
-                            </span>
-                          )}
-                        </div>
-                        <div className="tl-stay mono">체류 {item.place.stay_time_minutes}분</div>
-                      </div>
-                      <div className="tl-desc">
-                        {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
-                      </div>
-                    </div>
-                    {idx < day.items.length - 1 && (
-                      <div className="tl-transit">
-                        <span className="line" />
-                        🚗 차량 {day.items[idx + 1].travel_min_from_prev ?? 0}분 이동
-                      </div>
-                    )}
-                  </div>
-                ))}
+          <div className="day-summary mono" style={{ margin: "10px 0 16px", color: "var(--ink-soft)" }}>
+            {startIso ? `${dayDateLabel(startIso, day.day_index)} · ` : ""}
+            {day.items.length > 0
+              ? `${hhmm(day.items[0].arrive_at)}–${hhmm(
+                  day.items[day.items.length - 1].depart_at,
+                )} · ${day.items.length}곳 방문`
+              : "방문지 없음"}
+          </div>
 
-                {day.lodging_snapshot && (
-                  <div className="tl-item">
-                    <div className="tl-dot mono">{day.lodging_snapshot.check_in_time || "숙박"}</div>
-                    <div className="tl-card tl-lodging">
-                      <div className="tl-top">
-                        <div className="tl-title">
-                          🛏 {day.lodging_snapshot.title}
-                          <span className="meta-chip mono" style={{ marginLeft: 8 }}>
-                            {day.lodging_snapshot.category}
-                          </span>
-                        </div>
-                        <div className="tl-stay mono">{day.lodging_snapshot.price_hint}</div>
-                      </div>
-                      <div className="tl-desc">
-                        {day.lodging_snapshot.address}
-                        {day.lodging_snapshot.room_type ? ` · ${day.lodging_snapshot.room_type}` : ""}
-                        {day.lodging_snapshot.check_out_time
-                          ? ` · 체크아웃 ${day.lodging_snapshot.check_out_time}`
-                          : ""}
-                      </div>
-                      {day.lodging_snapshot.tripcom_link && (
-                        <a
-                          href={day.lodging_snapshot.tripcom_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="side-note"
-                          style={{ display: "inline-block", marginTop: 6 }}
-                        >
-                          트립닷컴에서 요금 확인 ↗
-                        </a>
+          {course.days.length > 1 && (
+            <div className="day-tabs day-tabs-full">
+              {course.days.map((d, i) => (
+                <button
+                  key={d.day_index}
+                  type="button"
+                  className={`day-tab${i === dayIdx ? " active" : ""}`}
+                  aria-pressed={i === dayIdx}
+                  onClick={() => setDayIdx(i)}
+                >
+                  <span className="day-tab-case">{dayCaseLabel(d.day_case)}</span>
+                  <span className="day-tab-main">
+                    DAY {d.day_index}
+                    {startIso && (
+                      <span className="day-tab-date"> · {dayDateShort(startIso, d.day_index)}</span>
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="day-subheading mono">
+            가용 {day.avail_hours}시간 · 목표 {day.target_slots}곳
+          </div>
+          {day.items.length === 0 && (
+            <div className="day-subheading mono">
+              이 조건에 맞는 장소를 더 찾지 못했어요. 권역을 넓혀보세요.
+            </div>
+          )}
+          <div className="timeline">
+            {day.items.map((item, idx) => (
+              <div className="tl-item" key={item.id}>
+                <div className="tl-dot mono">{hhmm(item.arrive_at)}</div>
+                <div
+                  className="tl-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedPlace(item.place)}
+                >
+                  <div className="tl-top">
+                    <div className="tl-title">
+                      {item.place.title}
+                      {slotLabel(item.slot_type) && (
+                        <span className="meta-chip mono" style={{ marginLeft: 8 }}>
+                          {slotLabel(item.slot_type)}
+                        </span>
+                      )}
+                      {item.hours_uncertain && (
+                        <span className="meta-chip mono" style={{ marginLeft: 8 }}>
+                          운영시간 확인 필요
+                        </span>
                       )}
                     </div>
+                    <div className="tl-stay mono">체류 {item.place.stay_time_minutes}분</div>
+                  </div>
+                  <div className="tl-desc">
+                    {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
+                  </div>
+                </div>
+                {idx < day.items.length - 1 && (
+                  <div className="tl-transit">
+                    <span className="line" />
+                    🚗 차량 {day.items[idx + 1].travel_min_from_prev ?? 0}분 이동
                   </div>
                 )}
               </div>
-            </div>
-          ))}
+            ))}
+
+            {day.lodging_snapshot && (
+              <div className="tl-item">
+                <div className="tl-dot mono">{day.lodging_snapshot.check_in_time || "숙박"}</div>
+                <div className="tl-card tl-lodging">
+                  <div className="tl-top">
+                    <div className="tl-title">
+                      🛏 {day.lodging_snapshot.title}
+                      <span className="meta-chip mono" style={{ marginLeft: 8 }}>
+                        {day.lodging_snapshot.category}
+                      </span>
+                    </div>
+                    <div className="tl-stay mono">{day.lodging_snapshot.price_hint}</div>
+                  </div>
+                  <div className="tl-desc">
+                    {day.lodging_snapshot.address}
+                    {day.lodging_snapshot.room_type ? ` · ${day.lodging_snapshot.room_type}` : ""}
+                    {day.lodging_snapshot.check_out_time
+                      ? ` · 체크아웃 ${day.lodging_snapshot.check_out_time}`
+                      : ""}
+                  </div>
+                  {day.lodging_snapshot.tripcom_link && (
+                    <a
+                      href={day.lodging_snapshot.tripcom_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="side-note"
+                      style={{ display: "inline-block", marginTop: 6 }}
+                    >
+                      트립닷컴에서 요금 확인 ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <aside>
