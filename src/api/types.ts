@@ -475,8 +475,9 @@ export interface CourseDay {
   need_lunch: boolean;
   need_dinner: boolean;
   need_night_spot: boolean;
-  lodging_snapshot: LodgingCard | null;
-  lodging_options_snapshot: LodgingCard[];
+  // 백엔드가 코스 상세에서 두 필드를 빼고 내려준다(숙소는 명세 6번 별도 엔드포인트).
+  lodging_snapshot?: LodgingCard | null;
+  lodging_options_snapshot?: LodgingCard[];
   items: CourseItem[];
 }
 
