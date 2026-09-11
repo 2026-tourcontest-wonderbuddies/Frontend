@@ -249,8 +249,7 @@ h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px);
 .subsection{margin-left:40px; margin-top:24px; padding-top:20px; border-top:1px dashed var(--line);}
 .subsection-title{font-family:'Song Myung',serif; font-size:15.5px; margin-bottom:4px;}
 .subsection-sub{font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-soft); margin-bottom:14px;}
-.lodging-pick-list{display:grid; gap:14px; margin:18px 0 0 40px;}
-@media (max-width:640px){ .step-sub,.chip-row,.time-inputs,.presets,.date-inputs,.field-row,.toggle-row,.tag-input-row,.subsection,.lodging-pick-list,.day-hours-list,.day-hours-note{margin-left:0;} }
+@media (max-width:640px){ .step-sub,.chip-row,.time-inputs,.presets,.date-inputs,.field-row,.toggle-row,.tag-input-row,.subsection,.day-hours-list,.day-hours-note{margin-left:0;} }
 
 .preview{position:sticky; top:96px;}
 @media (max-width:960px){ .preview{position:static;} }
@@ -559,7 +558,7 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
    화면은 완성됐지만 값이 서버로 전송되지 않거나 더미 데이터로 동작하는 영역을 적색으로 표시한다.
    연동이 끝나면 해당 마크업에서 nocon* 클래스만 떼면 된다. */
 .nocon{position:relative; border:2px dashed var(--nocon); border-radius:14px; background:rgba(217,45,32,0.045); padding:16px 18px 18px; margin-top:18px;}
-.nocon .step-sub, .nocon .lodging-pick-list{margin-left:0;}
+.nocon .step-sub{margin-left:0;}
 .nocon-tag{display:flex; width:fit-content; align-items:center; gap:6px; font-family:'Space Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:0.5px; background:var(--nocon); color:#fff; padding:4px 10px; border-radius:999px; margin-bottom:10px;}
 .nocon-note{font-family:'Space Mono',monospace; font-size:11.5px; line-height:1.7; color:var(--nocon); margin-top:10px;}
 .nocon-banner{display:block; font-family:'Space Mono',monospace; font-size:11.5px; line-height:1.7; color:var(--nocon); background:rgba(217,45,32,0.06); border-left:3px solid var(--nocon); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:16px;}

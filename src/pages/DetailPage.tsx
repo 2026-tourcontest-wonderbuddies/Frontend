@@ -106,7 +106,9 @@ export default function DetailPage() {
               ⏱ 체류 {Math.round(stats.stayMin / 60)}시간 · 이동 {stats.travelMin}분
             </span>
             <span className="meta-chip mono">📅 {course.days.length}일 일정</span>
-            <span className="meta-chip mono">🎯 추천 점수 {course.final_score.toFixed(1)}</span>
+            {course.final_score !== null && (
+              <span className="meta-chip mono">🎯 추천 점수 {course.final_score.toFixed(1)}</span>
+            )}
           </div>
           <div className="actions">
             <Link className="btn-primary" to={`/trip/${id}/map`}>

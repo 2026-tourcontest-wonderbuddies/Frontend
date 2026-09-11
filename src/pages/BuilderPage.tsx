@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BuilderDial from "../components/BuilderDial";
 import LoadingChecklist from "../components/LoadingChecklist";
@@ -7,7 +7,6 @@ import StepSchedule, { TRIP_LENGTH_CHIPS } from "../components/builder/StepSched
 import StepPurpose from "../components/builder/StepPurpose";
 import StepTaste from "../components/builder/StepTaste";
 import StepLodging from "../components/builder/StepLodging";
-import StepLodgingPick from "../components/builder/StepLodgingPick";
 import { useCreateTrip } from "../hooks/useCreateTrip";
 import { useAuth } from "../auth/AuthContext";
 import { addDays, fmtHour, resolveDayHours } from "../utils/date";
@@ -22,10 +21,10 @@ import {
 
 const PENDING_TRIP_KEY = "tj_pending_trip";
 
-type StepKey = "schedule" | "purpose" | "taste" | "lodging" | "lodgingPick";
+type StepKey = "schedule" | "purpose" | "taste" | "lodging";
 
 /** 다일 여행에서만 노출되는 스텝. 당일치기면 통째로 빠진다. */
-const MULTI_DAY_ONLY: StepKey[] = ["lodging", "lodgingPick"];
+const MULTI_DAY_ONLY: StepKey[] = ["lodging"];
 
 interface StepDef {
   key: StepKey;
@@ -37,7 +36,6 @@ const ALL_STEPS: StepDef[] = [
   { key: "purpose", title: "어디서 무엇을 하고 싶으세요?" },
   { key: "taste", title: "취향을 알려주세요" },
   { key: "lodging", title: "숙박 조건" },
-  { key: "lodgingPick", title: "숙소를 골라주세요" },
 ];
 
 /** 스텝별 필수 검증. 빈 배열이면 통과. */
@@ -72,6 +70,8 @@ export default function BuilderPage() {
   const [form, setForm] = useState<BuilderForm>(defaultBuilderForm);
   const [step, setStep] = useState(0);
   const [maxVisited, setMaxVisited] = useState(0);
+  /** 취소를 눌러 폼으로 돌아왔는지. 뒤늦게 도착한 응답이 화면을 옮기는 걸 막는다. */
+  const abandoned = useRef(false);
 
   const patch = (p: Partial<BuilderForm>) => setForm((f) => ({ ...f, ...p }));
 
@@ -132,17 +132,28 @@ export default function BuilderPage() {
       lodging_type: isMultiDay ? form.lodgingType || undefined : undefined,
       lodging_need_cooking: isMultiDay ? form.cooking === "필요" : undefined,
       lodging_free_text: isMultiDay ? form.lodgingFreeText || undefined : undefined,
-      // [백엔드 연결 이전] 위저드에서 고른 숙소(form.lodgingContentId)는 아직 보내지 않는다.
-      // 명세 1번 request에 대응 필드가 없어서다. 백엔드에 `lodging_content_id` 추가를
-      // 요청한 뒤 여기에 한 줄 넣으면 된다. (StepPurpose.tsx의 day_overrides와 같은 상황)
+      // 숙소 자체는 여기서 정하지 않는다. 백엔드 추천 알고리즘이 "그날 마지막 장소"에서의
+      // 이동시간으로 앵커를 고르므로(accommodations/recommend.py) 코스가 있어야 의미가 있다.
+      // 코스 생성 후 LodgingPage(명세 6·7번)에서 고른다.
     };
   }
 
   function submit(payload: TripCreateRequest) {
+    abandoned.current = false;
     createTrip.mutate(payload, {
       // 명세 1번은 코스 본문이 아니라 id 3개만 준다. 후보 화면이 trip_id로 상세를 받아온다.
-      onSuccess: (res) => navigate(`/trips/${res.trip_id}/courses`),
+      onSuccess: (res) => {
+        // 취소하고 폼으로 돌아온 뒤에 응답이 도착할 수 있다. 그때 화면을 끌고 가면 안 된다.
+        if (abandoned.current) return;
+        navigate(`/trips/${res.trip_id}/courses`);
+      },
     });
+  }
+
+  /** 기다리기를 포기하고 폼으로 돌아온다. 서버 작업을 멈출 수단은 없어서 그대로 돈다. */
+  function abandonWait() {
+    abandoned.current = true;
+    createTrip.reset();
   }
 
   function handleSubmit() {
@@ -175,7 +186,12 @@ export default function BuilderPage() {
   }, [isAuthenticated]);
 
   if (createTrip.isPending) {
-    return <LoadingChecklist />;
+    return (
+      <LoadingChecklist
+        note="여행 조건을 분석하고 있습니다 · 일정이 길수록 몇 분까지 걸릴 수 있어요"
+        onCancel={abandonWait}
+      />
+    );
   }
 
   const headcountNum = Number(form.headcount);
@@ -196,7 +212,6 @@ export default function BuilderPage() {
             {currentStep.key === "purpose" && <StepPurpose form={form} patch={patch} />}
             {currentStep.key === "taste" && <StepTaste form={form} patch={patch} />}
             {currentStep.key === "lodging" && <StepLodging form={form} patch={patch} />}
-            {currentStep.key === "lodgingPick" && <StepLodgingPick form={form} patch={patch} />}
           </div>
 
           {currentErrors.map((e) => (

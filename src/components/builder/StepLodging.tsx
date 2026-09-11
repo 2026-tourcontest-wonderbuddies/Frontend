@@ -34,6 +34,11 @@ export default function StepLodging({ form, patch }: StepProps) {
         <label>숙박 관련 자유 입력 (선택)</label>
         <textarea value={form.lodgingFreeText} onChange={(e) => patch({ lodgingFreeText: e.target.value })} />
       </div>
+
+      <p className="step-sub" style={{ marginTop: 22 }}>
+        숙소는 코스를 먼저 만든 뒤에 고르실 수 있어요. 동선의 마지막 장소에서 가까운 순으로
+        추천해드리려면 코스가 정해져 있어야 하거든요.
+      </p>
     </div>
   );
 }

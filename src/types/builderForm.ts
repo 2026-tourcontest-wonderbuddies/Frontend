@@ -34,9 +34,6 @@ export interface BuilderForm {
   lodgingType: LodgingType | "";
   cooking: string; // "무관" | "필요"
   lodgingFreeText: string;
-
-  // 5 — 숙소 고르기 (다일 여행에서만). 빈 문자열이면 고르지 않고 넘어간 것.
-  lodgingContentId: string;
 }
 
 export function defaultBuilderForm(): BuilderForm {
@@ -56,7 +53,6 @@ export function defaultBuilderForm(): BuilderForm {
     lodgingType: "상관없음",
     cooking: "무관",
     lodgingFreeText: "",
-    lodgingContentId: "",
   };
 }
 
