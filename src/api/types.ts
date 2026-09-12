@@ -557,6 +557,37 @@ export interface PlaceSearchQuery {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// 시간대별 장소 (홈 JEJU BY TIME OF DAY). GET /api/places/by-period/
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * 근거가 두 갈래다.
+ *  arrival — AI Hub 실측 도착시각의 시간대 쏠림 (아침/낮/노을/밤)
+ *  hours   — 영업·개방 시간 (새벽. 도착시각 표본이 전체의 0.8%뿐이라 랭킹이 안 선다)
+ */
+export type PeriodEvidence = "arrival" | "hours";
+
+export interface PeriodPlace extends SearchPlace {
+  stay_time_minutes: number;
+  evidence: PeriodEvidence;
+  // evidence === "arrival"
+  n?: number;
+  total?: number;
+  share?: number;
+  lift?: number;
+  score?: number;
+  // evidence === "hours"
+  open?: string;
+  close?: string;
+  obs?: number;
+}
+
+export interface PeriodPlacesResponse {
+  period: string;
+  results: PeriodPlace[];
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // 장소 상세. GET /api/places/{content_id}/
 // ══════════════════════════════════════════════════════════════════════════
 

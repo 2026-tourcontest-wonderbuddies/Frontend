@@ -1,5 +1,10 @@
 import { apiClient } from "./client";
-import type { PlaceDetail, PlaceSearchQuery, PlaceSearchResponse } from "./types";
+import type {
+  PeriodPlacesResponse,
+  PlaceDetail,
+  PlaceSearchQuery,
+  PlaceSearchResponse,
+} from "./types";
 
 /** [daeun 전용 신규] GET /api/places/search/ — 이름/유형/권역으로 장소 검색 */
 export function searchPlaces(params: PlaceSearchQuery) {
@@ -11,6 +16,13 @@ export function searchPlaces(params: PlaceSearchQuery) {
   query.set("page_size", String(params.page_size ?? 20));
 
   return apiClient.get<PlaceSearchResponse>(`/places/search/?${query.toString()}`);
+}
+
+/** GET /api/places/by-period/ — 홈 시간대 카드에 들어갈 장소 */
+export function getPeriodPlaces(period: string, limit = 10) {
+  return apiClient.get<PeriodPlacesResponse>(
+    `/places/by-period/?period=${period}&limit=${limit}`,
+  );
 }
 
 /**

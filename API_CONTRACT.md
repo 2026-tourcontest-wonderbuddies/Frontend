@@ -37,6 +37,7 @@
 | 7 | `POST /api/courses/{course_id}/select-lodging/` | `selectCourseLodging()` `src/api/courses.ts` | LodgingPage |
 | 8 | `POST /api/courses/{course_id}/modify/` | `modifyCourse()` `src/api/courses.ts` | (아직 화면 없음) |
 | 11 | `POST /api/auth/google/` | `loginWithGoogle()` `src/api/auth.ts` | LoginPage |
+| 신규 | `GET /api/places/by-period/` | `getPeriodPlaces()` `src/api/places.ts` | HomePage (JEJU BY TIME OF DAY 카드) |
 
 명세 9·10번(`/api/places/{content_id}/`, `/ask/`)은 백엔드에도 아직 없어 미연동입니다.
 
