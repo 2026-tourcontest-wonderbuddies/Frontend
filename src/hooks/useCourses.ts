@@ -70,7 +70,7 @@ export function useSelectCourseLodging() {
     mutationFn: ({ courseId, contentId }: { courseId: number | string; contentId: string }) =>
       selectCourseLodging(courseId, contentId),
     onSuccess: (_res, { courseId }) => {
-      // 숙소를 바꾸면 각 Day의 lodging_snapshot이 갱신되므로 상세를 다시 받는다.
+      // 숙소를 바꾸면 각 Day의 lodging이 갱신되므로 상세를 다시 받는다.
       qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
       qc.invalidateQueries({ queryKey: ["course-lodging-options", String(courseId)] });
     },

@@ -459,6 +459,23 @@ export interface LodgingCard {
   tripcom_zone_id: string;
 }
 
+/** 코스 상세에 실려 오는 축약 숙소. 마지막 날은 숙박이 없어 null 이다. */
+export type CourseLodging = Pick<
+  LodgingCard,
+  | "content_id"
+  | "title"
+  | "category"
+  | "price_hint"
+  | "address"
+  | "room_type"
+  | "check_in_time"
+  | "check_out_time"
+  | "tripcom_link"
+  | "lat"
+  | "lon"
+  | "region"
+>;
+
 export interface CourseDay {
   id: number;
   day_index: number;
@@ -468,9 +485,8 @@ export interface CourseDay {
   need_lunch: boolean;
   need_dinner: boolean;
   need_night_spot: boolean;
-  // 백엔드가 코스 상세에서 두 필드를 빼고 내려준다(숙소는 명세 6번 별도 엔드포인트).
-  lodging_snapshot?: LodgingCard | null;
-  lodging_options_snapshot?: LodgingCard[];
+  // 코스 상세는 화면에 쓰는 12개만 담은 축약 숙소를 준다(전체 카드는 명세 6번).
+  lodging?: CourseLodging | null;
   items: CourseItem[];
 }
 
@@ -481,6 +497,10 @@ export interface CourseDetail {
   is_selected: boolean;
   final_score: number | null;
   created_at: string;
+  // [백엔드 연결 이전] 공항 기준 여행 양 끝 시각. 추가 요청 중(TEAM_SHARE.md 추가 요청 5번).
+  // 없으면 타임라인에 공항 항목을 그리지 않는다.
+  trip_start_datetime?: string;
+  trip_end_datetime?: string;
   days: CourseDay[];
 }
 
