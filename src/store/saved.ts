@@ -1,17 +1,11 @@
 import { useSyncExternalStore } from "react";
-import type { SearchPlace } from "../api/types";
 
 /**
- * [백엔드 연결 이전] 저장함(찜)은 백엔드 API 명세에 대응 엔드포인트가 없다.
- * 서버에 `/api/saved/*` 가 생기기 전까지 브라우저 localStorage 에만 담는다.
- * 따라서 저장 목록은 기기·브라우저 단위이며 계정을 따라다니지 않는다.
+ * [백엔드 연결 이전] 코스 저장은 백엔드 API 명세에 대응 엔드포인트가 없다.
+ * 서버에 코스 저장이 생기기 전까지 브라우저 localStorage 에만 담는다.
+ * 따라서 저장 코스 목록은 기기·브라우저 단위이며 계정을 따라다니지 않는다.
+ * (장소 저장은 서버로 옮겼다 — src/hooks/useSavedPlaces.ts)
  */
-
-export interface SavedPlaceRecord {
-  id: string;
-  place: SearchPlace;
-  saved_at: string;
-}
 
 /** 코스 상세를 매번 다시 받지 않도록 저장 시점의 요약을 함께 담아둔다. */
 export interface SavedCourseRecord {
@@ -25,16 +19,13 @@ export interface SavedCourseRecord {
   saved_at: string;
 }
 
-const PLACES_KEY = "tj_saved_places";
 const COURSES_KEY = "tj_saved_courses";
 
 /** userId → 목록. 한 브라우저를 여러 계정이 쓰는 경우를 갈라둔다. */
 type Bucket<T> = Record<string, T[]>;
 
-const EMPTY_PLACES: SavedPlaceRecord[] = [];
 const EMPTY_COURSES: SavedCourseRecord[] = [];
 
-let placeCache: Bucket<SavedPlaceRecord> | null = null;
 let courseCache: Bucket<SavedCourseRecord> | null = null;
 const listeners = new Set<() => void>();
 
@@ -47,11 +38,6 @@ function readBucket<T>(key: string): Bucket<T> {
   }
 }
 
-function places(): Bucket<SavedPlaceRecord> {
-  placeCache ??= readBucket<SavedPlaceRecord>(PLACES_KEY);
-  return placeCache;
-}
-
 function courses(): Bucket<SavedCourseRecord> {
   courseCache ??= readBucket<SavedCourseRecord>(COURSES_KEY);
   return courseCache;
@@ -59,12 +45,6 @@ function courses(): Bucket<SavedCourseRecord> {
 
 function emit() {
   for (const listener of listeners) listener();
-}
-
-function writePlaces(next: Bucket<SavedPlaceRecord>) {
-  placeCache = next;
-  localStorage.setItem(PLACES_KEY, JSON.stringify(next));
-  emit();
 }
 
 function writeCourses(next: Bucket<SavedCourseRecord>) {
@@ -77,9 +57,8 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   // 다른 탭에서 바뀐 저장 목록을 따라간다.
   function onStorage(e: StorageEvent) {
-    if (e.key === PLACES_KEY) placeCache = null;
-    else if (e.key === COURSES_KEY) courseCache = null;
-    else return;
+    if (e.key !== COURSES_KEY) return;
+    courseCache = null;
     listener();
   }
   window.addEventListener("storage", onStorage);
@@ -101,21 +80,9 @@ export function courseSummaryText(course: SavedCourseRecord): string {
 
 // ── 조회 ──────────────────────────────────────────────────────────────────
 
-export function useSavedPlaces(userId?: string): SavedPlaceRecord[] {
-  return useSyncExternalStore(subscribe, () =>
-    userId ? (places()[userId] ?? EMPTY_PLACES) : EMPTY_PLACES,
-  );
-}
-
 export function useSavedCourses(userId?: string): SavedCourseRecord[] {
   return useSyncExternalStore(subscribe, () =>
     userId ? (courses()[userId] ?? EMPTY_COURSES) : EMPTY_COURSES,
-  );
-}
-
-export function useIsPlaceSaved(userId: string | undefined, contentId: string): boolean {
-  return useSyncExternalStore(subscribe, () =>
-    Boolean(userId && places()[userId]?.some((r) => r.place.content_id === contentId)),
   );
 }
 
@@ -126,20 +93,6 @@ export function useIsCourseSaved(userId: string | undefined, courseId?: number):
 }
 
 // ── 쓰기 ──────────────────────────────────────────────────────────────────
-
-/** 이미 저장돼 있으면 해제, 아니면 저장. */
-export function toggleSavedPlace(userId: string, place: SearchPlace) {
-  const list = places()[userId] ?? [];
-  const existing = list.find((r) => r.place.content_id === place.content_id);
-  const next = existing
-    ? list.filter((r) => r.id !== existing.id)
-    : [{ id: newId(), place, saved_at: new Date().toISOString() }, ...list];
-  writePlaces({ ...places(), [userId]: next });
-}
-
-export function removeSavedPlace(userId: string, id: string) {
-  writePlaces({ ...places(), [userId]: (places()[userId] ?? []).filter((r) => r.id !== id) });
-}
 
 export function toggleSavedCourse(userId: string, course: Omit<SavedCourseRecord, "id" | "saved_at">) {
   const list = courses()[userId] ?? [];

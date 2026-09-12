@@ -6,7 +6,7 @@ import { toggleSavedCourse, useIsCourseSaved } from "../store/saved";
 import { PRIORITY_LABELS } from "../api/types";
 import { dayCaseLabel, dayDateLabel, hhmm, slotLabel } from "../utils/format";
 import type { PlaceSummary } from "../api/types";
-import { courseItems, courseLodging, courseStartIso, courseStats } from "../utils/course";
+import { courseItems, courseLodging, courseStartIso, courseStats, dayAirport } from "../utils/course";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
 
 const STOP_ANGLES = [
@@ -65,6 +65,10 @@ export default function DetailPage() {
   }
 
   const day = course.days[dayIdx] ?? course.days[0];
+  const airport = dayAirport(course, day);
+  // 공항 시각이 있으면 그게 그 날의 실제 양 끝점이다(사용자가 빌더에 입력한 값).
+  const dayStart = airport.depart ?? day.items[0]?.arrive_at ?? null;
+  const dayEnd = airport.arrive ?? day.items[day.items.length - 1]?.depart_at ?? null;
   const allItems = courseItems(course);
   const lodging = courseLodging(course);
   const stats = courseStats(course);
@@ -158,11 +162,7 @@ export default function DetailPage() {
             <div className="mini-center">
               <div className="t">{regionText.split(" ")[0]}</div>
               <div className="s">
-                {day.items.length > 0
-                  ? `${hhmm(day.items[0].arrive_at)} → ${hhmm(
-                      day.items[day.items.length - 1].depart_at,
-                    )}`
-                  : ""}
+                {dayStart && dayEnd ? `${hhmm(dayStart)} → ${hhmm(dayEnd)}` : ""}
               </div>
             </div>
           </div>
@@ -176,10 +176,8 @@ export default function DetailPage() {
 
           <div className="day-summary mono" style={{ margin: "10px 0 16px", color: "var(--ink-soft)" }}>
             {startIso ? `${dayDateLabel(startIso, day.day_index)} · ` : ""}
-            {day.items.length > 0
-              ? `${hhmm(day.items[0].arrive_at)}–${hhmm(
-                  day.items[day.items.length - 1].depart_at,
-                )} · ${day.items.length}곳 방문`
+            {dayStart && dayEnd
+              ? `${hhmm(dayStart)}–${hhmm(dayEnd)} · ${day.items.length}곳 방문`
               : "방문지 없음"}
           </div>
 
@@ -209,6 +207,21 @@ export default function DetailPage() {
             </div>
           )}
           <div className="timeline">
+            {airport.depart && (
+              <div className="tl-item">
+                <div className="tl-dot mono">{hhmm(airport.depart)}</div>
+                <div className="tl-card tl-airport">
+                  <div className="tl-title">🛬 제주공항 밖 출발 (수하물 수령 완료)</div>
+                </div>
+                {airport.departTravelMin ? (
+                  <div className="tl-transit">
+                    <span className="line" />
+                    🚗 차량 {airport.departTravelMin}분 이동
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             {day.items.map((item, idx) => (
               <div className="tl-item" key={item.id}>
                 <div className="tl-dot mono">{hhmm(item.arrive_at)}</div>
@@ -238,38 +251,52 @@ export default function DetailPage() {
                     {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
                   </div>
                 </div>
-                {idx < day.items.length - 1 && (
+                {idx < day.items.length - 1 ? (
                   <div className="tl-transit">
                     <span className="line" />
                     🚗 차량 {day.items[idx + 1].travel_min_from_prev ?? 0}분 이동
                   </div>
-                )}
+                ) : airport.arriveTravelMin ? (
+                  <div className="tl-transit">
+                    <span className="line" />
+                    🚗 차량 {airport.arriveTravelMin}분 이동
+                  </div>
+                ) : null}
               </div>
             ))}
 
-            {day.lodging_snapshot && (
+            {airport.arrive && (
               <div className="tl-item">
-                <div className="tl-dot mono">{day.lodging_snapshot.check_in_time || "숙박"}</div>
+                <div className="tl-dot mono">{hhmm(airport.arrive)}</div>
+                <div className="tl-card tl-airport">
+                  <div className="tl-title">🛫 제주공항 도착 (탑승 수속)</div>
+                </div>
+              </div>
+            )}
+
+            {day.lodging && (
+              <div className="tl-item">
+                <div className="tl-dot mono">{day.lodging.check_in_time || "숙박"}</div>
                 <div className="tl-card tl-lodging">
                   <div className="tl-top">
                     <div className="tl-title">
-                      🛏 {day.lodging_snapshot.title}
+                      🛏 {day.lodging.title}
                       <span className="meta-chip mono" style={{ marginLeft: 8 }}>
-                        {day.lodging_snapshot.category}
+                        {day.lodging.category}
                       </span>
                     </div>
-                    <div className="tl-stay mono">{day.lodging_snapshot.price_hint}</div>
+                    <div className="tl-stay mono">{day.lodging.price_hint}</div>
                   </div>
                   <div className="tl-desc">
-                    {day.lodging_snapshot.address}
-                    {day.lodging_snapshot.room_type ? ` · ${day.lodging_snapshot.room_type}` : ""}
-                    {day.lodging_snapshot.check_out_time
-                      ? ` · 체크아웃 ${day.lodging_snapshot.check_out_time}`
+                    {day.lodging.address}
+                    {day.lodging.room_type ? ` · ${day.lodging.room_type}` : ""}
+                    {day.lodging.check_out_time
+                      ? ` · 체크아웃 ${day.lodging.check_out_time}`
                       : ""}
                   </div>
-                  {day.lodging_snapshot.tripcom_link && (
+                  {day.lodging.tripcom_link && (
                     <a
-                      href={day.lodging_snapshot.tripcom_link}
+                      href={day.lodging.tripcom_link}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="side-note"

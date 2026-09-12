@@ -3,32 +3,32 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Modal from "../components/Modal";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
-import type { SearchPlace } from "../api/types";
+import type { PlaceSummary, SearchPlace } from "../api/types";
+import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
 import {
   courseSummaryText,
   removeSavedCourse,
-  removeSavedPlace,
   useSavedCourses,
-  useSavedPlaces,
   type SavedCourseRecord,
-  type SavedPlaceRecord,
 } from "../store/saved";
 
-type DeleteTarget = { kind: "place"; item: SavedPlaceRecord } | { kind: "course"; item: SavedCourseRecord };
+type DeleteTarget = { kind: "place"; item: PlaceSummary } | { kind: "course"; item: SavedCourseRecord };
 
 /**
- * [백엔드 연결 이전] 저장 API 가 아직 서버에 없어 목록은 이 브라우저(localStorage)에만 있다.
+ * 장소는 계정에 저장된다(명세 신규 · GET /api/places/saved/).
+ * [백엔드 연결 이전] 코스 저장만 대응 엔드포인트가 없어 localStorage 에 남아 있다.
  */
 export default function SavedPage() {
   const { user } = useAuth();
-  const places = useSavedPlaces(user?.id);
+  const { data: places = [] } = useSavedPlaces(Boolean(user));
   const courses = useSavedCourses(user?.id);
+  const toggleSaved = useToggleSavedPlace();
   const [target, setTarget] = useState<DeleteTarget | null>(null);
   const [selected, setSelected] = useState<SearchPlace | null>(null);
 
   function confirmDelete() {
     if (!target || !user) return;
-    if (target.kind === "place") removeSavedPlace(user.id, target.item.id);
+    if (target.kind === "place") toggleSaved.mutate({ contentId: target.item.content_id, saved: true });
     else removeSavedCourse(user.id, target.item.id);
     setTarget(null);
   }
@@ -59,8 +59,8 @@ export default function SavedPage() {
       </div>
 
       <div className="nocon-banner" style={{ marginTop: 12 }}>
-        ⚠ 백엔드 미연동 — 저장 API가 아직 서버에 없어요. 저장한 장소·코스는 이 브라우저에만 남고,
-        다른 기기에서는 보이지 않아요.
+        ⚠ 저장한 코스는 아직 백엔드 미연동이에요. 코스는 이 브라우저에만 남고 다른 기기에서는
+        보이지 않아요. (장소는 계정에 저장돼요)
       </div>
 
       {isEmpty && (
@@ -79,15 +79,15 @@ export default function SavedPage() {
             저장한 장소
           </h2>
           <div className="saved-list">
-            {places.map((sp) => (
-              <div className="saved-row" key={sp.id}>
-                <button type="button" className="saved-row-link" onClick={() => setSelected(sp.place)}>
-                  <div className="saved-row-title">{sp.place.title}</div>
+            {places.map((place) => (
+              <div className="saved-row" key={place.content_id}>
+                <button type="button" className="saved-row-link" onClick={() => setSelected(place)}>
+                  <div className="saved-row-title">{place.title}</div>
                   <div className="saved-row-sub mono">
-                    {sp.place.content_type_name} · {sp.place.address}
+                    {place.content_type_name} · {place.address}
                   </div>
                 </button>
-                <button type="button" className="btn-outline" onClick={() => setTarget({ kind: "place", item: sp })}>
+                <button type="button" className="btn-outline" onClick={() => setTarget({ kind: "place", item: place })}>
                   삭제
                 </button>
               </div>
@@ -120,7 +120,7 @@ export default function SavedPage() {
       {target && (
         <Modal title={target.kind === "place" ? "장소 삭제" : "코스 삭제"} onClose={() => setTarget(null)}>
           <p style={{ marginBottom: 20 }}>
-            {target.kind === "place" ? target.item.place.title : target.item.title}을(를) 저장 목록에서
+            {target.item.title}을(를) 저장 목록에서
             삭제하시겠습니까?
           </p>
           <div style={{ display: "flex", gap: 10 }}>
