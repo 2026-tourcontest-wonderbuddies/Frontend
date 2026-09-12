@@ -5,7 +5,7 @@ import PlaceDetailSheet from "../components/PlaceDetailSheet";
 import ChipGroup from "../components/ChipGroup";
 import { useAuth } from "../auth/AuthContext";
 import { usePlaceSearchResults, usePlaceSuggestions } from "../hooks/usePlaceSearch";
-import { toggleSavedPlace, useSavedPlaces } from "../store/saved";
+import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
 import { REGION_CODE_BY_KEY, REGION_LABELS, type RegionKey, type SearchPlace } from "../api/types";
 
 const CATEGORY_OPTIONS = ["관광지", "문화시설", "음식점", "쇼핑"].map((v) => ({ value: v, label: v }));
@@ -39,8 +39,12 @@ export default function SearchPage() {
   const results = useMemo(() => data?.pages.flatMap((p) => p.results) ?? [], [data]);
   const total = data?.pages[0]?.total ?? 0;
 
-  const savedPlaces = useSavedPlaces(user?.id);
-  const savedIds = useMemo(() => new Set(savedPlaces.map((r) => r.place.content_id)), [savedPlaces]);
+  const { data: savedPlaces } = useSavedPlaces(Boolean(user));
+  const savedIds = useMemo(
+    () => new Set((savedPlaces ?? []).map((p) => p.content_id)),
+    [savedPlaces],
+  );
+  const toggleSaved = useToggleSavedPlace();
 
   function submitSearch(e?: FormEvent) {
     e?.preventDefault();
@@ -166,7 +170,13 @@ export default function SearchPage() {
                 type="button"
                 className="btn-outline"
                 aria-pressed={savedIds.has(place.content_id)}
-                onClick={() => toggleSavedPlace(user.id, place)}
+                disabled={toggleSaved.isPending}
+                onClick={() =>
+                  toggleSaved.mutate({
+                    contentId: place.content_id,
+                    saved: savedIds.has(place.content_id),
+                  })
+                }
               >
                 {savedIds.has(place.content_id) ? "♥ 저장됨" : "♡ 저장"}
               </button>

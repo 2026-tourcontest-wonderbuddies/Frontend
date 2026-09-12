@@ -60,7 +60,7 @@ src/
 | `/login` | 구글 로그인 | ✅ 명세 11번 |
 | `/list` | 추천 코스 목록 | ⚪ 정적 목업 — 백엔드에 "공개 코스" 모델이 없음 |
 | `/search` | 장소 검색 | ⚪ 프론트 단독 — 대응 엔드포인트 없음, 시드 10곳을 클라이언트 필터링 |
-| `/saved`, `/saved/map` | 저장함(찜) | ⚪ 프론트 단독 — 대응 엔드포인트 없음, `localStorage`에만 저장 |
+| `/saved`, `/saved/map` | 저장함(찜) | ✅ 장소는 `GET /api/places/saved/`·`POST/DELETE /api/places/{content_id}/save/` / ⚪ 코스는 엔드포인트가 없어 `localStorage` |
 | `/trip/:id/edit`, `/trip/:id/chat`, `/signup` | — | ⛔ 보류 (`ComingSoon`) |
 
 ## 4. 백엔드 팀에게 확인 요청

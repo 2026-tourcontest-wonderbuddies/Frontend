@@ -18,7 +18,7 @@ Notion `04. 개발 / API 명세서` 데이터베이스에는 아래 기능의 �
 | 기능 | 지금 구현 | 서버가 생기면 필요한 엔드포인트 |
 |---|---|---|
 | 장소 검색 | `src/data/places.ts` 시드 10곳을 클라이언트에서 필터링 (`src/pages/SearchPage.tsx`) | `GET /api/places/search?q&category&region` |
-| 저장(찜) | `localStorage` (`src/store/saved.ts`) — 기기·브라우저 단위, 계정을 따라다니지 않음 | `GET/POST/DELETE /api/saved/places`, `/api/saved/courses` |
+| 저장(찜) — 코스 | `localStorage` (`src/store/saved.ts`) — 기기·브라우저 단위, 계정을 따라다니지 않음 | 코스 저장용 엔드포인트 (장소는 `/api/places/saved/`로 연동 완료) |
 
 엔드포인트가 생기면 `src/data/places.ts`의 `filterPlaces()`와 `src/store/saved.ts`의
 읽기/쓰기 함수만 API 호출로 갈아끼우면 되고, 화면은 그대로 둔다.

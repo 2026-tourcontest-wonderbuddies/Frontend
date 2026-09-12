@@ -4,7 +4,8 @@ import { useAuth } from "../auth/AuthContext";
 import MapPin from "../components/MapPin";
 import KakaoMap, { type KakaoMapPoint } from "../components/KakaoMap";
 import { kakaoPlaceUrl } from "../utils/kakao";
-import { courseSummaryText, useSavedCourses, useSavedPlaces } from "../store/saved";
+import { useSavedPlaces } from "../hooks/useSavedPlaces";
+import { courseSummaryText, useSavedCourses } from "../store/saved";
 
 const PIN_POSITIONS = [
   { top: "20%", left: "58%" },
@@ -15,11 +16,11 @@ const PIN_POSITIONS = [
   { top: "28%", left: "80%" },
 ];
 
-/** [백엔드 연결 이전] 저장 목록은 localStorage 에만 있다. src/store/saved.ts 참고. */
+/** 장소는 서버(GET /api/places/saved/), 코스는 [백엔드 연결 이전]이라 localStorage 다. */
 export default function SavedMapPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<"places" | "courses">("places");
-  const places = useSavedPlaces(user?.id);
+  const { data: places = [] } = useSavedPlaces(Boolean(user));
   const courses = useSavedCourses(user?.id);
 
   if (!user) {
@@ -34,11 +35,11 @@ export default function SavedMapPage() {
     );
   }
 
-  const placePoints: KakaoMapPoint[] = places.map((sp) => ({
-    id: sp.id,
-    title: sp.place.title,
-    latitude: sp.place.latitude,
-    longitude: sp.place.longitude,
+  const placePoints: KakaoMapPoint[] = places.map((place) => ({
+    id: place.content_id,
+    title: place.title,
+    latitude: place.latitude,
+    longitude: place.longitude,
     label: "♥",
   }));
 
@@ -57,8 +58,8 @@ export default function SavedMapPage() {
       <h1 className="page-title">저장 지도 보기</h1>
 
       <div className="nocon-banner" style={{ marginTop: 12 }}>
-        ⚠ 백엔드 미연동 — 저장 API가 아직 서버에 없어요. 이 지도에 찍히는 건 이 브라우저에 저장된
-        목록뿐이에요.
+        ⚠ 저장한 코스는 아직 백엔드 미연동이에요. 코스 탭에 찍히는 건 이 브라우저에 저장된
+        목록뿐이에요. (장소는 계정에 저장돼요)
       </div>
 
       <div className="day-tabs" style={{ marginTop: 20 }}>
@@ -81,25 +82,25 @@ export default function SavedMapPage() {
             points={placePoints}
             fallback={
               <div className="map-placeholder big">
-                {places.slice(0, 6).map((sp, i) => (
-                  <MapPin key={sp.id} place={sp.place} style={PIN_POSITIONS[i]} />
+                {places.slice(0, 6).map((place, i) => (
+                  <MapPin key={place.content_id} place={place} style={PIN_POSITIONS[i]} />
                 ))}
               </div>
             }
           />
           <div className="saved-list" style={{ marginTop: 20 }}>
             {places.length === 0 && <p style={{ color: "var(--ink-soft)", fontSize: 13 }}>저장한 장소가 없어요.</p>}
-            {places.map((sp) => (
-              <div className="saved-row" key={sp.id}>
+            {places.map((place) => (
+              <div className="saved-row" key={place.content_id}>
                 <div>
-                  <div className="saved-row-title">📍 {sp.place.title}</div>
+                  <div className="saved-row-title">📍 {place.title}</div>
                   <div className="saved-row-sub mono">
-                    {sp.place.address} · {sp.place.content_type_name}
+                    {place.address} · {place.content_type_name}
                   </div>
                 </div>
                 <a
                   className="btn-outline"
-                  href={kakaoPlaceUrl(sp.place)}
+                  href={kakaoPlaceUrl(place)}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ flexShrink: 0 }}

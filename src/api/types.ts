@@ -577,6 +577,17 @@ export interface PlaceSearchQuery {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// 저장한 장소(찜). GET /api/places/saved/, POST·DELETE /api/places/{content_id}/save/
+// 목록 응답은 PlaceSummary 배열 그대로다.
+// ══════════════════════════════════════════════════════════════════════════
+
+/** POST/DELETE /api/places/{content_id}/save/ 응답 */
+export interface SavedPlaceToggle {
+  content_id: string;
+  saved: boolean;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // 시간대별 장소 (홈 JEJU BY TIME OF DAY). GET /api/places/by-period/
 // ══════════════════════════════════════════════════════════════════════════
 
