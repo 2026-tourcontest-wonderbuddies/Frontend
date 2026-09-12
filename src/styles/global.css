@@ -122,6 +122,23 @@ h1.hero-title .accent{color:var(--sunset);}
 .tod-desc{font-size:11.5px; opacity:0.85; margin-top:5px; line-height:1.6;}
 .tod-card.current::after{content:'지금'; position:absolute; top:14px; right:14px; font-family:'Space Mono',monospace; font-size:9.5px; letter-spacing:1px; background:var(--paper); color:var(--ink); padding:4px 8px; border-radius:999px;}
 
+
+.tod-card{cursor:pointer;}
+.tod-card.open{outline:2px solid var(--ink); outline-offset:3px;}
+.tod-panel{margin-top:14px; border:1px solid var(--line); border-radius:16px; padding:18px 20px; background:var(--paper);}
+.tod-panel-msg{font-size:12.5px; opacity:.6; padding:6px 0;}
+.tod-panel-head{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; font-family:'Song Myung',serif; font-size:16px; padding-bottom:12px; margin-bottom:4px; border-bottom:1px solid var(--line);}
+.tod-panel-head span{font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:.5px; opacity:.55;}
+.tod-place-list{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,1fr); gap:0 28px;}
+@media (max-width:720px){ .tod-place-list{grid-template-columns:1fr;} }
+.tod-place-row{display:flex; flex-direction:column; gap:3px; padding:11px 0; border-bottom:1px solid var(--line);}
+.tod-place-main{display:flex; align-items:baseline; gap:8px;}
+.tod-place-title{font-size:14px;}
+.tod-place-cat{font-size:10.5px; opacity:.5; white-space:nowrap;}
+.tod-place-meta{display:flex; align-items:baseline; gap:8px; font-size:11px; opacity:.6; min-width:0;}
+.tod-place-meta .mono{font-family:'Space Mono',monospace; white-space:nowrap;}
+.tod-place-addr{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
 .course-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:22px;}
 @media (max-width:920px){ .course-grid{grid-template-columns:1fr;} }
 .mini-timeline{display:flex; align-items:center; gap:4px; margin-top:10px;}
@@ -494,7 +511,7 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .lodging-flag.on{border-style:solid; border-color:var(--ink); color:var(--ink);}
 .lodging-warn{font-family:'Space Mono',monospace; font-size:11px; color:var(--sunset); margin-top:2px;}
 .lodging-actions{display:flex; flex-wrap:wrap; gap:12px; margin-top:28px;}
-.tl-card.tl-lodging{border-style:dashed; background:var(--paper-deep);}
+.tl-card.tl-lodging, .tl-card.tl-airport{border-style:dashed; background:var(--paper-deep);}
 
 /* ---------------- MODAL / SHEET ---------------- */
 .modal-backdrop{position:fixed; inset:0; background:rgba(27,35,64,0.45); z-index:120; display:flex; align-items:flex-end; justify-content:center; padding:0;}
