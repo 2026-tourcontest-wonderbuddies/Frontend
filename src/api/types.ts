@@ -675,6 +675,8 @@ export interface PlaceDetail {
   stay_time_minutes: number;
   latitude: number;
   longitude: number;
+  /** 장소 사진 URL. 사진이 없는 장소는 빈 배열이고, 서버가 같은 URL을 중복해 담아 보낸다. */
+  images: string[];
 }
 
 // ══════════════════════════════════════════════════════════════════════════
