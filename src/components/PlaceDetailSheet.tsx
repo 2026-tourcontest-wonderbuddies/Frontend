@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Modal from "./Modal";
-import { getPlaceDetail } from "../api/places";
-import type { PlaceDetail, SearchPlace } from "../api/types";
+import { askPlace, getPlaceDetail } from "../api/places";
+import type { AskPlaceResponse, PlaceDetail, SearchPlace } from "../api/types";
 
 interface PlaceDetailSheetProps {
   /** 코스 상세(PlaceSummary)에서 열 때는 stay_time_minutes(권장 체류시간)도 같이 온다. */
@@ -90,6 +90,22 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   // 실제로 반 칸 안에서 줄바꿈이 일어나는(=넘치는) 항목만 한 행 전체로 넓힌다. 글자 수로 짐작하지 않고 직접 잰다.
   const valueRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [wideKeys, setWideKeys] = useState<Set<string>>(new Set());
+
+  // RAG 문답. 서버가 이전 문답을 기억하지 않아서, 지난 문답은 시트가 열려 있는 동안만 여기 쌓아 둔다.
+  const [question, setQuestion] = useState("");
+  const [thread, setThread] = useState<AskPlaceResponse[]>([]);
+  const ask = useMutation({
+    mutationFn: (q: string) => askPlace(p.content_id, q),
+    onSuccess: (res) => setThread((prev) => [...prev, res]),
+  });
+
+  function submitAsk(e: React.FormEvent) {
+    e.preventDefault();
+    const q = question.trim();
+    if (!q || ask.isPending) return;
+    setQuestion("");
+    ask.mutate(q);
+  }
 
   useLayoutEffect(() => {
     const next = new Set<string>();
@@ -183,6 +199,42 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
             {menu && <p>{menu}</p>}
           </div>
         )}
+
+        <div className="override-section">
+          <div className="override-label">💬 이 장소에 물어보기</div>
+
+          {(thread.length > 0 || ask.isPending) && (
+            <div className="chat-thread" style={{ marginTop: 0, marginBottom: 14 }}>
+              {thread.map((qa, i) => (
+                <Fragment key={i}>
+                  <div className="chat-bubble user">{qa.question}</div>
+                  <div className="chat-bubble assistant">{qa.answer}</div>
+                </Fragment>
+              ))}
+              {ask.isPending && (
+                <>
+                  {/* 보낸 질문(ask.variables)을 답이 오기 전에 먼저 띄운다. */}
+                  <div className="chat-bubble user">{ask.variables}</div>
+                  <div className="chat-bubble assistant">답변을 찾는 중…</div>
+                </>
+              )}
+            </div>
+          )}
+
+          <form className="search-bar" style={{ marginTop: 0 }} onSubmit={submitAsk}>
+            <input
+              className="search-input"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="예: 여기 주차 가능한가요?"
+            />
+            <button type="submit" className="btn-primary" disabled={ask.isPending || !question.trim()}>
+              질문
+            </button>
+          </form>
+
+          {ask.isError && <p className="lodging-warn">답변을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.</p>}
+        </div>
 
         <div className="auth-error-banner" style={{ background: "var(--paper-deep)", borderColor: "var(--line)" }}>
           <b style={{ color: "var(--ink)", fontFamily: "'Noto Sans KR', sans-serif", fontWeight: 700 }}>확인 필요 정보</b>

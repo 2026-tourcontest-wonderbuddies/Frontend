@@ -1,5 +1,6 @@
 import { apiClient } from "./client";
 import type {
+  AskPlaceResponse,
   PeriodPlacesResponse,
   PlaceDetail,
   PlaceSearchQuery,
@@ -48,4 +49,9 @@ export function savePlace(contentId: string) {
 /** DELETE /api/places/{content_id}/save/ — 저장 해제 */
 export function unsavePlace(contentId: string) {
   return apiClient.del<SavedPlaceToggle>(`/places/${contentId}/save/`);
+}
+
+/** POST /api/places/{content_id}/ask/ — 장소 RAG 문답 */
+export function askPlace(contentId: string, question: string) {
+  return apiClient.post<AskPlaceResponse>(`/places/${contentId}/ask/`, { question });
 }
