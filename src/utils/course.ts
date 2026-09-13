@@ -1,4 +1,4 @@
-import type { CourseDay, CourseDetail, CourseItem } from "../api/types";
+import { PRIORITY_LABELS, type CourseDay, type CourseDetail, type CourseItem } from "../api/types";
 
 /** 모든 Day의 방문 항목을 순서대로 펼친다. */
 export function courseItems(course: CourseDetail): CourseItem[] {
@@ -20,6 +20,15 @@ export function courseStats(course: CourseDetail) {
     totalMin: stayMin + travelMin,
     dayCount: course.days.filter((d) => d.items.length > 0).length,
   };
+}
+
+/** 코스에는 이름 필드가 없어 첫·마지막 방문지로 한 줄 제목을 만든다. */
+export function courseTitle(course: CourseDetail): string {
+  const items = courseItems(course);
+  const first = items[0]?.place.title ?? "";
+  const last = items[items.length - 1]?.place.title ?? "";
+  if (last && first !== last) return `${first} → ${last}`;
+  return first || PRIORITY_LABELS[course.mode];
 }
 
 /** 여행 전체에 하나 걸리는 숙소 앵커. Day별로 같은 스냅샷이 들어온다. */

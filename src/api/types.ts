@@ -670,3 +670,14 @@ export interface PlaceDetail {
   latitude: number;
   longitude: number;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 저장한 코스(찜). GET /api/courses/saved/, POST·DELETE /api/courses/{course_id}/save/
+// 목록 응답은 명세 2번과 같은 직렬화기라 CourseSummary 배열 그대로다.
+// ══════════════════════════════════════════════════════════════════════════
+
+/** POST/DELETE /api/courses/{course_id}/save/ 응답 */
+export interface SavedCourseToggle {
+  course_id: number;
+  is_saved: boolean;
+}

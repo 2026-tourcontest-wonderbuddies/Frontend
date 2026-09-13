@@ -2,8 +2,10 @@ import { apiClient } from "./client";
 import type {
   CourseDetail,
   CoursePlacesResponse,
+  CourseSummary,
   LodgingOptionsResponse,
   ModifyCourseResponse,
+  SavedCourseToggle,
   SelectCourseResponse,
   SelectLodgingResponse,
 } from "./types";
@@ -43,4 +45,19 @@ export function modifyCourse(courseId: number | string, rawMessage: string) {
   return apiClient.post<ModifyCourseResponse>(`/courses/${courseId}/modify/`, {
     raw_message: rawMessage,
   });
+}
+
+/** GET /api/courses/saved/ — 저장한 코스 목록. 장소 저장과 같이 배열을 그대로 준다. */
+export function getSavedCourses() {
+  return apiClient.get<CourseSummary[]>("/courses/saved/");
+}
+
+/** POST /api/courses/{course_id}/save/ — 코스 저장 */
+export function saveCourse(courseId: number | string) {
+  return apiClient.post<SavedCourseToggle>(`/courses/${courseId}/save/`, {});
+}
+
+/** DELETE /api/courses/{course_id}/save/ — 코스 저장 해제 */
+export function unsaveCourse(courseId: number | string) {
+  return apiClient.del<SavedCourseToggle>(`/courses/${courseId}/save/`);
 }
