@@ -700,3 +700,14 @@ export interface SavedCourseToggle {
   course_id: number;
   is_saved: boolean;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 장소 RAG 문답. POST /api/places/{content_id}/ask/
+// ══════════════════════════════════════════════════════════════════════════
+
+/** 서버가 이전 문답을 기억하지 않는 1회성 QA다. 요청 바디는 { question } 하나뿐. */
+export interface AskPlaceResponse {
+  content_id: string;
+  question: string;
+  answer: string;
+}

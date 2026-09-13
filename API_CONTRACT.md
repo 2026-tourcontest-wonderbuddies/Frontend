@@ -36,10 +36,10 @@
 | 6 | `GET /api/courses/{course_id}/lodging-options/` | `getCourseLodgingOptions()` `src/api/courses.ts` | LodgingPage |
 | 7 | `POST /api/courses/{course_id}/select-lodging/` | `selectCourseLodging()` `src/api/courses.ts` | LodgingPage |
 | 8 | `POST /api/courses/{course_id}/modify/` | `modifyCourse()` `src/api/courses.ts` | (아직 화면 없음) |
+| 9 | `GET /api/places/{content_id}/` | `getPlaceDetail()` `src/api/places.ts` | PlaceDetailSheet |
+| 10 | `POST /api/places/{content_id}/ask/` | `askPlace()` `src/api/places.ts` | PlaceDetailSheet (장소 RAG 문답) |
 | 11 | `POST /api/auth/google/` | `loginWithGoogle()` `src/api/auth.ts` | LoginPage |
 | 신규 | `GET /api/places/by-period/` | `getPeriodPlaces()` `src/api/places.ts` | HomePage (JEJU BY TIME OF DAY 카드) |
-
-명세 9·10번(`/api/places/{content_id}/`, `/ask/`)은 백엔드에도 아직 없어 미연동입니다.
 
 ### 명세서와 백엔드가 다른 지점 (백엔드 실제 라우트를 따름)
 
@@ -47,7 +47,7 @@
 |---|---|---|---|
 | 6 | `/courses/{id}/days/{day_index}/lodging-options/` | `/courses/{id}/lodging-options/` | 백엔드 따름 (숙소는 여행 전체 앵커라 Day 단위가 아님 — 명세 7번 설명과 일치) |
 | 8 | Method `get` | `POST` + body `{raw_message}` | 백엔드 따름 |
-| 9 | Method `post` | 미구현 | 미연동 |
+| 9 | Method `post` | `GET`만 허용 (`Allow: GET, HEAD, OPTIONS`) | 백엔드 따름 |
 
 ## 화면 흐름
 
