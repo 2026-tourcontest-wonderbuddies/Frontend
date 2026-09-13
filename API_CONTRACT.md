@@ -54,7 +54,7 @@
 ```
 BuilderPage
   └ POST /api/trips/            → { trip_id, course_ids: {dist, pref, relax} }
-       (일자별 개별 조건은 대응 필드가 없어 전송되지 않음)
+       (일자별 개별 조건은 day_overrides로 함께 전송)
        ↓ /trips/{trip_id}/courses
 CoursesPage
   ├ GET /api/trips/{trip_id}/courses/    → 코스 3개의 id
@@ -79,7 +79,7 @@ DetailPage / MapPage
 | 방문 수 / 총 소요시간 / 이동시간 | `days[].items[]`에서 계산 (`src/utils/course.ts`) |
 | 총 이동거리, 여유시간, 5점 척도 점수, 배지 | 데이터 없음 → 미표시. `final_score`로 대체 |
 | 여행 요청 조건(목적·권역) | 코스 응답에 없음 → 상세 화면은 `mode`와 숙소 스냅샷의 `region`을 표시 |
-| 일자별 개별 조건(`day_overrides`) | 서버에 필드 없음 → 추가 요청 중(`TEAM_SHARE.md`). 필드가 생기면 `buildPayload()`에서 그대로 전송 |
+| 일자별 개별 조건(`day_overrides`) | **연동 완료.** 목적·권역·제외 카테고리를 `buildPayload()`에서 전송. 단 `start_hour`/`end_hour`는 엔진이 아직 안 읽음(아래 참조) |
 | 여행 시작·종료 시각(공항 기준) | 명세 1번 **요청**에만 있고 어떤 응답에도 없음 → 추가 요청 중(`TEAM_SHARE.md` 추가 요청 5번). 오기 전까지 타임라인 공항 항목 미표시 |
 | 코스 생성 전 숙소 추천 | **요청 철회.** 추천 알고리즘이 코스 결과에 의존해 코스 없이는 성립하지 않습니다(아래 참조). 숙소 선택은 코스 생성 후 `LodgingPage`(명세 6·7번) 한 곳으로 일원화했습니다 |
 
@@ -122,15 +122,19 @@ DetailPage / MapPage
 
 ## 남은 갭
 
-- **`day_overrides` 미지원**: 명세 1번에 대응 필드가 없어 일자별 개별 조건을 전송하지 못합니다.
-  여기에는 목적·권역·제외 카테고리뿐 아니라 **일자별 활동 시각(`start_hour`/`end_hour`)** 도 포함됩니다.
-  `start_datetime`·`end_datetime`는 1일차 시작과 마지막 날 종료라서, 다일 여행의 중간 일자
-  활동 시간대는 이 필드가 생기기 전까지 서버에 전달되지 않습니다(빌더 1스텝에서 입력은 받고 있습니다).
-  프론트는 화면 구성을 확정했고 타입(`DayOverridePayload`, `src/api/types.ts`)도 있어서,
-  서버에 필드가 추가되면 `buildPayload()`에 한 줄만 넣으면 됩니다.
-  (`region_preference`는 한글 `RegionKey`라 `REGION_CODE_BY_KEY` 변환이 필요합니다.)
-  덧붙여 명세 1번의 `exclude_categories`가 "삭제 예정"으로 표기돼 있는데, 일자별 조건에서
-  계속 쓸 값이라 **유지를 요청**해 뒀습니다.
+- **일자별 활동 시각(`start_hour`/`end_hour`)을 엔진이 읽지 않음**: `day_overrides` 자체는
+  연동됐지만(목적·권역·제외 카테고리는 코스에 반영됩니다), 빌더 **1스텝**에서 받는
+  일자별 활동 시각은 추천 결과에 반영되지 않습니다.
+  `constraints.py`의 `calc_avail_hours(day_index, total_days, trip_start_dt, trip_end_dt)`가
+  여행 전체 시각만 받고, 중간 일자는 `DAY_START_ANCHOR`(9시)/`DAY_END_ANCHOR`(21시)로
+  하드코딩돼 있기 때문입니다. 그래서 프론트는 이 두 값을 **전송하지 않고**,
+  1스텝의 "미연동" 안내문구를 그대로 두고 있습니다. 엔진이 오버라이드를 읽도록 바뀌면
+  `buildPayload()`에서 `form.dayHours`를 `day_overrides`에 병합하면 됩니다.
+- **제외 카테고리는 이름 문자열 완전일치**: 백엔드 `filters.py`의 `is_excluded()`가
+  `place.middle_category_name`/`small_category_name`과 문자열을 그대로 비교합니다.
+  `src/constants/tourCategories.ts`의 중분류명이 DB 값과 한 글자라도 다르면
+  **에러 없이 제외가 안 됩니다**(실제로 가운뎃점 `·` / 마침표 `.` / `U+2027` 차이로 3개가 어긋나 있었습니다).
+  `npm run check:categories`가 이 일치 여부를 검사합니다.
 - **여행 시작·종료 시각이 응답에 없음**: 빌더가 받는 시각은 제주공항 기준인데
   (시작=수하물 수령 후 공항 밖으로 나오는 시각, 종료=공항에 도착해야 하는 시각),
   `start_datetime`·`end_datetime`가 명세 1번 요청 본문에만 있고 명세 2·4번 응답에는 없습니다.

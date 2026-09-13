@@ -165,51 +165,55 @@ src/
 
 ### 추가 요청
 
-아래 1·2·5번은 **프론트 화면 구성이 확정된 사항**이라 서버 지원이 필요합니다.
-(기존 3·4번은 철회했습니다 — 아래 참조.)
+아래 5번은 **프론트 화면 구성이 확정된 사항**이라 서버 지원이 필요합니다.
+(1·2번은 해결됐고, 기존 3·4번은 철회했습니다 — 아래 참조.)
 
-#### 1. 명세 1번에 `day_overrides` 추가 (일자별 개별 조건)
+#### 1. ~~명세 1번에 `day_overrides` 추가~~ — **해결됐습니다. 연동 완료 🙏**
 
-다일 여행에서 날짜마다 목적·권역·제외 카테고리, 그리고 **하루 활동 시간대**를 다르게 두는 것이
-빌더의 확정 화면 구성입니다.
-현재는 서버에 대응 필드가 없어 사용자가 입력한 값을 보내지 못하고 있습니다.
-
-프론트 타입은 이미 확정돼 있습니다(`src/api/types.ts`의 `DayOverridePayload`).
-명세 1번 request body에 아래 형태로 추가해 주실 수 있을까요?
+`TripRequest.day_overrides`(JSONField)와 `engine.py`의 `_get_day_override()`로 들어온 것 확인했고,
+프론트에서 전송 연결을 마쳤습니다. 실제로 보내는 형태는 아래와 같습니다.
 
 ```json
 "day_overrides": [
   {
     "day_index": 2,
     "purpose_main": "activity",
-    "purpose_sub": "food",
     "region_preference": "NE",
-    "exclude_categories": ["자연관광"],
-    "start_hour": 9,
-    "end_hour": 21
+    "exclude_categories": ["자연경관(산)", "자연공원"]
   }
 ]
 ```
 
 - `day_index`는 1부터 시작합니다 (1일차, 2일차 …).
-- 배열에 없는 날짜는 공통 조건을 그대로 적용합니다.
-- 각 필드는 생략 가능하며, 생략하면 그 항목만 공통값을 씁니다.
-- `region_preference`는 명세 1번과 동일한 `NE | NW | SE | SW | ALL` 코드로 보냅니다.
-- `purpose_main` / `purpose_sub`도 명세 1번과 동일한 값입니다.
-- `start_hour` / `end_hour`는 **그 날의 활동 시간대**입니다(정시 단위, 0~24).
-  다일 여행은 `start_datetime`·`end_datetime`만으로는 1일차 시작과 마지막 날 종료밖에 알 수 없어
-  2일차 이후 하루를 몇 시부터 몇 시까지 쓰는지가 비어 있었습니다. 이 두 필드가 그 구멍을 메웁니다.
-- 1일차의 `start_hour`와 마지막 날의 `end_hour`는 `start_datetime`·`end_datetime`과 중복이라 보내지 않습니다.
-  그 사이 날짜는 사용자가 따로 정하지 않으면 프론트가 기본값 **09~21시**로 채워 보냅니다.
+- 설정하지 않은 날짜는 배열에 아예 넣지 않습니다. 설정하지 않은 **필드**도 키째로 빼서 보냅니다
+  (`null`을 보내지 않습니다 — `override.get("purpose_main", trip.purpose_main)` 폴백이 깨지므로).
+- `region_preference`는 명세 1번과 동일한 `NE | NW | SE | SW | ALL` 코드로 변환해 보냅니다.
 
-#### 2. `exclude_categories`를 삭제하지 말아 주세요
+**`start_hour` / `end_hour`는 보내지 않기로 했습니다.** `constraints.py`의
+`calc_avail_hours(day_index, total_days, trip_start_dt, trip_end_dt)`가 여행 전체 시각만 받고
+중간 일자를 `DAY_START_ANCHOR`(9시)/`DAY_END_ANCHOR`(21시)로 하드코딩하고 있어서,
+보내도 추천 결과가 달라지지 않기 때문입니다.
+빌더 1스텝에서 일자별 활동 시각을 입력받는 화면은 그대로 있고 "미연동" 표시를 유지해 뒀습니다.
+**엔진이 이 값을 읽도록 바뀌면 알려주세요** — 프론트는 한 줄 병합으로 바로 보낼 수 있습니다.
 
-명세 1번 본문에 `"exclude_categories": []  # 삭제 예정`이라고 적혀 있는데, 프론트는 이 값을
-위 1번의 일자별 조건에서 **계속 사용할 예정**입니다. 제외할 TourAPI 중분류를 날짜별로 고르는
-입력이 이미 화면에 있습니다.
+#### 2. ~~`exclude_categories`를 삭제하지 말아 주세요~~ — **유지해 주셔서 감사합니다 🙏**
 
-여행 전체 단위로 남기든 `day_overrides` 안에만 두든 상관없지만 **어느 쪽으로든 유지가 필요**합니다.
-삭제가 확정이라면 같은 목적을 달성할 대체 수단이 있는지 알려주세요.
+`TripRequestSerializer`에 그대로 남아 있는 것 확인했고, 일자별 조건에서 쓰고 있습니다.
+
+##### ⚠ 다만 한 가지 — 카테고리명 3개가 DB 값과 달랐습니다
+
+`filters.py`의 `is_excluded()`가 `place.middle_category_name`과 **문자열 완전일치**로 거르는데,
+프론트 `tourCategories.ts`의 중분류명 3개가 구분자 문자만 달라 **에러 없이 제외가 안 되고 있었습니다.**
+
+| 프론트(기존) | DB 실제 값 | 차이 |
+|---|---|---|
+| `농·산·어촌 체험` | `농.산.어촌 체험` | `U+00B7` → `U+002E` |
+| `도시·지역문화관광` | `도시.지역문화관광` | `U+00B7` → `U+002E` |
+| `자연경관(하천·해양)` | `자연경관(하천‧해양)` | `U+00B7` → `U+2027` |
+
+프론트를 DB 값(`data/jeju_places_stay_time.csv` 원본)에 맞춰 고쳤고,
+`npm run check:categories`로 27개 전부 일치하는지 검사합니다.
+**DB의 카테고리명을 정리하실 계획이 있다면 미리 알려주세요** — 프론트도 같이 맞춰야 합니다.
 
 #### 3·4. ~~코스 생성 전 숙소 추천 엔드포인트 신설~~ · ~~명세 1번에 `lodging_content_id` 추가~~ — **철회합니다**
 

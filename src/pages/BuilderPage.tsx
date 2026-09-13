@@ -132,6 +132,17 @@ export default function BuilderPage() {
       lodging_type: isMultiDay ? form.lodgingType || undefined : undefined,
       lodging_need_cooking: isMultiDay ? form.cooking === "필요" : undefined,
       lodging_free_text: isMultiDay ? form.lodgingFreeText || undefined : undefined,
+      // 설정 안 한 필드는 undefined라 JSON.stringify가 키째로 빼고, 서버가 공통 조건으로 폴백한다.
+      day_overrides: form.dayOverrides.length
+        ? form.dayOverrides
+            // 1스텝으로 돌아가 박 수를 줄였으면 사라진 날짜의 설정이 남아 있을 수 있다.
+            .filter((o) => o.day_index <= form.nights + 1)
+            .map((o) => ({
+              ...o,
+              // 폼은 한글 RegionKey를 들고 있다. 최상위 region_preference와 같은 변환을 태운다.
+              region_preference: o.region_preference ? REGION_CODE_BY_KEY[o.region_preference] : undefined,
+            }))
+        : undefined,
       // 숙소 자체는 여기서 정하지 않는다. 백엔드 추천 알고리즘이 "그날 마지막 장소"에서의
       // 이동시간으로 앵커를 고르므로(accommodations/recommend.py) 코스가 있어야 의미가 있다.
       // 코스 생성 후 LodgingPage(명세 6·7번)에서 고른다.
