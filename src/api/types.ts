@@ -385,7 +385,17 @@ export interface TripCreateResponse {
   course_ids: Record<CoursePriority, number>;
 }
 
-/** 명세 2번 · GET /api/trips/{trip_id}/courses/ */
+export interface DaySummary {
+  day_index: number;
+  place_count: number;
+  avail_hours: number;
+}
+
+/**
+ * 코스 요약. 명세 2번(`/trips/{trip_id}/courses/`)과 "이전 코스 조회"(`/trips/`)가
+ * 같은 직렬화기(RecommendedCourseSummarySerializer)를 써서 동일한 형태로 온다.
+ * 명세서 본문 예시에는 앞의 다섯 필드만 있지만 실제 응답에는 아래 집계값도 실려 온다.
+ */
 export interface CourseSummary {
   id: number;
   mode: CoursePriority;
@@ -393,10 +403,23 @@ export interface CourseSummary {
   // 명세서 예시엔 숫자만 있지만 서버가 null을 주는 코스가 실제로 있다(trip 20). 미표시로 처리한다.
   final_score: number | null;
   created_at: string;
+  place_count: number;
+  total_duration_min: number;
+  total_travel_min: number;
+  days_summary: DaySummary[];
 }
 
 export interface TripCoursesResponse {
   trip_id: number;
+  courses: CourseSummary[];
+}
+
+/** 명세서 "이전 코스 조회" · GET /api/trips/ — 내가 만든 여행 이력. 서버가 배열을 그대로 준다. */
+export interface TripHistory {
+  trip_id: number;
+  start_datetime: string;
+  end_datetime: string;
+  created_at: string;
   courses: CourseSummary[];
 }
 
