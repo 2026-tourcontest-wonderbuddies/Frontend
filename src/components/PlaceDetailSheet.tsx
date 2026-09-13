@@ -56,6 +56,9 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   // 상세엔 menu/featured_menu가 없어 목록에서 받은 값이 그대로 살아남는다.
   const p: SearchPlace & Partial<PlaceDetail> = { ...place, ...detail };
 
+  // 서버가 같은 사진 URL을 두 번씩 담아 보내서 중복을 걷어낸다. 사진이 없는 장소는 빈 배열이다.
+  const photos = [...new Set(p.images ?? [])];
+
   const hours = hasValue(p.hours_raw) ? hoursLines(p.hours_raw) : [];
   const isRestaurant = p.content_type_name === "음식점";
   const menu = hasValue(p.menu) ? p.menu : "";
@@ -100,7 +103,24 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   return (
     <Modal title={p.title} onClose={onClose}>
       <div className="place-detail-sheet">
-        <div className="place-sheet-photo" />
+        {photos.length > 0 ? (
+          <div className="place-sheet-photos">
+            {photos.map((src) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                loading="lazy"
+                // 링크가 깨진 사진은 깨진 아이콘 대신 그냥 숨긴다.
+                onError={(e) => {
+                  e.currentTarget.hidden = true;
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="place-sheet-photo" />
+        )}
 
         <p style={{ marginBottom: 16 }}>
           {p.content_type_name}
