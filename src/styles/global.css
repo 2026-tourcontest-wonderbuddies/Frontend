@@ -256,7 +256,6 @@ h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px);
 .day-hours-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
 .day-hours-label{font-family:'Space Mono',monospace; font-size:12.5px; font-weight:700; min-width:52px;}
 .day-hours-hint{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft);}
-.day-hours-note{margin-left:40px;}
 .date-inputs{display:flex; align-items:center; gap:12px; margin-left:40px; margin-top:16px; flex-wrap:wrap;}
 .date-box{display:flex; flex-direction:column; gap:6px;}
 .date-box .lbl{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft);}
@@ -279,7 +278,7 @@ h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px);
 .subsection{margin-left:40px; margin-top:24px; padding-top:20px; border-top:1px dashed var(--line);}
 .subsection-title{font-family:'Song Myung',serif; font-size:15.5px; margin-bottom:4px;}
 .subsection-sub{font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-soft); margin-bottom:14px;}
-@media (max-width:640px){ .step-sub,.chip-row,.time-inputs,.presets,.date-inputs,.field-row,.toggle-row,.tag-input-row,.subsection,.day-hours-list,.day-hours-note{margin-left:0;} }
+@media (max-width:640px){ .step-sub,.chip-row,.time-inputs,.presets,.date-inputs,.field-row,.toggle-row,.tag-input-row,.subsection,.day-hours-list{margin-left:0;} }
 
 .preview{position:sticky; top:96px;}
 @media (max-width:960px){ .preview{position:static;} }

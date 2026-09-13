@@ -116,12 +116,11 @@ export default function BuilderPage() {
   }
 
   function buildPayload(): TripCreateRequest {
-    // 24시는 그 날 00:00이 아니라 다음 날 00:00이다. 날짜를 하루 넘겨야 마지막 날이 사라지지 않는다.
-    const endsAtMidnight = form.endHour === 24;
+    const dayHours = resolveDayHours(form.nights, form.startHour, form.endHour, form.dayHours);
+    const overrideByDay = new Map(form.dayOverrides.map((o) => [o.day_index, o]));
     return {
-      // 서버 TIME_ZONE이 UTC라서 오프셋을 빼면 9시간 밀린다. KST를 명시한다.
-      start_datetime: `${form.startDate}T${fmtHour(form.startHour)}:00+09:00`,
-      end_datetime: `${endsAtMidnight ? addDays(endDate, 1) : endDate}T${fmtHour(endsAtMidnight ? 0 : form.endHour)}:00+09:00`,
+      start_date: form.startDate,
+      end_date: endDate,
       guests: Number(form.headcount),
       purpose_main: form.purposeMain as PurposeKey,
       purpose_sub: form.purposeSub || undefined,
@@ -132,17 +131,22 @@ export default function BuilderPage() {
       lodging_type: isMultiDay ? form.lodgingType || undefined : undefined,
       lodging_need_cooking: isMultiDay ? form.cooking === "필요" : undefined,
       lodging_free_text: isMultiDay ? form.lodgingFreeText || undefined : undefined,
+      // resolveDayHours가 박 수 밖의 일자를 걸러주므로, 줄어든 일정에 남은 설정은 자동으로 빠진다.
       // 설정 안 한 필드는 undefined라 JSON.stringify가 키째로 빼고, 서버가 공통 조건으로 폴백한다.
-      day_overrides: form.dayOverrides.length
-        ? form.dayOverrides
-            // 1스텝으로 돌아가 박 수를 줄였으면 사라진 날짜의 설정이 남아 있을 수 있다.
-            .filter((o) => o.day_index <= form.nights + 1)
-            .map((o) => ({
-              ...o,
-              // 폼은 한글 RegionKey를 들고 있다. 최상위 region_preference와 같은 변환을 태운다.
-              region_preference: o.region_preference ? REGION_CODE_BY_KEY[o.region_preference] : undefined,
-            }))
-        : undefined,
+      day_schedules: dayHours.map(({ dayIndex, startHour, endHour }) => {
+        const o = overrideByDay.get(dayIndex);
+        return {
+          day_index: dayIndex,
+          start_time: fmtHour(startHour),
+          // 서버가 hour=24로 datetime을 만들 수 없어(ValueError) 자정은 그 날 23:59로 보낸다.
+          end_time: endHour === 24 ? "23:59" : fmtHour(endHour),
+          purpose_main: o?.purpose_main,
+          purpose_sub: o?.purpose_sub,
+          // 폼은 한글 RegionKey를 들고 있다. 최상위 region_preference와 같은 변환을 태운다.
+          region_preference: o?.region_preference ? REGION_CODE_BY_KEY[o.region_preference] : undefined,
+          exclude_categories: o?.exclude_categories,
+        };
+      }),
       // 숙소 자체는 여기서 정하지 않는다. 백엔드 추천 알고리즘이 "그날 마지막 장소"에서의
       // 이동시간으로 앵커를 고르므로(accommodations/recommend.py) 코스가 있어야 의미가 있다.
       // 코스 생성 후 LodgingPage(명세 6·7번)에서 고른다.

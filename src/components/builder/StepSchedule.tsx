@@ -161,15 +161,6 @@ export default function StepSchedule({ form, patch }: StepProps) {
               기본값으로 되돌리기
             </button>
           </div>
-          {/*
-            [백엔드 연결 이전] 1일차 시작·마지막 날 종료만 start_datetime/end_datetime으로 전송된다.
-            그 사이 일자별 시각은 명세 1번 request에 day_overrides 필드가 없어 아직 보내지 못한다.
-            필드가 추가되면 BuilderPage.tsx의 buildPayload()에서 함께 보내면 된다.
-          */}
-          <p className="nocon-note day-hours-note">
-            ⚠ 백엔드 미연동 — 1일차 시작과 마지막 날 종료만 서버로 전송돼요. 그 사이 일자별 시각은 명세 1번에{" "}
-            <code>day_overrides</code> 필드가 추가되면 함께 보냅니다.
-          </p>
         </>
       ) : (
         <>

@@ -195,10 +195,20 @@ export interface DayOverridePayload {
   end_hour?: number; // 1~24. 그 날 활동 종료 시각. 마지막 날은 end_datetime과 중복이라 생략
 }
 
-/** 전송용. 폼 상태(DayOverridePayload)는 권역을 한글 RegionKey로 들고 있어 코드로 바꿔 보낸다. */
-export type DayOverrideRequest = Omit<DayOverridePayload, "region_preference"> & {
+/**
+ * 전송용. 폼 상태(DayOverridePayload)는 권역을 한글 RegionKey로 들고 있어 코드로 바꿔 보낸다.
+ * 시각은 최상위가 아니라 일자별로만 보낸다. 서버가 start_date + (day_index-1)일 + "HH:MM"로
+ * 그 날의 시각을 조립하고(engine._combine_date_and_time), 키가 없으면 KeyError로 500이 난다.
+ */
+export interface DayScheduleRequest {
+  day_index: number;
+  start_time: string; // "HH:MM"
+  end_time: string;
+  purpose_main?: PurposeKey;
+  purpose_sub?: PurposeKey;
   region_preference?: RegionCode;
-};
+  exclude_categories?: string[]; // TourAPI 중분류/소분류 이름 배열 (filters.is_excluded가 이름으로 매칭)
+}
 
 // ── Course candidates (recommendation list before a trip is persisted) ────
 
@@ -368,8 +378,8 @@ export const REGION_CODE_BY_KEY: Record<RegionKey, RegionCode> = {
 
 /** 명세 1번 · POST /api/trips/ request body */
 export interface TripCreateRequest {
-  start_datetime: string; // "2026-09-10T14:00:00+09:00"
-  end_datetime: string;
+  start_date: string; // "2026-09-10"
+  end_date: string;
   guests: number;
   purpose_main: PurposeKey;
   purpose_sub?: PurposeKey;
@@ -382,7 +392,8 @@ export interface TripCreateRequest {
   lodging_type?: string;
   lodging_need_cooking?: boolean;
   lodging_free_text?: string;
-  day_overrides?: DayOverrideRequest[];
+  /** 서버가 이 개수로 여행 일수를 센다(engine.generate_one_course). 전체 일자를 빠짐없이 보낸다. */
+  day_schedules: DayScheduleRequest[];
 }
 
 /** 명세 1번 · 응답. 코스 본문이 아니라 3개 코스의 id만 온다. */
