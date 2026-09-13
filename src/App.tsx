@@ -22,8 +22,7 @@ import SavedMapPage from "./pages/SavedMapPage";
  * [백엔드 연결 이전] 아래 ComingSoon 라우트들은 백엔드 API 명세에 대응 엔드포인트가 없어 보류한 화면이다.
  * 화면 코드는 src/deferred/ 에 그대로 있다 (src/deferred/README.md 참고).
  *
- * /search 와 /saved 도 서버 엔드포인트가 없지만, 화면은 프론트 단독으로 동작한다.
- * 검색은 src/data/places.ts 시드 목록을, 저장함은 localStorage(src/store/saved.ts)를 쓴다.
+ * /saved 는 계정 저장분이다(GET /api/places/saved/, GET /api/courses/saved/).
  */
 export default function App() {
   return (

@@ -5,7 +5,9 @@ import MapPin from "../components/MapPin";
 import KakaoMap, { type KakaoMapPoint } from "../components/KakaoMap";
 import { kakaoPlaceUrl } from "../utils/kakao";
 import { useSavedPlaces } from "../hooks/useSavedPlaces";
-import { courseSummaryText, useSavedCourses } from "../store/saved";
+import { useSavedCourses } from "../hooks/useSavedCourses";
+import { useCourseDetails } from "../hooks/useCourses";
+import { courseItems, courseStats, courseTitle } from "../utils/course";
 
 const PIN_POSITIONS = [
   { top: "20%", left: "58%" },
@@ -16,12 +18,14 @@ const PIN_POSITIONS = [
   { top: "28%", left: "80%" },
 ];
 
-/** 장소는 서버(GET /api/places/saved/), 코스는 [백엔드 연결 이전]이라 localStorage 다. */
+/** 장소·코스 모두 서버 저장분이다(GET /api/places/saved/, GET /api/courses/saved/). */
 export default function SavedMapPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<"places" | "courses">("places");
   const { data: places = [] } = useSavedPlaces(Boolean(user));
-  const courses = useSavedCourses(user?.id);
+  const { data: savedCourses = [] } = useSavedCourses(Boolean(user));
+  // 목록 응답에는 좌표·이름이 없어 상세(명세 4번)로 채운다(CoursesPage와 같은 방식).
+  const { courses } = useCourseDetails(savedCourses.map((c) => c.id));
 
   if (!user) {
     return (
@@ -44,11 +48,12 @@ export default function SavedMapPage() {
   }));
 
   // 코스 마커는 그 코스의 첫 장소를 대표 좌표로 삼는다.
-  const coursePoints: KakaoMapPoint[] = courses.flatMap((sc) =>
-    sc.first_place
-      ? [{ id: sc.id, title: sc.title, latitude: sc.first_place.latitude, longitude: sc.first_place.longitude }]
-      : [],
-  );
+  const coursePoints: KakaoMapPoint[] = courses.flatMap((sc) => {
+    const first = courseItems(sc)[0]?.place;
+    return first
+      ? [{ id: String(sc.id), title: courseTitle(sc), latitude: first.latitude, longitude: first.longitude }]
+      : [];
+  });
 
   return (
     <div className="wrap" style={{ padding: "40px 32px 90px" }}>
@@ -56,11 +61,6 @@ export default function SavedMapPage() {
         <Link to="/saved">저장 목록으로 돌아가기</Link>
       </div>
       <h1 className="page-title">저장 지도 보기</h1>
-
-      <div className="nocon-banner" style={{ marginTop: 12 }}>
-        ⚠ 저장한 코스는 아직 백엔드 미연동이에요. 코스 탭에 찍히는 건 이 브라우저에 저장된
-        목록뿐이에요. (장소는 계정에 저장돼요)
-      </div>
 
       <div className="day-tabs" style={{ marginTop: 20 }}>
         <button type="button" className={`day-tab${tab === "places" ? " active" : ""}`} onClick={() => setTab("places")}>
@@ -117,26 +117,32 @@ export default function SavedMapPage() {
             points={coursePoints}
             fallback={
               <div className="map-placeholder big">
-                {courses.slice(0, 6).map((sc, i) =>
-                  sc.first_place ? (
-                    <MapPin key={sc.id} place={sc.first_place} style={PIN_POSITIONS[i]} label={sc.title} />
+                {courses.slice(0, 6).map((sc, i) => {
+                  const first = courseItems(sc)[0]?.place;
+                  return first ? (
+                    <MapPin key={sc.id} place={first} style={PIN_POSITIONS[i]} label={courseTitle(sc)} />
                   ) : (
-                    <div className="map-pin" key={sc.id} style={PIN_POSITIONS[i]} title={sc.title} />
-                  ),
-                )}
+                    <div className="map-pin" key={sc.id} style={PIN_POSITIONS[i]} title={courseTitle(sc)} />
+                  );
+                })}
               </div>
             }
           />
           <div className="saved-list" style={{ marginTop: 20 }}>
             {courses.length === 0 && <p style={{ color: "var(--ink-soft)", fontSize: 13 }}>저장한 코스가 없어요.</p>}
-            {courses.map((sc) => (
-              <Link className="saved-row saved-row-link" key={sc.id} to={`/trip/${sc.course_id}`}>
-                <div>
-                  <div className="saved-row-title">🗺️ {sc.title}</div>
-                  <div className="saved-row-sub mono">{courseSummaryText(sc)}</div>
-                </div>
-              </Link>
-            ))}
+            {courses.map((sc) => {
+              const stats = courseStats(sc);
+              return (
+                <Link className="saved-row saved-row-link" key={sc.id} to={`/trip/${sc.id}`}>
+                  <div>
+                    <div className="saved-row-title">🗺️ {courseTitle(sc)}</div>
+                    <div className="saved-row-sub mono">
+                      {stats.visitCount}곳 · 총 {Math.round(stats.totalMin / 60)}시간
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </>
       )}

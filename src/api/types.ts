@@ -647,3 +647,21 @@ export interface PlaceDetail {
   latitude: number;
   longitude: number;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 저장한 코스(찜). GET /api/courses/saved/, POST·DELETE /api/courses/{course_id}/save/
+// ══════════════════════════════════════════════════════════════════════════
+
+/** GET /api/courses/saved/ 의 한 줄. 명세 2번 요약(CourseSummary)에 집계 필드가 붙어 온다. */
+export interface SavedCourse extends CourseSummary {
+  place_count: number;
+  total_duration_min: number;
+  total_travel_min: number;
+  days_summary: { day_index: number; place_count: number; avail_hours: number }[];
+}
+
+/** POST/DELETE /api/courses/{course_id}/save/ 응답 */
+export interface SavedCourseToggle {
+  course_id: number;
+  is_saved: boolean;
+}

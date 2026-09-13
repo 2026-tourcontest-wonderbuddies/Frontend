@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCourse } from "../hooks/useCourses";
 import { useAuth } from "../auth/AuthContext";
-import { toggleSavedCourse, useIsCourseSaved } from "../store/saved";
+import { useSavedCourses, useToggleSavedCourse } from "../hooks/useSavedCourses";
 import { PRIORITY_LABELS } from "../api/types";
 import { dayCaseLabel, dayDateLabel, hhmm, slotLabel } from "../utils/format";
 import type { PlaceSummary } from "../api/types";
@@ -38,7 +38,9 @@ export default function DetailPage() {
   const { data: course, isLoading, isError } = useCourse(id);
   const { user } = useAuth();
   const courseId = Number(id);
-  const isSaved = useIsCourseSaved(user?.id, courseId);
+  const { data: savedCourses = [] } = useSavedCourses(Boolean(user));
+  const isSaved = savedCourses.some((c) => c.id === courseId);
+  const toggleSaved = useToggleSavedCourse();
   const [selectedPlace, setSelectedPlace] = useState<PlaceSummary | null>(null);
   const [dayIdx, setDayIdx] = useState(0);
 
@@ -78,9 +80,6 @@ export default function DetailPage() {
   const modeText = PRIORITY_LABELS[course.mode];
   const titleFirst = allItems[0]?.place.title ?? "";
   const titleLast = allItems[allItems.length - 1]?.place.title ?? "";
-  // 저장함 목록에 쓸 한 줄 제목. 코스에는 이름 필드가 없어 첫·마지막 방문지로 만든다.
-  const savedTitle =
-    titleLast && titleFirst !== titleLast ? `${titleFirst} → ${titleLast}` : titleFirst || modeText;
 
   return (
     <div>
@@ -124,22 +123,8 @@ export default function DetailPage() {
                 type="button"
                 className="btn-outline"
                 aria-pressed={isSaved}
-                onClick={() =>
-                  toggleSavedCourse(user.id, {
-                    course_id: courseId,
-                    title: savedTitle,
-                    spot_count: allItems.length,
-                    stay_min: stats.stayMin,
-                    travel_min: stats.travelMin,
-                    first_place: allItems[0]
-                      ? {
-                          title: allItems[0].place.title,
-                          latitude: allItems[0].place.latitude,
-                          longitude: allItems[0].place.longitude,
-                        }
-                      : undefined,
-                  })
-                }
+                disabled={toggleSaved.isPending}
+                onClick={() => toggleSaved.mutate({ courseId, saved: isSaved })}
               >
                 {isSaved ? "♥ 저장됨" : "♡ 저장함에 담기"}
               </button>
