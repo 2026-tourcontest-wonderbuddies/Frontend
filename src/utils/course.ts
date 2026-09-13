@@ -36,6 +36,14 @@ const diffMin = (a: string, b: string) =>
   Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000));
 
 /**
+ * 백엔드 엔진이 단일 이동 60분 초과를 아예 컷하므로(filters.py) 그보다 큰 값은 이동시간이 아니다.
+ * 지금 서버가 2일차 이후 arrive_at/depart_at에 1일차 날짜를 그대로 넣고 있어서
+ * 시각 차이로 계산하면 며칠치(수천 분)가 나온다. 그런 값은 표시하지 않는다.
+ */
+const MAX_TRAVEL_MIN = 60;
+const travelOrNull = (min: number) => (min > 0 && min <= MAX_TRAVEL_MIN ? min : null);
+
+/**
  * 그 날 타임라인 양 끝에 붙일 공항 시각과 공항↔인접 장소 이동시간.
  * 입도일(A)·당일치기(D)는 시작, 출도일(C)·당일치기(D)는 종료에 공항이 붙는다.
  * 서버가 trip_start_datetime/trip_end_datetime을 안 주면 전부 null이라 공항 항목은 그려지지 않는다.
@@ -50,11 +58,13 @@ export function dayAirport(course: CourseDetail, day: CourseDay) {
     arrive: arrive ?? null,
     // 서버가 첫 항목의 travel_min_from_prev를 채워주면 그걸 쓰고, 아니면 공항 시각과 방문 시각의
     // 차이로 구한다(엔진이 공항 기준으로 스케줄을 잡으므로 같은 값이다).
+    // ?? 가 아니라 || 인 이유: 서버가 0을 주면 이동시간 자체가 없다는 뜻이라 fallback을 타야 한다.
     // ponytail: 엔진이 여유시간을 끼워 넣으면 그만큼 과대 표기된다.
-    // 서버가 실제 이동시간을 내려주기 시작하면 ?? 앞쪽이 자동으로 이긴다.
     departTravelMin:
-      depart && first ? (first.travel_min_from_prev ?? diffMin(depart, first.arrive_at)) : null,
-    arriveTravelMin: arrive && last ? diffMin(last.depart_at, arrive) : null,
+      depart && first
+        ? travelOrNull(first.travel_min_from_prev || diffMin(depart, first.arrive_at))
+        : null,
+    arriveTravelMin: arrive && last ? travelOrNull(diffMin(last.depart_at, arrive)) : null,
   };
 }
 
