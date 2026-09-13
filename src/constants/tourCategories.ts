@@ -10,7 +10,7 @@ export interface TourCategoryGroup {
 export const TOUR_CATEGORIES: TourCategoryGroup[] = [
   {
     major: "자연관광",
-    minors: ["자연경관(산)", "자연경관(하천·해양)", "자연공원", "자연생태", "기타자연관광"],
+    minors: ["자연경관(산)", "자연경관(하천‧해양)", "자연공원", "자연생태", "기타자연관광"],
   },
   {
     major: "문화관광",
@@ -18,7 +18,7 @@ export const TOUR_CATEGORIES: TourCategoryGroup[] = [
       "전시시설",
       "테마공원",
       "도시공원",
-      "도시·지역문화관광",
+      "도시.지역문화관광",
       "랜드마크관광",
       "기타문화관광지",
       "교육시설",
@@ -28,7 +28,7 @@ export const TOUR_CATEGORIES: TourCategoryGroup[] = [
   },
   {
     major: "체험관광",
-    minors: ["농·산·어촌 체험", "기타체험", "산업관광", "웰니스관광", "전통체험", "공예체험"],
+    minors: ["농.산.어촌 체험", "기타체험", "산업관광", "웰니스관광", "전통체험", "공예체험"],
   },
   {
     major: "역사관광",

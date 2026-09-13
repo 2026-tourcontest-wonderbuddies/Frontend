@@ -195,6 +195,11 @@ export interface DayOverridePayload {
   end_hour?: number; // 1~24. 그 날 활동 종료 시각. 마지막 날은 end_datetime과 중복이라 생략
 }
 
+/** 전송용. 폼 상태(DayOverridePayload)는 권역을 한글 RegionKey로 들고 있어 코드로 바꿔 보낸다. */
+export type DayOverrideRequest = Omit<DayOverridePayload, "region_preference"> & {
+  region_preference?: RegionCode;
+};
+
 // ── Course candidates (recommendation list before a trip is persisted) ────
 
 export interface CandidateScores {
@@ -377,6 +382,7 @@ export interface TripCreateRequest {
   lodging_type?: string;
   lodging_need_cooking?: boolean;
   lodging_free_text?: string;
+  day_overrides?: DayOverrideRequest[];
 }
 
 /** 명세 1번 · 응답. 코스 본문이 아니라 3개 코스의 id만 온다. */
