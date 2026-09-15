@@ -527,6 +527,8 @@ export interface CourseDay {
   need_night_spot: boolean;
   // 코스 상세는 화면에 쓰는 12개만 담은 축약 숙소를 준다(전체 카드는 명세 6번).
   lodging?: CourseLodging | null;
+  // 그날 마지막 장소 → 숙소(마지막 날은 공항) 이동시간(분). select-lodging 이전에는 null일 수 있다.
+  travel_to_next_min?: number | null;
   items: CourseItem[];
 }
 
