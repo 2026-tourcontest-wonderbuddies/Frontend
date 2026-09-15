@@ -77,7 +77,11 @@ src/
 
 ### 버그
 
-- 🚨 **시간대(KST) 미변환 — 모든 코스의 일정 계산이 어긋납니다.** `origin/develop` 최신
+- ~~🚨 **시간대(KST) 미변환**~~ — **해결 확인.** develop 최신(`d9aae8d`)의
+  `constraints.py:_minutes_of_day()`가 `dt.astimezone(KST)`를 거치도록 고쳐져 있습니다.
+  배포 서버가 이 리비전을 반영했는지만 확인하면 됩니다. 아래는 당시 재현 기록입니다.
+
+- 🚨 **(과거 기록) 시간대(KST) 미변환 — 모든 코스의 일정 계산이 어긋납니다.** `origin/develop` 최신
   (`2a98417`)을 로컬에서 돌려 랜덤 입력 6건으로 확인했습니다. **6건 전부 영향받았습니다.**
 
   `settings.py`의 `TIME_ZONE = 'UTC'`인데, 아래 세 곳이 KST로 변환하지 않고 UTC 시각을
@@ -150,9 +154,143 @@ src/
   | `engine.py:103·136` | 항목마다 개별 `ItineraryItem.objects.create()` (3박4일 × 3코스면 60여 회) | 일자 단위 `bulk_create` |
 
   프론트는 로딩 화면에 경과 시간과 취소 버튼을 넣어 두었지만, 근본 해결은 위쪽입니다.
-- `POST /api/courses/{id}/modify/` 는 현재 **항상 500**입니다.
-  `apps/nlp/modification_interpreter.py`에서 정의되지 않은 `client` 변수를 호출합니다
-  (`_get_client()`를 쓰려던 것으로 보입니다). 같은 문제가 `generate_result_explanation`에도 있습니다.
+- ~~`POST /api/courses/{id}/modify/` 는 현재 **항상 500**입니다~~ — **해결 확인.** develop
+  최신(`d9aae8d`)의 `modification_interpreter.py`는 `_get_client()`가 정상 정의되어 있고,
+  `CourseModifyView`도 locked/removed/scope 처리까지 구현되어 있습니다. 화면 연결 가능한 상태로
+  보입니다 — 프론트는 아직 `(아직 화면 없음)`.
+
+### Pipeline 5-B 음식점 로직 — 프론트 연동하며 확인한 것
+
+`food_cafe_balance` 입력 UI를 붙이면서 `apps/recommendation/food_scoring.py`를 읽었습니다.
+**알고리즘 자체는 문서대로 다 들어가 있었습니다** — 시너지 보너스
+`((주목적×보조목적)/100)×0.2`, `Pref_k = Pref_food/100`,
+`MEAL_CAPABLE_ROLES = (RESTAURANT, SNACK)`, 소프트 필터 5곳 미만 트리거 + `-0.15` 감점까지
+전부 확인했습니다. `FOOD_PREF_TO_TAG`의 키 10개도 프론트 `FOOD_PREF_LABELS`와 정확히 일치합니다.
+
+아래는 **코드는 있는데 실행 경로가 닿지 않는** 지점들입니다. 받아놓고 안 쓰이면
+사용자를 속이게 되어서, 프론트에서 입력을 받지 않고 여기 적습니다.
+(2번 식사 제한은 확인 결과 **의도된 제외**로, 요청이 아니라 기록입니다.)
+
+#### 1. 🚨 아침식사 슬롯은 구조적으로 생성될 수 없습니다
+
+문서 「음식점 슬롯 구성 **+ 아침식사 추가**」의 아침 항목이 **한 번도 발동하지 않습니다.**
+
+`constraints.py:22-30`:
+
+```python
+DAY_START_ANCHOR = 9 * 60          # 540
+MORNING_WINDOW   = (7 * 60, 9 * 60)  # (420, 540)
+```
+
+`calc_avail_hours()`가 모든 day_case에서 시작 시각에 바닥을 깝니다 (`constraints.py:93·96·99·102`):
+
+```python
+start_min = max(_minutes_of_day(trip_start_dt), DAY_START_ANCHOR)   # 항상 >= 540
+```
+
+그런데 `check_meal_flags()`(`constraints.py:70`)는 이렇게 판정합니다:
+
+```python
+need_morning = not (end_min <= MORNING_WINDOW[0] or start_min >= MORNING_WINDOW[1])
+#                                                   start_min >= 540 → 항상 True
+#                                                   → need_morning 항상 False
+```
+
+`DAY_START_ANCHOR`와 `MORNING_WINDOW[1]`이 똑같이 9시라, `start_min >= 540`이 항상 참이 되어
+`need_morning`은 **입력과 무관하게 언제나 `False`** 입니다. 사용자가 7시에 시작한다고 해도
+`max(..., 540)`에서 9시로 올라가 버립니다.
+
+- 부수적으로, 설령 켜지더라도 `engine.py:139-145`가 **점심·저녁만** 시간 순 체크포인트로
+  잡고 아침은 `extra_food_types`로 넘어가 그날 마지막 관광지 **뒤에** 붙습니다
+  (`engine.py:146`, `:229-259`). 아침식사가 저녁 시간대에 배치됩니다.
+- 수정 방향: `MORNING_WINDOW`를 `DAY_START_ANCHOR`보다 뒤로 옮기거나(예: `(8*60, 10*60)`),
+  아침이 있는 날은 `DAY_START_ANCHOR` 바닥을 걷어내야 합니다. 그리고 아침도 점심·저녁처럼
+  시간 순 체크포인트에 넣어야 합니다.
+- **프론트는 아침 관련 UI를 만들지 않았습니다.** 위가 고쳐지면 알려주세요.
+  (`need_morning`은 `ItineraryDaySerializer`에 이미 들어 있어서 응답엔 내려오고 있습니다 —
+  항상 `false`라 프론트 타입에는 넣지 않았습니다.)
+
+#### 2. 식사 제한(비건·육류제외·해산물제외)은 **기능 제외 확정** — 확인 완료
+
+`passes_food_restriction()`과 `RESTRICTION_KEYWORDS`(`food_scoring.py:37-56`)가 완성된 채
+`engine.py:166`에서 `""`로 하드코딩돼 있어 처음엔 연동 누락으로 봤는데,
+**의도적으로 범위에서 빠진 기능임을 확인했습니다.** 요청 아닙니다.
+
+- 프론트도 식사 제한 입력 UI를 만들지 않습니다.
+- `food_scoring.py:37-56`은 현재 **호출되지 않는 코드**입니다. 나중에 누가 "버그"로 보고
+  되살리지 않도록 여기 남겨둡니다. 정리하실지 여부는 백엔드 판단에 맡깁니다.
+
+#### 3. 음식점 영업시간·휴무일 필터가 꺼져 있습니다
+
+`engine.py:164-168`, 위 `food_restriction`과 같은 호출부입니다:
+
+```python
+meal_candidates, relaxed_ids = build_meal_candidates(
+    all_food_places, quadrant, visit_start_dt,
+    trip.food_pref_1, trip.food_pref_2, "",
+    is_open_at_fn=lambda p, dt: (True, True),   # ← 항상 "열려 있음"
+)
+```
+
+문서 「필터링 및 매칭 로직」 1번의 **필수 필터 "휴무일 아님"이 음식점에 대해 적용되지
+않습니다.** 일반 장소 쪽에서 쓰는 영업시간 판정 함수를 그대로 넘기면 될 것 같은데,
+이것도 식사 제한처럼 의도된 제외인지 확인 부탁드립니다.
+(의도가 아니라면 문 닫은 식당이 코스에 들어갈 수 있습니다.)
+
+#### 4. 자유 입력(QueryFit)이 음식 점수에 반영되지 않습니다
+
+문서 3번 「자유 입력 처리 → 코사인 유사도 → QueryFit(0~100)」과
+`Pref_food = PurposeFit×0.5 + QueryFit×0.5`가 **실행되지 않습니다.**
+`calc_nlp_match_scores()`는 `_place_vectors`가 `None`이면 `{}`를 반환하는데
+(`nlp_matching.py:36-46`), `load_place_embeddings()`를 **호출하는 곳이 프로젝트에 없습니다**
+(`apps/recommendation/apps.py`에 `ready()`가 없습니다). `engine.py:102` 주석도
+"임시 비활성화 상태라 항상 {} 반환"으로 적어두셨습니다.
+
+결과적으로 `query_fit`이 항상 `None`이라 `Pref_food == PurposeFit`이고,
+`free_text_input`은 음식점 순위에 아무 영향이 없습니다. 임시 조치가 맞는지,
+`place_embeddings.npz` 로딩 계획이 있는지 알려주세요.
+
+#### 5. `is_relaxed_preference`가 응답에서 빠져 있었습니다 — 고쳐서 올립니다 🙏
+
+문서 「소프트 필터 4. 투명성」의 "⚠ 선호 음식과 완전히 일치하지 않음" 표시를 붙이려는데,
+`ItineraryItem.is_relaxed_preference`가 **DB에는 저장되는데 API로는 안 내려오고 있었습니다.**
+모델(`models.py:149-152`)·마이그레이션(`0005_...`)·기록(`engine.py:222`·`:255`)은 다 있고
+`ItineraryItemSerializer.Meta.fields`에서만 빠져 있어서, 한 줄 추가했습니다.
+
+```python
+fields = ["id", "order", "place", "slot_type", "arrive_at", "depart_at",
+          "travel_min_from_prev", "locked", "hours_uncertain",
+          "is_relaxed_preference", "recommend_reason"]
+```
+
+프론트는 이 값을 타임라인에 `⚠ 선호 음식 미일치` 배지로 보여줍니다. 선택 필드로 뒀으니
+배포 전 서버에서도 배지만 안 뜨고 정상 동작합니다.
+
+> **🚨 재확인 필요 — develop 최신(`d9aae8d`)에서 다시 빠져 있습니다.** `ItineraryItemSerializer`가
+> `day_schedules` 스키마 전환 과정에서 통째로 다시 쓰이면서 위에서 추가했던 한 줄이 유실된
+> 것으로 보입니다(`apps/trips/serializers.py:37`, `fields`에 `is_relaxed_preference` 없음).
+> 모델·엔진 쪽 로직은 그대로 있어 DB에는 계속 저장되고 있습니다. 다시 한 줄 추가를 부탁드립니다.
+
+#### 6. 참고 — `BAR`는 편성 불가 (문서 의도와 결과적으로 일치)
+
+`FOOD_ROLE_MAP`(`import_tour_api.py:17-24`)은 기타주점을 `BAR`로 넣는데,
+`ItineraryItem.SLOT_TYPE_CHOICES`(`models.py:136`)에 `BAR`가 없고
+`decide_food_slot_types()`도 `BAR` 슬롯을 만들지 않습니다. 문서의 "기본 추천 제외"와
+결과가 같으니 그대로 두면 될 것 같습니다. 확인만 부탁드립니다.
+
+#### 7. 참고 — `"둘다"` + 짧은 날은 카페가 0곳입니다
+
+`food_scoring.py:247-249`의 `else` 분기가 `pattern[i % 2]`로 `RESTAURANT`부터 시작합니다.
+
+```python
+extra_count = 1 if avail_hours < 6 else 2       # :242
+pattern = ["RESTAURANT", "CAFE"]
+extra_types = [pattern[i % 2] for i in range(extra_count)]
+```
+
+`avail_hours < 6`이면 `extra_count == 1` → `["RESTAURANT"]`. 즉 "둘 다"를 고른 짧은 날에
+**카페가 한 곳도 안 나옵니다.** 의도라면 그대로 두고, 아니라면 `extra_count == 1`일 때
+`CAFE`부터 시작하거나 번갈아 쓰면 될 것 같습니다. 프론트는 현재 동작 그대로 설명합니다.
 
 ### 권한
 
@@ -168,10 +306,19 @@ src/
 아래 5번은 **프론트 화면 구성이 확정된 사항**이라 서버 지원이 필요합니다.
 (1·2번은 해결됐고, 기존 3·4번은 철회했습니다 — 아래 참조.)
 
-#### 1. ~~명세 1번에 `day_overrides` 추가~~ — **해결됐습니다. 연동 완료 🙏**
+#### 1. ~~명세 1번에 `day_overrides` 추가~~ — **해결됐고, 이후 `day_schedules`로 한 단계 더 나아갔습니다 🙏**
+
+> **갱신(`d312586`):** 아래는 `day_overrides`(선택적 예외) 방식이었던 당시 기록입니다.
+> 이후 프론트가 `start_date`/`end_date` + **필수** `day_schedules[]`(일자마다
+> `{ day_index, start_time, end_time, purpose_main?, purpose_sub?, region_preference?,
+> exclude_categories? }`)로 요청 스키마를 바꿨습니다. 서버가 `start_date + (day_index-1)일 +
+> "HH:MM"`로 그 날 시각을 조립하고(`engine._combine_date_and_time`) 키가 없으면 `KeyError`로
+> 500이 나기 때문에, 이제 **모든 날짜의 시각을 매번 채워 보냅니다.** 아래 `start_hour`/`end_hour`
+> 미전송 관련 서술은 더 이상 사실이 아닙니다 — 지금은 매일 전송되고
+> `calc_avail_hours_from_schedule()`가 실제로 읽습니다.
 
 `TripRequest.day_overrides`(JSONField)와 `engine.py`의 `_get_day_override()`로 들어온 것 확인했고,
-프론트에서 전송 연결을 마쳤습니다. 실제로 보내는 형태는 아래와 같습니다.
+프론트에서 전송 연결을 마쳤습니다. 당시 보내던 형태는 아래와 같습니다.
 
 ```json
 "day_overrides": [
@@ -185,16 +332,7 @@ src/
 ```
 
 - `day_index`는 1부터 시작합니다 (1일차, 2일차 …).
-- 설정하지 않은 날짜는 배열에 아예 넣지 않습니다. 설정하지 않은 **필드**도 키째로 빼서 보냅니다
-  (`null`을 보내지 않습니다 — `override.get("purpose_main", trip.purpose_main)` 폴백이 깨지므로).
 - `region_preference`는 명세 1번과 동일한 `NE | NW | SE | SW | ALL` 코드로 변환해 보냅니다.
-
-**`start_hour` / `end_hour`는 보내지 않기로 했습니다.** `constraints.py`의
-`calc_avail_hours(day_index, total_days, trip_start_dt, trip_end_dt)`가 여행 전체 시각만 받고
-중간 일자를 `DAY_START_ANCHOR`(9시)/`DAY_END_ANCHOR`(21시)로 하드코딩하고 있어서,
-보내도 추천 결과가 달라지지 않기 때문입니다.
-빌더 1스텝에서 일자별 활동 시각을 입력받는 화면은 그대로 있고 "미연동" 표시를 유지해 뒀습니다.
-**엔진이 이 값을 읽도록 바뀌면 알려주세요** — 프론트는 한 줄 병합으로 바로 보낼 수 있습니다.
 
 #### 2. ~~`exclude_categories`를 삭제하지 말아 주세요~~ — **유지해 주셔서 감사합니다 🙏**
 
@@ -252,7 +390,12 @@ src/
 `LodgingPage`에서 숙소를 바꾸는 흐름이 계속 유효한가)만 남고, 이건 지금 저희가 쓰는
 유일한 흐름이 되었으니 **유지 여부를 확인만 부탁드립니다.**
 
-#### 5. 명세 4번 응답에 여행 시작·종료 시각 추가 (`trip_start_datetime` / `trip_end_datetime`)
+#### 5. ~~명세 4번 응답에 여행 시작·종료 시각 추가 (`trip_start_datetime` / `trip_end_datetime`)~~ — **해결됐습니다 🙏**
+
+develop 최신(`d9aae8d`, 커밋 `b2b08a2`)의 `RecommendedCourseSerializer.Meta.fields`에
+`trip_start_datetime`·`trip_end_datetime`이 이미 포함되어 있는 것을 확인했습니다. 프론트는
+`CourseDetail`에 선택 필드로 미리 넣어 뒀던 대로, 코드 변경 없이 타임라인 공항 표시가 켜집니다.
+**배포 서버가 이 리비전을 반영했는지만 확인 부탁드립니다.** (아래는 당시 요청 기록입니다.)
 
 코스 상세 타임라인의 **양 끝에 제주공항을 표시**하려고 합니다. 빌더 1스텝이 받는 시각이
 애초에 공항 기준이기 때문입니다 — 시작 = 수하물 수령 후 공항 밖으로 나오는 시각,
@@ -302,3 +445,20 @@ src/
   사라집니다. 아래 엔드포인트가 생기면 바로 갈아끼울 수 있게 해뒀습니다.
   - `GET /api/places/search?q&category&region`
   - `GET/POST/DELETE /api/saved/places`, `/api/saved/courses`
+
+### 새로 발견 — 코스 수동 편집 API가 이미 구현돼 있습니다
+
+`apps/trips/urls.py`(develop, `d9aae8d`)를 보다가 발견했습니다. **명세에 없어서 `src/deferred/`로
+미뤄둔 "코스 수동 편집"의 엔드포인트가 이미 존재하고, 스텁이 아니라 실제로 동작합니다**
+(순서 변경 시 `recalc_timeline_from()`으로 이동시간·시각까지 재계산합니다).
+
+| 엔드포인트 | 설명 |
+|---|---|
+| `POST /api/courses/{id}/days/{day_index}/reorder/` | `{ item_ids: number[] }` 순서대로 재배치 |
+| `POST /api/courses/{id}/days/{day_index}/items/` | `{ content_id, order }` 장소 삽입 |
+| `DELETE /api/courses/{id}/items/{item_id}/` | 장소 삭제 (뒤 일정 재계산) |
+| `POST`·`DELETE /api/courses/{id}/items/{item_id}/lock/` | 장소 고정·해제 |
+
+명세서에 없던 이유(대응 엔드포인트 부재)가 사라졌으니, **`src/deferred/`의 코스 수동 편집
+화면을 되살릴지 이번 스프린트에서 논의 필요**합니다. 명세서에도 추가해 주시면 좋겠습니다.
+이번 점검에서는 발견만 기록하고 화면 복구는 하지 않았습니다.
