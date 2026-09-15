@@ -68,6 +68,22 @@ export default function DetailPage() {
 
   const day = course.days[dayIdx] ?? course.days[0];
   const airport = dayAirport(course, day);
+  // 체크인 가능 시각(호텔 정책)과 실제 도착 시각(마지막 일정 종료 + 이동시간)은 다르다.
+  // 늦게 도착하면 체크인 시각보다 늦으므로, 둘 중 늦은 시각을 타임라인 dot에 쓴다.
+  const lastItemDepart = day.items[day.items.length - 1]?.depart_at ?? null;
+  // travel_to_next_min은 숙소 확정(select-lodging) 이전에는 없을 수 있다 — 그때는 이동시간 0으로 근사한다.
+  const lodgingArriveIso =
+    lastItemDepart && day.travel_to_next_min != null
+      ? new Date(new Date(lastItemDepart).getTime() + day.travel_to_next_min * 60000).toISOString()
+      : lastItemDepart;
+  const lodgingArriveAt =
+    lodgingArriveIso && day.lodging?.check_in_time
+      ? hhmm(lodgingArriveIso) > day.lodging.check_in_time
+        ? hhmm(lodgingArriveIso)
+        : day.lodging.check_in_time
+      : lodgingArriveIso
+        ? hhmm(lodgingArriveIso)
+        : day.lodging?.check_in_time || "숙박";
   // 공항 시각이 있으면 그게 그 날의 실제 양 끝점이다(사용자가 빌더에 입력한 값).
   const dayStart = airport.depart ?? day.items[0]?.arrive_at ?? null;
   const dayEnd = airport.arrive ?? day.items[day.items.length - 1]?.depart_at ?? null;
@@ -246,6 +262,11 @@ export default function DetailPage() {
                     <span className="line" />
                     🚗 차량 {airport.arriveTravelMin}분 이동
                   </div>
+                ) : day.lodging && day.travel_to_next_min != null ? (
+                  <div className="tl-transit">
+                    <span className="line" />
+                    🚗 차량 {day.travel_to_next_min}분 이동
+                  </div>
                 ) : null}
               </div>
             ))}
@@ -261,7 +282,7 @@ export default function DetailPage() {
 
             {day.lodging && (
               <div className="tl-item">
-                <div className="tl-dot mono">{day.lodging.check_in_time || "숙박"}</div>
+                <div className="tl-dot mono">{lodgingArriveAt}</div>
                 <div className="tl-card tl-lodging">
                   <div className="tl-top">
                     <div className="tl-title">
@@ -275,6 +296,9 @@ export default function DetailPage() {
                   <div className="tl-desc">
                     {day.lodging.address}
                     {day.lodging.room_type ? ` · ${day.lodging.room_type}` : ""}
+                    {day.lodging.check_in_time
+                      ? ` · 체크인 ${day.lodging.check_in_time}부터`
+                      : ""}
                     {day.lodging.check_out_time
                       ? ` · 체크아웃 ${day.lodging.check_out_time}`
                       : ""}
