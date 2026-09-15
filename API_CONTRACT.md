@@ -41,6 +41,19 @@
 | 11 | `POST /api/auth/google/` | `loginWithGoogle()` `src/api/auth.ts` | LoginPage |
 | 신규 | `GET /api/places/by-period/` | `getPeriodPlaces()` `src/api/places.ts` | HomePage (JEJU BY TIME OF DAY 카드) |
 
+### 백엔드에 새로 생겼지만 아직 프론트가 안 부르는 엔드포인트
+
+`apps/trips/urls.py`(develop, `d9aae8d`)에서 발견. 스텁이 아니라 실제 구현이다(순서 변경 시
+이동시간·시각 재계산 포함). "코스 수동 편집"이 명세에 없어 `src/deferred/`로 미룬 이유가
+사라졌으니, 되살릴지는 백엔드 팀과 논의 후 결정한다.
+
+| 엔드포인트 | 설명 |
+|---|---|
+| `POST /api/courses/{id}/days/{day_index}/reorder/` | 순서 변경 — body `{ item_ids: number[] }` |
+| `POST /api/courses/{id}/days/{day_index}/items/` | 장소 추가 — body `{ content_id, order }` |
+| `DELETE /api/courses/{id}/items/{item_id}/` | 장소 삭제 |
+| `POST`·`DELETE /api/courses/{id}/items/{item_id}/lock/` | 장소 고정·해제 |
+
 ### 명세서와 백엔드가 다른 지점 (백엔드 실제 라우트를 따름)
 
 | 명세 # | 명세서 | 백엔드 실제 | 프론트 |
@@ -54,7 +67,7 @@
 ```
 BuilderPage
   └ POST /api/trips/            → { trip_id, course_ids: {dist, pref, relax} }
-       (일자별 개별 조건은 day_overrides로 함께 전송)
+       (일자별 시각·목적·권역·제외 카테고리는 day_schedules[]로 날짜별 전송 — day_overrides 아님)
        ↓ /trips/{trip_id}/courses
 CoursesPage
   ├ GET /api/trips/{trip_id}/courses/    → 코스 3개의 id
@@ -79,8 +92,8 @@ DetailPage / MapPage
 | 방문 수 / 총 소요시간 / 이동시간 | `days[].items[]`에서 계산 (`src/utils/course.ts`) |
 | 총 이동거리, 여유시간, 5점 척도 점수, 배지 | 데이터 없음 → 미표시. `final_score`로 대체 |
 | 여행 요청 조건(목적·권역) | 코스 응답에 없음 → 상세 화면은 `mode`와 숙소 스냅샷의 `region`을 표시 |
-| 일자별 개별 조건(`day_overrides`) | **연동 완료.** 목적·권역·제외 카테고리를 `buildPayload()`에서 전송. 단 `start_hour`/`end_hour`는 엔진이 아직 안 읽음(아래 참조) |
-| 여행 시작·종료 시각(공항 기준) | 명세 1번 **요청**에만 있고 어떤 응답에도 없음 → 추가 요청 중(`TEAM_SHARE.md` 추가 요청 5번). 오기 전까지 타임라인 공항 항목 미표시 |
+| 일자별 개별 조건 | **연동 완료.** `day_schedules 스키마로 교체` (`d312586`) 이후 목적·권역·제외 카테고리에 더해 `start_hour`/`end_hour`까지 날짜별로 매번 전송하고, 백엔드 `calc_avail_hours_from_schedule()`가 실제로 읽는다. 예전 `day_overrides` 필드는 폼 내부 상태로만 남고 전송 포맷에서는 사라졌다 |
+| 여행 시작·종료 시각(공항 기준) | **연동 완료.** `RecommendedCourseSerializer`(develop)가 `trip_start_datetime`/`trip_end_datetime`을 코스 상세 응답에 포함한다(백엔드 커밋 `b2b08a2`). `CourseDetail`은 이미 선택 필드로 받아둔 상태라 타임라인 공항 항목이 코드 변경 없이 켜진다 — 단, 배포 서버가 이 커밋을 반영했는지는 별도 확인 필요 |
 | 코스 생성 전 숙소 추천 | **요청 철회.** 추천 알고리즘이 코스 결과에 의존해 코스 없이는 성립하지 않습니다(아래 참조). 숙소 선택은 코스 생성 후 `LodgingPage`(명세 6·7번) 한 곳으로 일원화했습니다 |
 
 ## 미연동 기능
@@ -122,33 +135,32 @@ DetailPage / MapPage
 
 ## 남은 갭
 
-- **일자별 활동 시각(`start_hour`/`end_hour`)을 엔진이 읽지 않음**: `day_overrides` 자체는
-  연동됐지만(목적·권역·제외 카테고리는 코스에 반영됩니다), 빌더 **1스텝**에서 받는
-  일자별 활동 시각은 추천 결과에 반영되지 않습니다.
-  `constraints.py`의 `calc_avail_hours(day_index, total_days, trip_start_dt, trip_end_dt)`가
-  여행 전체 시각만 받고, 중간 일자는 `DAY_START_ANCHOR`(9시)/`DAY_END_ANCHOR`(21시)로
-  하드코딩돼 있기 때문입니다. 그래서 프론트는 이 두 값을 **전송하지 않고**,
-  1스텝의 "미연동" 안내문구를 그대로 두고 있습니다. 엔진이 오버라이드를 읽도록 바뀌면
-  `buildPayload()`에서 `form.dayHours`를 `day_overrides`에 병합하면 됩니다.
 - **제외 카테고리는 이름 문자열 완전일치**: 백엔드 `filters.py`의 `is_excluded()`가
   `place.middle_category_name`/`small_category_name`과 문자열을 그대로 비교합니다.
   `src/constants/tourCategories.ts`의 중분류명이 DB 값과 한 글자라도 다르면
   **에러 없이 제외가 안 됩니다**(실제로 가운뎃점 `·` / 마침표 `.` / `U+2027` 차이로 3개가 어긋나 있었습니다).
   `npm run check:categories`가 이 일치 여부를 검사합니다.
-- **여행 시작·종료 시각이 응답에 없음**: 빌더가 받는 시각은 제주공항 기준인데
-  (시작=수하물 수령 후 공항 밖으로 나오는 시각, 종료=공항에 도착해야 하는 시각),
-  `start_datetime`·`end_datetime`가 명세 1번 요청 본문에만 있고 명세 2·4번 응답에는 없습니다.
-  상세 화면은 `course_id`만으로 진입해 trip을 되짚을 경로가 없습니다.
-  그래서 타임라인 양 끝의 공항 항목(`🛬 제주공항 밖 출발` / `🛫 제주공항 도착`)과
-  공항↔인접 장소 이동시간이 지금은 표시되지 않고, 일자 요약줄도 관광지 구간만 보여줍니다.
-  `CourseDetail`의 `trip_start_datetime`·`trip_end_datetime`를 **선택 필드로 미리 넣어 두어**,
-  서버가 내려주기 시작하면 코드 변경 없이 켜집니다(`src/utils/course.ts`의 `dayAirport`).
-- **`food_cafe_balance`**: 명세 1번의 선택 필드지만 빌더에 입력 UI가 없어 보내지 않습니다.
-  `"음식점중심"` / `"카페중심"`만 엔진이 인식합니다.
+- **`food_cafe_balance`**: **연동 완료.** 빌더 3스텝(취향)에서 받아 전송합니다.
+  전송값은 `"음식점중심"` / `"카페중심"` / `"둘다"` 세 가지입니다. 백엔드
+  `food_scoring.decide_food_slot_types()`가 한글 리터럴을 직접 비교하므로
+  **공백·가운뎃점을 넣으면 안 됩니다**(`"음식점 중심"`은 매칭 실패 → `else` 분기 = 둘 다).
+  `"둘다"`는 백엔드에 상수가 없는 `else` 분기라, 안 보내는 것과 동작이 같습니다.
+  화면 라벨(`음식점 중심` 등)과 전송값은 `FOOD_CAFE_BALANCE_LABELS`(`src/api/types.ts`)에서
+  키=전송값 / 값=라벨로 분리해 둡니다.
+  - **목적에 `food`가 있을 때만 묻고, 있을 때만 보냅니다.** 엔진이
+    `purpose_selected = purpose_main == "food" or purpose_sub == "food"`일 때만 이 값을 읽고
+    (`engine.py:127`, `food_scoring.py:239`), 아니면 통째로 무시하기 때문입니다.
+    화면과 전송이 어긋나지 않게 `isFoodPurpose()`(`src/types/builderForm.ts`) 하나를
+    `StepTaste`와 `buildPayload()`가 같이 씁니다.
+  - 서버에 값 검증이 없어 **오타가 에러 없이 조용히 무시됩니다**(제외 카테고리와 같은 성격).
   (`food_pref_2`는 3스텝에서 최대 2개를 받아 **실제로 전송하고 있습니다** — 예전 기록이 틀렸습니다.)
+- **`is_relaxed_preference`(소프트 필터 완화 표시)**: 백엔드가 값을 계산해 DB에 저장하지만
+  현재 develop(`d9aae8d`)의 `ItineraryItemSerializer.Meta.fields`(`apps/trips/serializers.py:37`)에
+  다시 빠져 있습니다 — `day_schedules` 스키마 전환 때 serializer가 통째로 다시 쓰이면서
+  이전에 추가했던 한 줄이 유실된 것으로 보입니다. **백엔드 팀에 재요청 필요.**
+  프론트는 `CourseItem.is_relaxed_preference?`를 **선택 필드**로 두어, 응답에 없어도 배지만
+  안 뜨고 정상 동작합니다. 타임라인에서 `⚠ 선호 음식 미일치` 배지로 보여줍니다(`DetailPage`).
 - **권역 5분할 → 4사분면**: 빌더 UI의 한글 권역을 `REGION_CODE_BY_KEY`(`src/api/types.ts`)로
   변환해 보냅니다. 경계 정의가 실제로 일치하는지는 백엔드 확인이 필요합니다.
-- **`POST /api/courses/{id}/modify/`**: 백엔드에서 항상 500이 납니다
-  (`apps/nlp/modification_interpreter.py`의 미정의 `client` 변수). 화면 연결 전 수정 필요.
 - **권한**: 명세 11번은 "모든 API에 토큰 필요"라고 하지만, 현재 백엔드 `/api/`는
   `AllowAny`라 누구나 임의의 `trip_id`/`course_id`를 조회할 수 있습니다.

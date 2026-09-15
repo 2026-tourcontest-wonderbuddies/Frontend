@@ -59,6 +59,10 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   // 원본으로 확대해 보고 있는 사진. 빈 문자열이면 안 띄운다.
   const [zoomed, setZoomed] = useState("");
 
+  // 데스크톱 헤더에서는 주소 옆에 "|"로 이어 보여준다(좁은 화면은 사진 아래 카테고리 줄을 그대로 씀).
+  const categoryText = `${p.content_type_name}${p.small_category_name ? ` · ${p.small_category_name}` : ""}`;
+  const headerSubtitle = [hasValue(p.address) ? p.address : "", categoryText].filter(Boolean).join(" | ") || undefined;
+
   // 서버가 같은 사진 URL을 두 번씩 담아 보내서 중복을 걷어낸다. 사진이 없는 장소는 빈 배열이다.
   const photos = [...new Set(p.images ?? [])];
 
@@ -120,45 +124,51 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   }, [p.content_id, fields.map((f) => f.value).join("|")]);
 
   return (
-    <Modal title={p.title} onClose={onClose}>
+    <Modal title={p.title} subtitle={headerSubtitle} onClose={onClose} wide>
       <div className="place-detail-sheet">
-        {photos.length > 0 ? (
-          <div className="place-sheet-photos">
-            {photos.map((src) => (
-              // 시트 안에서는 160px로 잘라 보여주고, 누르면 같은 화면 위에 원본을 덮어 띄운다.
-              // 페이지 이동이 아니라서 닫으면 상세 시트가 그대로 남는다.
-              <button key={src} type="button" onClick={() => setZoomed(src)}>
-                <img
-                  src={src}
-                  alt=""
-                  loading="lazy"
-                  // 링크가 깨진 사진은 깨진 아이콘 대신 칸째로 숨긴다.
-                  onError={(e) => {
-                    e.currentTarget.parentElement!.hidden = true;
-                  }}
-                />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="place-sheet-photo" />
-        )}
+        {/* 사진+카테고리를 한 덩어리로 묶어서, 데스크톱에서 오른쪽 정보 카드와 같은 높이로 늘어나게 한다. */}
+        <div className="place-sheet-media">
+          {photos.length > 0 ? (
+            <div className="place-sheet-photos">
+              {photos.map((src) => (
+                // 시트 안에서는 160px로 잘라 보여주고, 누르면 같은 화면 위에 원본을 덮어 띄운다.
+                // 페이지 이동이 아니라서 닫으면 상세 시트가 그대로 남는다.
+                <button key={src} type="button" onClick={() => setZoomed(src)}>
+                  <img
+                    src={src}
+                    alt=""
+                    loading="lazy"
+                    // 링크가 깨진 사진은 깨진 아이콘 대신 칸째로 숨긴다.
+                    onError={(e) => {
+                      e.currentTarget.parentElement!.hidden = true;
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="place-sheet-photo" />
+          )}
 
-        {zoomed && (
-          // 오버레이 전체가 버튼이라 아무 데나 누르거나 엔터를 쳐도 닫힌다.
-          <button type="button" className="photo-zoom" aria-label="사진 닫기" onClick={() => setZoomed("")}>
-            <img src={zoomed} alt="" />
-          </button>
-        )}
+          {zoomed && (
+            // 오버레이 전체가 버튼이라 아무 데나 누르거나 엔터를 쳐도 닫힌다.
+            <button type="button" className="photo-zoom" aria-label="사진 닫기" onClick={() => setZoomed("")}>
+              <img src={zoomed} alt="" />
+            </button>
+          )}
 
-        <p style={{ marginBottom: 16 }}>
-          {p.content_type_name}
-          {p.small_category_name ? ` · ${p.small_category_name}` : ""}
-        </p>
+          <p className="place-sheet-category" style={{ marginBottom: 16 }}>
+            {p.content_type_name}
+            {p.small_category_name ? ` · ${p.small_category_name}` : ""}
+          </p>
+        </div>
 
         <div className="place-fact-grid">
           {fields.map((f) => (
-            <div key={f.key} className={`fact-item ${wideKeys.has(f.key) ? "fact-span-2" : ""}`}>
+            <div
+              key={f.key}
+              className={`fact-item ${f.key === "address" ? "fact-item-address" : ""} ${wideKeys.has(f.key) ? "fact-span-2" : ""}`}
+            >
               <div className="override-label">
                 {f.icon} {f.label}
               </div>
@@ -173,7 +183,7 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
           ))}
 
           {multiLineHours.length > 0 && (
-            <div className="fact-item fact-span-2">
+            <div className="fact-item fact-span-2 fact-item-multiline">
               <div className="override-label">🕐 운영시간</div>
               {multiLineHours.map((line) => (
                 <p key={line}>{line}</p>
@@ -182,7 +192,7 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
           )}
         </div>
 
-        <div className="override-section">
+        <div className="override-section place-sheet-overview">
           <div className="override-label">📝 장소 소개</div>
           {/* 서버 요약(overview_summary)이 있으면 그대로 쓴다. 이미 요약문이라 100자 컷을 또 먹이면 뭉개진다. */}
           <p>
@@ -193,14 +203,14 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
         </div>
 
         {isRestaurant && (menu || featuredMenu) && (
-          <div className="override-section">
+          <div className="override-section place-sheet-menu">
             <div className="override-label">🍽️ 메뉴</div>
             {featuredMenu && <p>대표 메뉴: {featuredMenu}</p>}
             {menu && <p>{menu}</p>}
           </div>
         )}
 
-        <div className="override-section">
+        <div className="override-section place-sheet-chat">
           <div className="override-label">💬 이 장소에 물어보기</div>
 
           {(thread.length > 0 || ask.isPending) && (
