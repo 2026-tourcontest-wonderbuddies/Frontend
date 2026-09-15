@@ -11,7 +11,7 @@ export function courseItems(course: CourseDetail): CourseItem[] {
  */
 export function courseStats(course: CourseDetail) {
   const items = courseItems(course);
-  const stayMin = items.reduce((s, it) => s + it.place.stay_time_minutes, 0);
+  const stayMin = items.reduce((s, it) => s + diffMin(it.arrive_at, it.depart_at), 0);
   const travelMin = items.reduce((s, it) => s + (it.travel_min_from_prev ?? 0), 0);
   return {
     visitCount: items.length,
@@ -41,7 +41,7 @@ export function courseStartIso(course: CourseDetail): string | null {
   return courseItems(course)[0]?.arrive_at ?? null;
 }
 
-const diffMin = (a: string, b: string) =>
+export const diffMin = (a: string, b: string) =>
   Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000));
 
 /**

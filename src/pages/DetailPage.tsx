@@ -6,7 +6,7 @@ import { useSavedCourses, useToggleSavedCourse } from "../hooks/useSavedCourses"
 import { PRIORITY_LABELS } from "../api/types";
 import { dayCaseLabel, dayDateLabel, hhmm, slotLabel } from "../utils/format";
 import type { PlaceSummary } from "../api/types";
-import { courseItems, courseLodging, courseStartIso, courseStats, dayAirport } from "../utils/course";
+import { courseItems, courseLodging, courseStartIso, courseStats, dayAirport, diffMin } from "../utils/course";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
 
 const STOP_ANGLES = [
@@ -246,7 +246,7 @@ export default function DetailPage() {
                         </span>
                       )}
                     </div>
-                    <div className="tl-stay mono">체류 {item.place.stay_time_minutes}분</div>
+                    <div className="tl-stay mono">체류 {diffMin(item.arrive_at, item.depart_at)}분</div>
                   </div>
                   <div className="tl-desc">
                     {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
