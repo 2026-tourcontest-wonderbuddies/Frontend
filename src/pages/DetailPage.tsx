@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCourse } from "../hooks/useCourses";
 import { useAuth } from "../auth/AuthContext";
@@ -38,6 +39,26 @@ const PIN_POSITIONS = [
   { top: "60%", left: "80%" },
   { top: "80%", left: "55%" },
 ];
+
+/** 도착 시각대에 따라 타임라인 링 색을 고른다(핸드오프 시안 기준). */
+function hourColor(time: string) {
+  const h = Number(time.slice(0, 2));
+  if (!Number.isFinite(h)) return "var(--morning)";
+  if (h < 7) return "var(--night)";
+  if (h < 9) return "var(--dawn)";
+  if (h < 12) return "var(--morning)";
+  if (h < 16) return "var(--midday)";
+  if (h < 19) return "var(--sunset)";
+  return "var(--night)";
+}
+
+function TlDot({ time }: { time: string }) {
+  return (
+    <div className="tl-dot mono" style={{ "--dot": hourColor(time) } as CSSProperties}>
+      {time}
+    </div>
+  );
+}
 
 /** 라우트의 :id 는 명세 4번의 course_id 다. */
 export default function DetailPage() {
@@ -181,7 +202,7 @@ export default function DetailPage() {
       </header>
 
       <div className="main-detail wrap">
-        <div>
+        <div className="detail-timeline-panel">
           <div className="section-label">TIMELINE</div>
           <div className="section-title serif">시간 순서대로 보는 코스</div>
 
@@ -220,14 +241,14 @@ export default function DetailPage() {
           <div className="timeline">
             {airport.depart && (
               <div className="tl-item">
-                <div className="tl-dot mono">{hhmm(airport.depart)}</div>
+                <TlDot time={hhmm(airport.depart)} />
                 <div className="tl-card tl-airport">
                   <div className="tl-title">🛬 제주공항 밖 출발 (수하물 수령 완료)</div>
                 </div>
                 {airport.departTravelMin ? (
                   <div className="tl-transit">
                     <span className="line" />
-                    🚗 차량 {airport.departTravelMin}분 이동
+                    ▸ 차량 {airport.departTravelMin}분 이동
                   </div>
                 ) : null}
               </div>
@@ -235,14 +256,14 @@ export default function DetailPage() {
 
             {lodgingStart.time && (
               <div className="tl-item">
-                <div className="tl-dot mono">{hhmm(lodgingStart.time)}</div>
+                <TlDot time={hhmm(lodgingStart.time)} />
                 <div className="tl-card tl-lodging">
                   <div className="tl-title">🛏 {lodgingStart.lodging?.title} 출발</div>
                 </div>
                 {lodgingStart.travelMin ? (
                   <div className="tl-transit">
                     <span className="line" />
-                    🚗 차량 {lodgingStart.travelMin}분 이동
+                    ▸ 차량 {lodgingStart.travelMin}분 이동
                   </div>
                 ) : null}
               </div>
@@ -250,7 +271,7 @@ export default function DetailPage() {
 
             {day.items.map((item, idx) => (
               <div className="tl-item" key={item.id}>
-                <div className="tl-dot mono">{hhmm(item.arrive_at)}</div>
+                <TlDot time={hhmm(item.arrive_at)} />
                 <div
                   className="tl-card"
                   role="button"
@@ -280,17 +301,17 @@ export default function DetailPage() {
                 {idx < day.items.length - 1 ? (
                   <div className="tl-transit">
                     <span className="line" />
-                    🚗 차량 {day.items[idx + 1].travel_min_from_prev ?? 0}분 이동
+                    ▸ 차량 {day.items[idx + 1].travel_min_from_prev ?? 0}분 이동
                   </div>
                 ) : airport.arriveTravelMin ? (
                   <div className="tl-transit">
                     <span className="line" />
-                    🚗 차량 {airport.arriveTravelMin}분 이동
+                    ▸ 차량 {airport.arriveTravelMin}분 이동
                   </div>
                 ) : day.lodging && day.travel_to_next_min != null ? (
                   <div className="tl-transit">
                     <span className="line" />
-                    🚗 차량 {day.travel_to_next_min}분 이동
+                    ▸ 차량 {day.travel_to_next_min}분 이동
                   </div>
                 ) : null}
               </div>
@@ -298,7 +319,7 @@ export default function DetailPage() {
 
             {airport.arrive && (
               <div className="tl-item">
-                <div className="tl-dot mono">{hhmm(airport.arrive)}</div>
+                <TlDot time={hhmm(airport.arrive)} />
                 <div className="tl-card tl-airport">
                   <div className="tl-title">🛫 제주공항 도착 (탑승 수속)</div>
                 </div>
@@ -307,7 +328,7 @@ export default function DetailPage() {
 
             {day.lodging && (
               <div className="tl-item">
-                <div className="tl-dot mono">{lodgingArriveAt}</div>
+                <TlDot time={lodgingArriveAt} />
                 <div className="tl-card tl-lodging">
                   <div className="tl-top">
                     <div className="tl-title">

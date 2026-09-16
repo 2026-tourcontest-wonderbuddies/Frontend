@@ -7,6 +7,8 @@
   --nocon:#D92D20;
   /* 지도 마커 범례(🟢 방문지 / 🔴 도착지)용. 기존 팔레트엔 초록·순적색이 없어서 추가한다. */
   --marker-visit:#2FA84F; --marker-end:#E14B4B;
+  /* 타임라인 카드 hover용 갈색 계열. */
+  --tl-hover:#EFE3D2; --tl-hover-line:#C7AF8C;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
@@ -236,6 +238,8 @@ h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px);
 .step-num{font-family:'Space Mono',monospace; font-size:12px; width:26px; height:26px; border-radius:50%; border:1px solid var(--ink); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .step-title{font-family:'Song Myung',serif; font-size:20px;}
 .step-sub{font-family:'Space Mono',monospace; font-size:11.5px; color:var(--ink-soft); margin:6px 0 0 40px;}
+/* 스텝 내부에서 새 섹션이 시작되는 지점을 가로선으로 구분한다. */
+.section-sep{margin-top:26px; padding-top:22px; border-top:1px solid var(--line);}
 .chip-row{display:flex; flex-wrap:wrap; gap:10px; margin-left:40px; margin-top:18px;}
 .chip{font-family:'Space Mono',monospace; font-size:13px; padding:11px 18px; border-radius:999px; border:1px solid var(--line); background:var(--card); transition:all .2s ease; cursor:pointer;}
 .chip:hover{border-color:var(--ink);}
@@ -255,7 +259,9 @@ h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px);
 .day-hours-list{display:flex; flex-direction:column; gap:10px; margin-left:40px; margin-top:20px;}
 .day-hours-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
 .day-hours-label{font-family:'Space Mono',monospace; font-size:12.5px; font-weight:700; min-width:52px;}
-.day-hours-hint{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft);}
+.day-hours-pair{display:flex; align-items:flex-start; gap:12px;}
+.day-hours-col{display:flex; flex-direction:column; gap:4px;}
+.day-hours-hint{font-family:'Space Mono',monospace; font-size:10.5px; font-weight:700; color:var(--sunset);}
 .date-inputs{display:flex; align-items:center; gap:12px; margin-left:40px; margin-top:16px; flex-wrap:wrap;}
 .date-box{display:flex; flex-direction:column; gap:6px;}
 .date-box .lbl{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft);}
@@ -330,7 +336,7 @@ svg.arc-svg{position:absolute; inset:0; transform:rotate(-90deg);}
   .wizard-progress-title{font-size:17px;}
   .wizard-body{min-height:0;}
   .wizard-nav{position:fixed; left:0; right:0; bottom:64px; z-index:82; margin:0; padding:12px 18px calc(12px + env(safe-area-inset-bottom)); background:rgba(247,244,237,0.96); backdrop-filter:blur(10px); border-top:1px solid var(--line);}
-  .wizard-nav .cta-final{flex:1; justify-content:center; padding:15px 20px;}
+  .wizard-nav .cta-final{padding:12px 22px; font-size:12.5px;}
   #screen-builder .builder{padding-bottom:150px;}
 }
 
@@ -357,23 +363,33 @@ h1.result-title{font-family:'Song Myung',serif; font-size:clamp(26px,3.8vw,42px)
 @media (max-width:960px){ .main-detail{grid-template-columns:1fr;} }
 @media (max-width:640px){ .main-detail{padding:40px 18px 20px; gap:0;} }
 .section-label{font-family:'Space Mono',monospace; font-size:12px; letter-spacing:2px; color:var(--sunset); text-transform:uppercase; margin-bottom:8px;}
-.timeline{position:relative; padding-left:60px; margin-top:36px;}
-@media (max-width:640px){ .timeline{padding-left:48px;} }
-.timeline::before{content:''; position:absolute; left:20px; top:6px; bottom:6px; width:3px; border-radius:3px; background:linear-gradient(180deg, var(--dawn), var(--morning), var(--midday), var(--sunset));}
-@media (max-width:640px){ .timeline::before{left:15px;} }
+.timeline{position:relative; padding-left:96px; margin-top:36px;}
+@media (max-width:640px){ .timeline{padding-left:74px;} }
+.timeline::before{content:''; position:absolute; left:70px; top:6px; bottom:6px; width:3px; border-radius:3px; background:linear-gradient(to bottom, var(--morning) 0%, var(--midday) 38%, var(--sunset) 72%, var(--night) 100%);}
+@media (max-width:640px){ .timeline::before{left:52px;} }
 .tl-item{position:relative; margin-bottom:30px;}
-.tl-dot{position:absolute; left:-60px; top:4px; width:42px; height:42px; border-radius:50%; background:var(--card); border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; font-family:'Space Mono',monospace; font-size:10.5px; font-weight:700;}
-@media (max-width:640px){ .tl-dot{left:-48px; width:34px; height:34px; font-size:9px;} }
+/* 시각은 선 왼쪽에 글자로만 두고, 선 위에는 작은 원만 찍는다. */
+.tl-dot{position:absolute; left:-96px; top:3px; width:52px; text-align:right; font-family:'Space Mono',monospace; font-size:11.5px; font-weight:700;}
+.tl-dot::after{content:''; position:absolute; top:3px; left:64.5px; width:8px; height:8px; border-radius:50%; background:var(--card); border:3px solid var(--dot, var(--morning));}
+@media (max-width:640px){ .tl-dot{left:-74px; width:40px; font-size:10px;} .tl-dot::after{left:46.5px;} }
 .tl-card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 22px; transition:transform .2s ease, box-shadow .2s ease;}
 @media (max-width:640px){ .tl-card{padding:14px 16px;} }
-.tl-card:hover{transform:translateX(4px); box-shadow:0 14px 30px -16px rgba(27,35,64,0.25);}
+.tl-card:hover{transform:translateX(4px); box-shadow:0 14px 30px -16px rgba(27,35,64,0.25); background:var(--tl-hover); border-color:var(--tl-hover-line);}
+
+/* 타임라인은 흰 패널로 감싼다. 웹 폭에서는 지도가 스크롤을 따라오게 고정한다. */
+.detail-timeline-panel{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:34px 30px;}
+@media (max-width:640px){ .detail-timeline-panel{border-radius:16px; padding:22px 16px;} }
+@media (min-width:961px){ .main-detail > aside{position:sticky; top:88px; align-self:start;} }
 .tl-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; gap:8px;}
 .tl-title{font-family:'Song Myung',serif; font-size:18px;}
 .tl-stay{font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-soft);}
 .tl-desc{font-size:13px; color:var(--ink-soft); line-height:1.75;}
-.tl-transit{display:flex; align-items:center; gap:10px; margin:14px 0 0 -60px; font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-soft);}
-@media (max-width:640px){ .tl-transit{margin-left:-48px;} }
-.tl-transit .line{flex:0 0 40px; height:1px; background:var(--line); margin-left:20px;}
+.tl-transit{position:relative; display:flex; align-items:center; gap:10px; margin:14px 0 0; font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-soft);}
+/* 이동 구간도 가로선 대신 선 위의 작은 빈 원으로 표시한다. */
+.tl-transit::before{content:''; position:absolute; top:50%; left:-30px; transform:translateY(-50%); width:7px; height:7px; border-radius:50%; background:var(--card); border:2px solid var(--line);}
+@media (max-width:640px){ .tl-transit::before{left:-26px;} }
+/* 이동 텍스트 오른쪽으로 점선을 카드 폭 끝까지 늘인다. */
+.tl-transit .line{order:1; flex:1 1 auto; height:0; border-top:1px dashed var(--line); background:none; margin:0;}
 .day-heading{font-family:'Song Myung',serif; font-size:17px; margin:36px 0 4px;}
 .day-heading:first-child{margin-top:0;}
 .day-subheading{font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-soft); margin-bottom:10px;}
@@ -669,10 +685,38 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .nocon-note{font-family:'Space Mono',monospace; font-size:11.5px; line-height:1.7; color:var(--nocon); margin-top:10px;}
 .nocon-banner{display:block; font-family:'Space Mono',monospace; font-size:11.5px; line-height:1.7; color:var(--nocon); background:rgba(217,45,32,0.06); border-left:3px solid var(--nocon); border-radius:0 8px 8px 0; padding:10px 12px; margin-bottom:16px;}
 
-/* 모바일에서는 한 줄에 시작·종료가 다 들어가지 않아 일자 라벨을 윗줄로 분리한다. */
+/* 모바일에서는 출발일·도착일도 한 줄 2열로 배치한다. */
 @media (max-width:640px){
-  .day-hours-list{gap:18px;}
-  .day-hours-row{gap:8px;}
-  .day-hours-row .time-arrow{display:none;}
+  .date-inputs{flex-wrap:nowrap; gap:8px;}
+  .date-box{flex:1; min-width:0;}
+  .date-box input[type="date"]{width:100%; padding:8px 6px; font-size:11.5px;}
+}
+
+/* 모바일에서는 칩(토글) 버튼을 균일한 3열 그리드로 배치해 세로로 늘어지지 않게 한다. */
+@media (max-width:640px){
+  .chip-row{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;}
+  .chip{padding:9px 4px; font-size:10.5px; border-radius:18px; text-align:center; line-height:1.3; white-space:pre-line;}
+  /* 여행 기간 칩은 라벨이 짧아 5개를 한 줄에 다 넣고, 더 둥글게 둔다. */
+  .trip-chip-row{grid-template-columns:repeat(5, 1fr); gap:4px;}
+  .trip-chip-row .chip{padding:8px 2px; font-size:9.5px; border-radius:999px;}
+  /* 장소 검색 페이지 칩은 라벨이 길어 3열로 줄이면 글씨가 뭉개진다. 웹과 같은 칩 크기로 되돌린다. */
+  .search-page .chip-row{display:flex; flex-wrap:wrap; gap:10px;}
+  .search-page .chip{padding:11px 18px; font-size:13px; border-radius:999px; white-space:nowrap;}
+  /* 권역만 라벨이 길어 한 열로 쌓는다(두 열은 폭이 모자란다). */
+  .region-chip-grid .chip-row{display:grid; grid-template-columns:max-content; gap:10px;}
+}
+
+/* 모바일에서는 일자 라벨을 윗줄로 분리하고, 시작·종료 시각은 한 줄에 2열로 배치한다. */
+@media (max-width:640px){
+  .day-hours-list{gap:14px;}
+  .day-hours-row{flex-direction:column; align-items:stretch; gap:6px;}
   .day-hours-label{width:100%; min-width:0;}
+  .day-hours-pair{gap:8px;}
+  .day-hours-col{flex:1; min-width:0;}
+  .day-hours-col .time-box{width:100%;}
+  .time-box{padding:8px 6px; gap:4px;}
+  .time-box .lbl{font-size:9.5px; padding:0 2px; white-space:nowrap;}
+  .stepper-btn{width:22px; height:22px; font-size:12px;}
+  .time-val{font-size:13px; min-width:38px;}
+  .day-hours-hint{font-size:9px; line-height:1.4;}
 }
