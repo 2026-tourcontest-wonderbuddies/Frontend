@@ -10,7 +10,7 @@ export type PurposeKey =
 
 export const PURPOSE_LABELS: Record<PurposeKey, string> = {
   nature: "힐링/자연",
-  food: "식당/카페",
+  food: "음식/카페",
   photo: "사진/감성",
   culture: "문화/역사",
   activity: "체험/액티비티",
@@ -77,6 +77,19 @@ export const FOOD_PREF_LABELS: Record<FoodPrefKey, string> = {
   일식: "일식",
   중식: "중식",
   양식세계음식: "양식·세계음식",
+};
+
+/**
+ * 음식/카페 비중. 키가 그대로 전송값이다 — 백엔드 food_scoring.decide_food_slot_types()가
+ * 한글 리터럴을 직접 비교하므로 공백·중점을 넣으면 조용히 "둘다"로 떨어진다.
+ * 목적(purpose_main/sub)에 "food"가 없으면 엔진이 이 값을 아예 읽지 않는다.
+ */
+export type FoodCafeBalance = "음식점중심" | "카페중심" | "둘다";
+
+export const FOOD_CAFE_BALANCE_LABELS: Record<FoodCafeBalance, string> = {
+  음식점중심: "음식점 중심",
+  카페중심: "카페 중심",
+  둘다: "둘 다",
 };
 
 export type LodgingType = "호텔" | "리조트·콘도" | "펜션·민박" | "게스트하우스" | "상관없음";
@@ -387,8 +400,8 @@ export interface TripCreateRequest {
   free_text_input?: string;
   food_pref_1?: string;
   food_pref_2?: string;
-  // [백엔드 연결 이전] 명세엔 있지만 프론트에 아직 입력 UI가 없어 항상 undefined로 보낸다.
-  food_cafe_balance?: string;
+  /** 목적에 "food"가 있을 때만 보낸다. 없으면 엔진이 무시하므로 키째로 뺀다. */
+  food_cafe_balance?: FoodCafeBalance;
   lodging_type?: string;
   lodging_need_cooking?: boolean;
   lodging_free_text?: string;
@@ -458,6 +471,8 @@ export interface CourseItem {
   travel_min_from_prev: number | null;
   locked: boolean;
   hours_uncertain: boolean;
+  /** 선호 음식 후보가 5곳 미만이라 태그 조건이 완화되어 뽑힌 항목(소프트 필터 −0.15 감점 대상). */
+  is_relaxed_preference?: boolean;
 }
 
 /** 숙소 카드의 조건 충족 표시 한 줄 */
