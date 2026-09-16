@@ -8,6 +8,8 @@ import type { StepProps } from "../../types/builderForm";
 
 const PURPOSE_OPTIONS = toOptions(PURPOSE_LABELS);
 const REGION_OPTIONS = pickOptions(REGION_LABELS, BUILDER_REGION_KEYS);
+// 칩 안에서 줄바꿈될 때 "구좌)"처럼 괄호가 중간에서 끊기지 않도록 여는 괄호 앞에서 줄을 바꾼다.
+const REGION_CHIP_OPTIONS = REGION_OPTIONS.map((o) => ({ ...o, label: o.label.replace(" (", "\n(") }));
 
 export default function StepPurpose({ form, patch }: StepProps) {
   const [showDayOverrides, setShowDayOverrides] = useState(false);
@@ -16,9 +18,13 @@ export default function StepPurpose({ form, patch }: StepProps) {
   return (
     <div className="step">
       <div className="step-sub">희망 권역은 하나만 고를 수 있어요 (선택 안 하면 제주 전역에서 추천)</div>
-      <ChipGroup options={REGION_OPTIONS} value={form.region} onChange={(v) => patch({ region: v as RegionKey })} />
+      <ChipGroup
+        options={REGION_CHIP_OPTIONS}
+        value={form.region}
+        onChange={(v) => patch({ region: v as RegionKey })}
+      />
 
-      <div className="step-sub" style={{ marginTop: 26 }}>여행 목적 — 주목적은 필수예요</div>
+      <div className="step-sub section-sep">여행 목적 — 주목적은 필수예요</div>
       <ChipGroup
         options={PURPOSE_OPTIONS}
         value={form.purposeMain}

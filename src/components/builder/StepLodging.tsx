@@ -20,22 +20,22 @@ export default function StepLodging({ form, patch }: StepProps) {
     <div className="step">
       <div className="step-sub">다일 여행이라 숙박 조건도 함께 받을게요</div>
 
-      <div className="step-sub" style={{ marginTop: 20 }}>숙소 유형</div>
+      <div className="step-sub" style={{ marginTop: 20 }}>어떤 유형의 숙소가 좋으세요?</div>
       <ChipGroup
         options={LODGING_TYPE_OPTIONS}
         value={form.lodgingType}
         onChange={(v) => patch({ lodgingType: v as LodgingType })}
       />
 
-      <div className="step-sub" style={{ marginTop: 22 }}>희망 조건 — 취사 유무</div>
+      <div className="step-sub section-sep">취사가 가능하면 좋겠어요?</div>
       <ChipGroup options={COOKING_OPTIONS} value={form.cooking} onChange={(cooking) => patch({ cooking })} />
 
-      <div className="field-row" style={{ marginTop: 22 }}>
-        <label>숙박 관련 자유 입력 (선택)</label>
+      <div className="field-row section-sep">
+        <label>숙소에 대해 더 하고 싶은 말이 있다면 (선택)</label>
         <textarea value={form.lodgingFreeText} onChange={(e) => patch({ lodgingFreeText: e.target.value })} />
       </div>
 
-      <p className="step-sub" style={{ marginTop: 22 }}>
+      <p className="step-sub section-sep">
         숙소는 코스를 먼저 만든 뒤에 고르실 수 있어요. 동선의 마지막 장소에서 가까운 순으로
         추천해드리려면 코스가 정해져 있어야 하거든요.
       </p>

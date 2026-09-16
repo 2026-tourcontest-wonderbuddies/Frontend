@@ -26,7 +26,7 @@ export default function StepTaste({ form, patch }: StepProps) {
       {/* 목적에 음식/카페가 있을 때만 묻는다. 아니면 엔진이 이 값을 읽지 않는다. */}
       {isFoodPurpose(form) && (
         <>
-          <div className="step-sub" style={{ marginTop: 26 }}>음식점과 카페, 어느 쪽에 무게를 둘까요?</div>
+          <div className="step-sub section-sep">음식점과 카페, 어느 쪽에 무게를 둘까요?</div>
           <ChipGroup
             options={FOOD_CAFE_BALANCE_OPTIONS}
             value={form.foodCafeBalance}
@@ -35,7 +35,7 @@ export default function StepTaste({ form, patch }: StepProps) {
         </>
       )}
 
-      <div className="step-sub" style={{ marginTop: 26 }}>더 하고 싶은 말이 있다면 (선택)</div>
+      <div className="step-sub section-sep">더 하고 싶은 말이 있다면 (선택)</div>
       <div className="field-row">
         <textarea
           placeholder="예: 아이랑 같이라 계단 많은 곳은 피하고 싶어요"
