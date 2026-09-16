@@ -6,6 +6,7 @@ import Footer from "./components/Footer";
 import ComingSoon from "./components/ComingSoon";
 import HomePage from "./pages/HomePage";
 import ListPage from "./pages/ListPage";
+import CuratedCourseDetailPage from "./pages/CuratedCourseDetailPage";
 import BuilderPage from "./pages/BuilderPage";
 import DetailPage from "./pages/DetailPage";
 import LoginPage from "./pages/LoginPage";
@@ -31,6 +32,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/list" element={<ListPage />} />
+        <Route path="/list/:id" element={<CuratedCourseDetailPage />} />
         <Route path="/builder" element={<BuilderPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/trips/:tripId/courses" element={<CoursesPage />} />
