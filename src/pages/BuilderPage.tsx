@@ -10,7 +10,7 @@ import StepLodging from "../components/builder/StepLodging";
 import { useCreateTrip } from "../hooks/useCreateTrip";
 import { useAuth } from "../auth/AuthContext";
 import { addDays, fmtHour, resolveDayHours } from "../utils/date";
-import { defaultBuilderForm, type BuilderForm } from "../types/builderForm";
+import { defaultBuilderForm, isFoodPurpose, type BuilderForm } from "../types/builderForm";
 import {
   PURPOSE_LABELS,
   REGION_CODE_BY_KEY,
@@ -131,6 +131,8 @@ export default function BuilderPage() {
       free_text_input: form.freeTextInput || undefined,
       food_pref_1: form.foodPrefs[0] || undefined,
       food_pref_2: form.foodPrefs[1] || undefined,
+      // 목적을 food로 골랐다가 되돌리면 폼엔 값이 남는다. 엔진과 같은 조건으로 걸러 보낸다.
+      food_cafe_balance: isFoodPurpose(form) ? form.foodCafeBalance : undefined,
       lodging_type: isMultiDay ? form.lodgingType || undefined : undefined,
       lodging_need_cooking: isMultiDay ? form.cooking === "필요" : undefined,
       lodging_free_text: isMultiDay ? form.lodgingFreeText || undefined : undefined,
