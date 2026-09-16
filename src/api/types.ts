@@ -539,10 +539,12 @@ export interface CourseDetail {
   is_selected: boolean;
   final_score: number | null;
   created_at: string;
-  // [백엔드 연결 이전] 공항 기준 여행 양 끝 시각. 추가 요청 중(TEAM_SHARE.md 추가 요청 5번).
-  // 없으면 타임라인에 공항 항목을 그리지 않는다.
+  // 공항 기준 여행 양 끝 시각. 없으면 타임라인에 공항 항목을 그리지 않는다.
   trip_start_datetime?: string;
   trip_end_datetime?: string;
+  // 마지막 날 마지막 장소 → 공항 예상 이동시간(분, 좌표 기반 추정치). depart_at/trip_end_datetime
+  // 시각 차이보다 정확해서 dayAirport()가 이 값을 우선 사용한다.
+  return_to_airport_travel_min?: number | null;
   days: CourseDay[];
 }
 

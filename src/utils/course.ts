@@ -75,7 +75,12 @@ export function dayAirport(course: CourseDetail, day: CourseDay) {
       depart && first
         ? travelOrNull(first.travel_min_from_prev || diffMin(depart, first.arrive_at))
         : null,
-    arriveTravelMin: arrive && last ? travelOrNull(diffMin(last.depart_at, arrive)) : null,
+    // 서버 좌표 기반 추정치(return_to_airport_travel_min)가 있으면 그걸 우선 쓴다.
+    // 시각 차이(diffMin)는 여유시간이 끼어있거나 날짜가 어긋나면 부풀거나 깨진다.
+    arriveTravelMin:
+      arrive && last
+        ? travelOrNull(course.return_to_airport_travel_min ?? diffMin(last.depart_at, arrive))
+        : null,
   };
 }
 
