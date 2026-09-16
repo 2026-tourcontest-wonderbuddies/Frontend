@@ -38,7 +38,7 @@ const ALL_STEPS: StepDef[] = [
   { key: "schedule", title: "언제, 몇 분이서 가세요?" },
   { key: "purpose", title: "어디서 무엇을 하고 싶으세요?" },
   { key: "taste", title: "취향을 알려주세요" },
-  { key: "lodging", title: "숙박 조건" },
+  { key: "lodging", title: "숙소는 어떤 곳이 좋으세요?" },
 ];
 
 /** 스텝별 필수 검증. 빈 배열이면 통과. */

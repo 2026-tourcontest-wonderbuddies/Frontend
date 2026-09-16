@@ -41,12 +41,12 @@ export interface BuilderForm {
 export function defaultBuilderForm(): BuilderForm {
   return {
     startDate: defaultStartDate(),
-    nights: 3,
+    nights: 1,
     startHour: 9,
     endHour: 18,
     dayHours: [],
     headcount: "2",
-    region: "서귀포동부",
+    region: "전역",
     purposeMain: "photo",
     purposeSub: "",
     dayOverrides: [],
