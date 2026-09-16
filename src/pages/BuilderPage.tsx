@@ -20,6 +20,9 @@ import {
 } from "../api/types";
 
 const PENDING_TRIP_KEY = "tj_pending_trip";
+// LodgingPage가 받는 응답(CourseDetail 등)엔 인원수가 없다. 백엔드가 안 돌려주는 값이라
+// 트립 생성 직후 여기서만 세션에 남겨 LodgingPage 요약줄에 표시한다.
+export const TRIP_GUESTS_KEY_PREFIX = "tj_trip_guests_";
 
 type StepKey = "schedule" | "purpose" | "taste" | "lodging";
 
@@ -160,6 +163,7 @@ export default function BuilderPage() {
       onSuccess: (res) => {
         // 취소하고 폼으로 돌아온 뒤에 응답이 도착할 수 있다. 그때 화면을 끌고 가면 안 된다.
         if (abandoned.current) return;
+        sessionStorage.setItem(`${TRIP_GUESTS_KEY_PREFIX}${res.trip_id}`, String(payload.guests));
         navigate(`/trips/${res.trip_id}/courses`);
       },
     });
