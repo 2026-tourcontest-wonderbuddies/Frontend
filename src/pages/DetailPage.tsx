@@ -13,6 +13,7 @@ import {
   courseStats,
   dayAirport,
   dayLodgingStart,
+  diffMin,
 } from "../utils/course";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
 
@@ -270,7 +271,7 @@ export default function DetailPage() {
                         </span>
                       )}
                     </div>
-                    <div className="tl-stay mono">체류 {item.place.stay_time_minutes}분</div>
+                    <div className="tl-stay mono">체류 {diffMin(item.arrive_at, item.depart_at)}분</div>
                   </div>
                   <div className="tl-desc">
                     {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
