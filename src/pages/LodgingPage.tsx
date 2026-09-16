@@ -7,12 +7,19 @@ import {
 } from "../hooks/useCourses";
 import LoadingChecklist from "../components/LoadingChecklist";
 import { PRIORITY_LABELS, type LodgingCard } from "../api/types";
+import { TRIP_GUESTS_KEY_PREFIX } from "./BuilderPage";
 
 const CHECK_MARK: Record<LodgingCard["checks"][number]["status"], string> = {
   yes: "✓",
   no: "✕",
   unknown: "?",
 };
+
+/** "참고가 60,000원~ (실시간 아님)"처럼 끝에 붙는 괄호 설명을 따로 떼어 작게 보여주기 위함. */
+function splitPriceHint(hint: string) {
+  const m = hint.match(/^(.*?)\s*(\([^)]*\))\s*$/);
+  return m ? { main: m[1], note: m[2] } : { main: hint, note: null };
+}
 
 export default function LodgingPage() {
   const { tripId, courseId } = useParams<{ tripId: string; courseId: string }>();
@@ -24,6 +31,7 @@ export default function LodgingPage() {
   const selectCourse = useSelectCourse();
 
   const nights = course.data ? Math.max(0, course.data.days.length - 1) : 0;
+  const guests = tripId ? sessionStorage.getItem(`${TRIP_GUESTS_KEY_PREFIX}${tripId}`) : null;
 
   /** 숙소를 서버에 반영한 뒤 코스를 최종 확정한다(명세 7번 → 3번). */
   function chooseAndConfirm(contentId: string) {
@@ -70,6 +78,7 @@ export default function LodgingPage() {
         {nights}박 일정이에요. 입력하신 숙박 조건과 코스 동선을 함께 보고 골랐어요. 숙소를 고르면 코스가 확정됩니다.
       </p>
       <div className="candidates-summary">
+        {guests && <span>👤 {guests}명</span>}
         <span>📅 {course.data.days.length}일 일정</span>
         <span>🛏 {nights}박 · 전체 동일 숙소</span>
         <span>🎯 {PRIORITY_LABELS[course.data.mode]}</span>
@@ -99,6 +108,7 @@ export default function LodgingPage() {
           <div className="candidate-grid">
             {cards.map((card) => (
               <div className="candidate-card" key={card.content_id}>
+                <div className="lodging-card-photo" />
                 <div className="candidate-head">
                   <div className="candidate-label">
                     {card.title}
@@ -110,7 +120,7 @@ export default function LodgingPage() {
                   </div>
                   <button
                     type="button"
-                    className="btn-primary"
+                    className="btn-primary lodging-select-btn"
                     onClick={() => chooseAndConfirm(card.content_id)}
                     disabled={selectLodging.isPending}
                   >
@@ -125,7 +135,17 @@ export default function LodgingPage() {
                 <div className="candidate-stats">
                   <div className="candidate-stat">
                     <div className="k">참고 요금</div>
-                    <div className="v">{card.price_hint || "확인 필요"}</div>
+                    <div className="v">
+                      {(() => {
+                        const { main, note } = splitPriceHint(card.price_hint || "확인 필요");
+                        return (
+                          <>
+                            <span className="v-main">{main}</span>
+                            {note && <span className="v-note">{note}</span>}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                   <div className="candidate-stat">
                     <div className="k">동선에서</div>
