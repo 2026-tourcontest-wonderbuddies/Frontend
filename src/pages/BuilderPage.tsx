@@ -10,7 +10,7 @@ import StepLodging from "../components/builder/StepLodging";
 import { useCreateTrip } from "../hooks/useCreateTrip";
 import { useAuth } from "../auth/AuthContext";
 import { addDays, fmtHour, resolveDayHours } from "../utils/date";
-import { defaultBuilderForm, type BuilderForm } from "../types/builderForm";
+import { defaultBuilderForm, isFoodPurpose, type BuilderForm } from "../types/builderForm";
 import {
   PURPOSE_LABELS,
   REGION_CODE_BY_KEY,
@@ -20,6 +20,9 @@ import {
 } from "../api/types";
 
 const PENDING_TRIP_KEY = "tj_pending_trip";
+// LodgingPage가 받는 응답(CourseDetail 등)엔 인원수가 없다. 백엔드가 안 돌려주는 값이라
+// 트립 생성 직후 여기서만 세션에 남겨 LodgingPage 요약줄에 표시한다.
+export const TRIP_GUESTS_KEY_PREFIX = "tj_trip_guests_";
 
 type StepKey = "schedule" | "purpose" | "taste" | "lodging";
 
@@ -35,7 +38,7 @@ const ALL_STEPS: StepDef[] = [
   { key: "schedule", title: "언제, 몇 분이서 가세요?" },
   { key: "purpose", title: "어디서 무엇을 하고 싶으세요?" },
   { key: "taste", title: "취향을 알려주세요" },
-  { key: "lodging", title: "숙박 조건" },
+  { key: "lodging", title: "숙소는 어떤 곳이 좋으세요?" },
 ];
 
 /** 스텝별 필수 검증. 빈 배열이면 통과. */
@@ -128,6 +131,8 @@ export default function BuilderPage() {
       free_text_input: form.freeTextInput || undefined,
       food_pref_1: form.foodPrefs[0] || undefined,
       food_pref_2: form.foodPrefs[1] || undefined,
+      // 목적을 food로 골랐다가 되돌리면 폼엔 값이 남는다. 엔진과 같은 조건으로 걸러 보낸다.
+      food_cafe_balance: isFoodPurpose(form) ? form.foodCafeBalance : undefined,
       lodging_type: isMultiDay ? form.lodgingType || undefined : undefined,
       lodging_need_cooking: isMultiDay ? form.cooking === "필요" : undefined,
       lodging_free_text: isMultiDay ? form.lodgingFreeText || undefined : undefined,
@@ -160,6 +165,7 @@ export default function BuilderPage() {
       onSuccess: (res) => {
         // 취소하고 폼으로 돌아온 뒤에 응답이 도착할 수 있다. 그때 화면을 끌고 가면 안 된다.
         if (abandoned.current) return;
+        sessionStorage.setItem(`${TRIP_GUESTS_KEY_PREFIX}${res.trip_id}`, String(payload.guests));
         navigate(`/trips/${res.trip_id}/courses`);
       },
     });

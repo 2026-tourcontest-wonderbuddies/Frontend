@@ -17,13 +17,6 @@ const PRESETS = [
   { s: 7, e: 19, label: "12시간" },
 ];
 
-/** 다일 여행에서 중간 일자에 한 번에 적용하는 하루 활동 시간대. */
-const DAY_PRESETS = [
-  { s: 8, e: 20, label: "매일 08–20" },
-  { s: 9, e: 21, label: "매일 09–21" },
-  { s: 10, e: 22, label: "매일 10–22" },
-];
-
 export { TRIP_LENGTH_CHIPS };
 
 interface HourStepperProps {
@@ -62,6 +55,7 @@ function HourStepper({ label, value, min, max, onChange }: HourStepperProps) {
 export default function StepSchedule({ form, patch }: StepProps) {
   const endDate = useMemo(() => addDays(form.startDate, form.nights), [form.startDate, form.nights]);
   const isMultiDay = form.nights > 0;
+  const headcountNum = Math.max(1, Number(form.headcount) || 1);
   const dayHours = useMemo(
     () => resolveDayHours(form.nights, form.startHour, form.endHour, form.dayHours),
     [form.nights, form.startHour, form.endHour, form.dayHours],
@@ -71,17 +65,6 @@ export default function StepSchedule({ form, patch }: StepProps) {
     const rest = form.dayHours.filter((o) => o.day_index !== dayIndex);
     const current = form.dayHours.find((o) => o.day_index === dayIndex);
     patch({ dayHours: [...rest, { ...current, day_index: dayIndex, ...p }] });
-  }
-
-  /** 양 끝점(1일차 시작·마지막 날 종료)은 그대로 두고 나머지 시각만 한 번에 맞춘다. */
-  function applyDayPreset(s: number, e: number) {
-    patch({
-      dayHours: Array.from({ length: form.nights + 1 }, (_, i) => ({
-        day_index: i + 1,
-        start_hour: s,
-        end_hour: e,
-      })),
-    });
   }
 
   return (
@@ -98,7 +81,7 @@ export default function StepSchedule({ form, patch }: StepProps) {
           <input type="date" value={endDate} disabled />
         </div>
       </div>
-      <div className="chip-row" style={{ marginTop: 14 }}>
+      <div className="chip-row trip-chip-row" style={{ marginTop: 14 }}>
         {TRIP_LENGTH_CHIPS.map((c) => (
           <button
             type="button"
@@ -111,12 +94,27 @@ export default function StepSchedule({ form, patch }: StepProps) {
         ))}
       </div>
 
-      <div className="step-sub" style={{ marginTop: 24 }}>
-        {isMultiDay ? "일자별 활동 시각" : "총 여행 활동 시각"} — ※ 제주공항 기준입니다.
-        <br />
-        시작 — 수하물 수령 후 공항 밖으로 나오는 시각
-        <br />
-        종료 — 돌아가는 날 공항에 도착해야 하는 시각 (예: 15시 비행이면 13시)
+      <div className="step-sub section-sep">몇 분이서 가세요?</div>
+      <div className="time-inputs">
+        <div className="time-box">
+          <span className="lbl">인원</span>
+          <button
+            type="button"
+            className="stepper-btn"
+            disabled={headcountNum <= 1}
+            onClick={() => patch({ headcount: String(headcountNum - 1) })}
+          >
+            –
+          </button>
+          <span className="time-val mono">{headcountNum}</span>
+          <button type="button" className="stepper-btn" onClick={() => patch({ headcount: String(headcountNum + 1) })}>
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="step-sub section-sep">
+        {isMultiDay ? "일자별로 몇 시부터 몇 시까지 움직일지 정해주세요." : "여행 전체 활동 시각을 정해주세요."}
       </div>
 
       {isMultiDay ? (
@@ -128,35 +126,38 @@ export default function StepSchedule({ form, patch }: StepProps) {
               return (
                 <div className="day-hours-row" key={d.dayIndex}>
                   <span className="day-hours-label">{d.dayIndex}일차</span>
-                  <HourStepper
-                    label="시작"
-                    value={d.startHour}
-                    min={0}
-                    max={Math.min(23, d.endHour - 1)}
-                    onChange={(v) =>
-                      isFirst ? patch({ startHour: v }) : patchDayHours(d.dayIndex, { start_hour: v })
-                    }
-                  />
-                  <span className="time-arrow">→</span>
-                  <HourStepper
-                    label="종료"
-                    value={d.endHour}
-                    min={Math.max(1, d.startHour + 1)}
-                    max={24}
-                    onChange={(v) => (isLast ? patch({ endHour: v }) : patchDayHours(d.dayIndex, { end_hour: v }))}
-                  />
-                  {isFirst && <span className="day-hours-hint">공항에서 나오는 시각</span>}
-                  {isLast && <span className="day-hours-hint">공항에 도착할 시각</span>}
+                  <div className="day-hours-pair">
+                    <div className="day-hours-col">
+                      <HourStepper
+                        label="시작"
+                        value={d.startHour}
+                        min={0}
+                        max={Math.min(23, d.endHour - 1)}
+                        onChange={(v) =>
+                          isFirst ? patch({ startHour: v }) : patchDayHours(d.dayIndex, { start_hour: v })
+                        }
+                      />
+                      {isFirst && <span className="day-hours-hint">공항에서 나오는 시각</span>}
+                    </div>
+                    <span className="time-arrow">→</span>
+                    <div className="day-hours-col">
+                      <HourStepper
+                        label="종료"
+                        value={d.endHour}
+                        min={Math.max(1, d.startHour + 1)}
+                        max={24}
+                        onChange={(v) =>
+                          isLast ? patch({ endHour: v }) : patchDayHours(d.dayIndex, { end_hour: v })
+                        }
+                      />
+                      {isLast && <span className="day-hours-hint">공항에 도착할 시각</span>}
+                    </div>
+                  </div>
                 </div>
               );
             })}
           </div>
           <div className="presets">
-            {DAY_PRESETS.map((p) => (
-              <button type="button" className="preset" key={p.label} onClick={() => applyDayPreset(p.s, p.e)}>
-                {p.label}
-              </button>
-            ))}
             <button type="button" className="preset" onClick={() => patch({ dayHours: [] })}>
               기본값으로 되돌리기
             </button>
@@ -196,15 +197,12 @@ export default function StepSchedule({ form, patch }: StepProps) {
         </>
       )}
 
-      <div className="step-sub" style={{ marginTop: 24 }}>몇 분이서 가세요?</div>
-      <div className="field-row">
-        <label>인원 수</label>
-        <input
-          type="number"
-          min={1}
-          value={form.headcount}
-          onChange={(e) => patch({ headcount: e.target.value })}
-        />
+      <div className="step-sub" style={{ marginTop: 14 }}>
+        ※ 제주공항 기준입니다.
+        <br />
+        시작 — 수하물 수령 후 공항 밖으로 나오는 시각
+        <br />
+        종료 — 돌아가는 날 공항에 도착해야 하는 시각 (예: 15시 비행이면 13시)
       </div>
     </div>
   );

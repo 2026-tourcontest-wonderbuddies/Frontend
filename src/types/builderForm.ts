@@ -1,5 +1,6 @@
 import type {
   DayOverridePayload,
+  FoodCafeBalance,
   FoodPrefKey,
   LodgingType,
   PurposeKey,
@@ -28,6 +29,7 @@ export interface BuilderForm {
 
   // 3 — 취향
   foodPrefs: FoodPrefKey[];
+  foodCafeBalance: FoodCafeBalance;
   freeTextInput: string;
 
   // 4 — 숙박 (다일 여행에서만)
@@ -39,22 +41,31 @@ export interface BuilderForm {
 export function defaultBuilderForm(): BuilderForm {
   return {
     startDate: defaultStartDate(),
-    nights: 3,
+    nights: 1,
     startHour: 9,
     endHour: 18,
     dayHours: [],
     headcount: "2",
-    region: "서귀포동부",
+    region: "전역",
     purposeMain: "photo",
     purposeSub: "",
     dayOverrides: [],
     foodPrefs: [],
+    foodCafeBalance: "둘다",
     freeTextInput: "",
     lodgingType: "상관없음",
     cooking: "무관",
     lodgingFreeText: "",
   };
 }
+
+/**
+ * 음식/카페 비중을 물어볼지 판단한다. 엔진과 같은 조건이어야 한다 —
+ * engine.py의 purpose_selected = (purpose_main == "food" or purpose_sub == "food").
+ * 화면과 전송이 어긋나지 않도록 StepTaste와 buildPayload가 이 하나를 공유한다.
+ */
+export const isFoodPurpose = (form: BuilderForm) =>
+  form.purposeMain === "food" || form.purposeSub === "food";
 
 export type PatchForm = (patch: Partial<BuilderForm>) => void;
 

@@ -1,4 +1,4 @@
-import { PRIORITY_LABELS, type CourseDay, type CourseDetail, type CourseItem } from "../api/types";
+import { PRIORITY_LABELS, type CourseDay, type CourseDetail, type CourseItem, type CourseLodging } from "../api/types";
 
 /** 모든 Day의 방문 항목을 순서대로 펼친다. */
 export function courseItems(course: CourseDetail): CourseItem[] {
@@ -44,6 +44,8 @@ export function courseStartIso(course: CourseDetail): string | null {
 export const diffMin = (a: string, b: string) =>
   Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000));
 
+const subMin = (iso: string, min: number) => new Date(new Date(iso).getTime() - min * 60000).toISOString();
+
 /**
  * 백엔드 엔진이 단일 이동 60분 초과를 아예 컷하므로(filters.py) 그보다 큰 값은 이동시간이 아니다.
  * 지금 서버가 2일차 이후 arrive_at/depart_at에 1일차 날짜를 그대로 넣고 있어서
@@ -73,7 +75,33 @@ export function dayAirport(course: CourseDetail, day: CourseDay) {
       depart && first
         ? travelOrNull(first.travel_min_from_prev || diffMin(depart, first.arrive_at))
         : null,
-    arriveTravelMin: arrive && last ? travelOrNull(diffMin(last.depart_at, arrive)) : null,
+    // 서버 좌표 기반 추정치(return_to_airport_travel_min)가 있으면 그걸 우선 쓴다.
+    // 시각 차이(diffMin)는 여유시간이 끼어있거나 날짜가 어긋나면 부풀거나 깨진다.
+    arriveTravelMin:
+      arrive && last
+        ? travelOrNull(course.return_to_airport_travel_min ?? diffMin(last.depart_at, arrive))
+        : null,
+  };
+}
+
+/**
+ * 2일차부터 그 날 타임라인의 출발점은 전날 묵은 숙소다(백엔드가 select-lodging 확정 후
+ * 첫 항목의 travel_min_from_prev를 전날 숙소 기준으로 재계산해 준다 — course_modifier.py
+ * ccfbe7e에서 day.lodging_snapshot이 아니라 prev_day.lodging_snapshot을 보도록 고쳤다).
+ * day.lodging(이 날 자신의 숙소)은 마지막 날엔 항상 null이라 못 쓴다 — 반드시 전날 걸 봐야 한다.
+ */
+export function dayLodgingStart(course: CourseDetail, dayIdx: number) {
+  const day = course.days[dayIdx];
+  const prevLodging = course.days[dayIdx - 1]?.lodging;
+  const first = day?.items[0];
+  if (dayIdx === 0 || !prevLodging || !first) {
+    return { lodging: null as CourseLodging | null, time: null as string | null, travelMin: null as number | null };
+  }
+  const rawTravel = first.travel_min_from_prev ?? 0;
+  return {
+    lodging: prevLodging,
+    time: subMin(first.arrive_at, rawTravel),
+    travelMin: travelOrNull(rawTravel),
   };
 }
 
