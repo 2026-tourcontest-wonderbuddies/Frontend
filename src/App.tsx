@@ -28,56 +28,58 @@ export default function App() {
   return (
     <AuthProvider>
       <Nav />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/list" element={<ListPage />} />
-        <Route path="/builder" element={<BuilderPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/trips/:tripId/courses" element={<CoursesPage />} />
-        <Route path="/trips/:tripId/courses/:courseId/lodging" element={<LodgingPage />} />
-        <Route path="/trip/:id" element={<DetailPage />} />
-        <Route path="/trip/:id/map" element={<MapPage />} />
+      <main className="app-main">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/list" element={<ListPage />} />
+          <Route path="/builder" element={<BuilderPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/trips/:tripId/courses" element={<CoursesPage />} />
+          <Route path="/trips/:tripId/courses/:courseId/lodging" element={<LodgingPage />} />
+          <Route path="/trip/:id" element={<DetailPage />} />
+          <Route path="/trip/:id/map" element={<MapPage />} />
 
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/saved" element={<SavedPage />} />
-        <Route path="/saved/map" element={<SavedMapPage />} />
-        <Route
-          path="/trip/:id/edit"
-          element={
-            <ComingSoon
-              title="코스 편집은 준비 중이에요"
-              desc="일정 순서 변경·삭제 API가 아직 서버에 없어요."
-            />
-          }
-        />
-        <Route
-          path="/trip/:id/chat"
-          element={
-            <ComingSoon
-              title="챗봇 수정은 준비 중이에요"
-              desc="수정 요청은 서버에 저장되지만 재계산이 아직 준비되지 않았어요."
-            />
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <ComingSoon
-              title="이메일 회원가입은 준비 중이에요"
-              desc="지금은 구글 로그인만 지원해요."
-            />
-          }
-        />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/saved" element={<SavedPage />} />
+          <Route path="/saved/map" element={<SavedMapPage />} />
+          <Route
+            path="/trip/:id/edit"
+            element={
+              <ComingSoon
+                title="코스 편집은 준비 중이에요"
+                desc="일정 순서 변경·삭제 API가 아직 서버에 없어요."
+              />
+            }
+          />
+          <Route
+            path="/trip/:id/chat"
+            element={
+              <ComingSoon
+                title="챗봇 수정은 준비 중이에요"
+                desc="수정 요청은 서버에 저장되지만 재계산이 아직 준비되지 않았어요."
+              />
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <ComingSoon
+                title="이메일 회원가입은 준비 중이에요"
+                desc="지금은 구글 로그인만 지원해요."
+              />
+            }
+          />
 
-        <Route
-          path="*"
-          element={
-            <div className="state-panel">
-              <span className="serif">페이지를 찾을 수 없어요</span>
-            </div>
-          }
-        />
-      </Routes>
+          <Route
+            path="*"
+            element={
+              <div className="state-panel">
+                <span className="serif">페이지를 찾을 수 없어요</span>
+              </div>
+            }
+          />
+        </Routes>
+      </main>
       <Footer />
       <TabBar />
     </AuthProvider>
