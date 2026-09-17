@@ -732,3 +732,33 @@ export interface AskPlaceResponse {
   question: string;
   answer: string;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// 추천 코스(큐레이션). GET /api/curated-courses/, GET /api/curated-courses/{id}/
+// "나만의 코스 만들기"(TripRequest 기반)와는 별개로, 미리 골라둔 장소 조합을 보여준다.
+// ══════════════════════════════════════════════════════════════════════════
+
+export type CuratedRegion = RegionCode; // "NE" | "NW" | "SE" | "SW" | "ALL"
+
+/** GET /api/curated-courses/ 목록 원소. */
+export interface CuratedCourseSummary {
+  id: number;
+  title: string;
+  region: CuratedRegion;
+  region_label: string;
+  duration: string;
+  badge: string;
+  time_of_day: string[];
+  meta_chips: string[];
+  gradient: string;
+}
+
+export interface CuratedCourseItem {
+  order: number;
+  place: PlaceSummary;
+}
+
+/** GET /api/curated-courses/{id}/ 상세. */
+export interface CuratedCourseDetail extends CuratedCourseSummary {
+  items: CuratedCourseItem[];
+}
