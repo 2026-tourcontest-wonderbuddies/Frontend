@@ -447,8 +447,8 @@ export interface TripCoursesResponse {
 /** 명세서 "이전 코스 조회" · GET /api/trips/ — 내가 만든 여행 이력. 서버가 배열을 그대로 준다. */
 export interface TripHistory {
   trip_id: number;
-  start_datetime: string;
-  end_datetime: string;
+  start_date: string;
+  end_date: string;
   created_at: string;
   courses: CourseSummary[];
 }
