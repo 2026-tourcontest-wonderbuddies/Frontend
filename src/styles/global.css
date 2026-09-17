@@ -522,6 +522,8 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .candidate-desc{font-size:12.5px; color:var(--ink-soft); line-height:1.7; height:3.4em; padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--line); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;}
 .candidate-badges{display:flex; flex-wrap:wrap; gap:6px;}
 .candidate-badge{font-family:'Space Mono',monospace; font-size:10.5px; background:var(--paper-deep); padding:5px 9px; border-radius:999px; color:var(--ink-soft);}
+.candidate-top{display:flex; flex-direction:column; gap:12px; background:var(--paper-deep); margin:-26px -26px 0; padding:26px 26px 0; border-radius:20px 20px 0 0;}
+.candidate-top .candidate-desc{margin-bottom:0;}
 .candidate-mode{font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:0.5px; color:var(--ink-soft); text-transform:uppercase;}
 .candidate-day-list{display:flex; flex-direction:column; gap:6px; padding-top:12px; border-top:1px solid var(--line);}
 .candidate-day-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft);}

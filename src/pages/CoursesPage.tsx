@@ -110,10 +110,11 @@ export default function CoursesPage() {
           const stats = courseStats(c);
           return (
             <div className="candidate-card" key={c.id}>
-              <div className="candidate-mode mono">{PRIORITY_LABELS[c.mode]}</div>
-              <div className="candidate-label">{MODE_TITLE[c.mode]}</div>
-
-              <p className="candidate-desc">{MODE_DESC[c.mode]}</p>
+              <div className="candidate-top">
+                <div className="candidate-mode mono">{PRIORITY_LABELS[c.mode]}</div>
+                <div className="candidate-label">{MODE_TITLE[c.mode]}</div>
+                <p className="candidate-desc">{MODE_DESC[c.mode]}</p>
+              </div>
 
               <div className="candidate-stats">
                 <div className="candidate-stat">
