@@ -504,6 +504,8 @@ export interface LodgingCard {
   checks: LodgingCheck[];
   needs_check: boolean;
   unknown_fields: string[];
+  /** 숙소 사진 URL. lodging_adapter가 코스 생성 시점에 LodgingImage에서 채워 넣는다. 없으면 빈 배열. */
+  images: string[];
   query_fit: string | null;
   travel_min: number | null;
   travel_min_total: number | null;
