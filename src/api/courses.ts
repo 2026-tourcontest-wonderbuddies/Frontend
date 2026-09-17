@@ -61,3 +61,35 @@ export function saveCourse(courseId: number | string) {
 export function unsaveCourse(courseId: number | string) {
   return apiClient.del<SavedCourseToggle>(`/courses/${courseId}/save/`);
 }
+
+// ── 코스 수동 편집 (TEAM_SHARE.md "새로 발견") ──────────────────────────────
+// 응답 형태가 미확인이라 반환값은 쓰지 않는다 — 호출부가 성공 후 코스 상세를 재조회한다.
+
+/** 그 날 안에서 장소 순서를 통째로 재배치한다. 이동시간·시각도 서버가 다시 계산한다. */
+export function reorderCourseDayItems(
+  courseId: number | string,
+  dayIndex: number,
+  itemIds: number[],
+) {
+  return apiClient.post(`/courses/${courseId}/days/${dayIndex}/reorder/`, {
+    item_ids: itemIds,
+  });
+}
+
+/** 그 날에 장소를 하나 추가한다. */
+export function addCourseItem(
+  courseId: number | string,
+  dayIndex: number,
+  contentId: string,
+  order: number,
+) {
+  return apiClient.post(`/courses/${courseId}/days/${dayIndex}/items/`, {
+    content_id: contentId,
+    order,
+  });
+}
+
+/** 장소를 하나 삭제한다. 뒤 일정은 서버가 재계산한다. */
+export function deleteCourseItem(courseId: number | string, itemId: number) {
+  return apiClient.del(`/courses/${courseId}/items/${itemId}/`);
+}

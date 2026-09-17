@@ -1,12 +1,18 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useCourse } from "../hooks/useCourses";
+import {
+  useAddCourseItem,
+  useCourse,
+  useDeleteCourseItem,
+  useReorderCourseItems,
+} from "../hooks/useCourses";
+import { usePlaceSuggestions } from "../hooks/usePlaceSearch";
 import { useAuth } from "../auth/AuthContext";
 import { useSavedCourses, useToggleSavedCourse } from "../hooks/useSavedCourses";
 import { PRIORITY_LABELS } from "../api/types";
 import { dayCaseLabel, dayDateLabel, hhmm, slotLabel } from "../utils/format";
-import type { PlaceSummary } from "../api/types";
+import type { CourseDay, PlaceSummary, SearchPlace } from "../api/types";
 import {
   courseItems,
   courseLodging,
@@ -17,6 +23,7 @@ import {
   diffMin,
 } from "../utils/course";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
+import Modal from "../components/Modal";
 
 const STOP_ANGLES = [
   { x: 118, y: 0 },
@@ -60,6 +67,66 @@ function TlDot({ time }: { time: string }) {
   );
 }
 
+/** 검색 자동완성(usePlaceSuggestions)에서 고른 장소를 그 날 맨 끝에 추가한다. */
+function AddPlaceModal({
+  courseId,
+  day,
+  onClose,
+}: {
+  courseId: number;
+  day: CourseDay;
+  onClose: () => void;
+}) {
+  const [q, setQ] = useState("");
+  const { data } = usePlaceSuggestions(q);
+  const suggestions = data?.results ?? [];
+  const addItem = useAddCourseItem();
+
+  function pick(place: SearchPlace) {
+    addItem.mutate(
+      { courseId, dayIndex: day.day_index, contentId: place.content_id, order: day.items.length + 1 },
+      { onSuccess: onClose },
+    );
+  }
+
+  return (
+    <Modal title={`DAY ${day.day_index}에 장소 추가`} onClose={onClose}>
+      <div className="search-bar" style={{ marginBottom: 12 }}>
+        <input
+          className="search-input"
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="장소명으로 검색"
+        />
+      </div>
+      {addItem.isPending && <p className="mono" style={{ color: "var(--ink-soft)" }}>추가하는 중…</p>}
+      {addItem.isError && <p className="lodging-warn">추가하지 못했어요. 잠시 후 다시 시도해 주세요.</p>}
+      <div className="saved-list">
+        {suggestions.map((place) => (
+          <div className="saved-row" key={place.content_id}>
+            <button
+              type="button"
+              className="saved-row-link"
+              disabled={addItem.isPending}
+              onClick={() => pick(place)}
+            >
+              <div className="saved-row-title">{place.title}</div>
+              <div className="saved-row-sub mono">
+                {place.content_type_name}
+                {place.small_category_name ? ` · ${place.small_category_name}` : ""}
+              </div>
+            </button>
+          </div>
+        ))}
+        {q.trim() && suggestions.length === 0 && (
+          <p style={{ color: "var(--ink-soft)", fontSize: 13 }}>검색 결과가 없어요.</p>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 /** 라우트의 :id 는 명세 4번의 course_id 다. */
 export default function DetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,6 +139,9 @@ export default function DetailPage() {
   const toggleSaved = useToggleSavedCourse();
   const [selectedPlace, setSelectedPlace] = useState<PlaceSummary | null>(null);
   const [dayIdx, setDayIdx] = useState(0);
+  const [addPlaceOpen, setAddPlaceOpen] = useState(false);
+  const reorderItems = useReorderCourseItems();
+  const deleteItem = useDeleteCourseItem();
 
   if (isLoading) {
     return (
@@ -96,6 +166,20 @@ export default function DetailPage() {
   }
 
   const day = course.days[dayIdx] ?? course.days[0];
+
+  function moveItem(idx: number, direction: -1 | 1) {
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= day.items.length) return;
+    const ids = day.items.map((it) => it.id);
+    [ids[idx], ids[targetIdx]] = [ids[targetIdx], ids[idx]];
+    reorderItems.mutate({ courseId, dayIndex: day.day_index, itemIds: ids });
+  }
+
+  function removeItem(itemId: number) {
+    if (!window.confirm("이 장소를 코스에서 삭제할까요?")) return;
+    deleteItem.mutate({ courseId, itemId });
+  }
+
   const airport = dayAirport(course, day);
   const lodgingStart = dayLodgingStart(course, dayIdx);
   // 체크인 가능 시각(호텔 정책)과 실제 도착 시각(마지막 일정 종료 + 이동시간)은 다르다.
@@ -161,22 +245,6 @@ export default function DetailPage() {
               <span className="meta-chip mono">🎯 추천 점수 {course.final_score.toFixed(1)}</span>
             )}
           </div>
-          <div className="actions">
-            <Link className="btn-primary" to={`/trip/${id}/map`}>
-              지도에서 열기
-            </Link>
-            {user && (
-              <button
-                type="button"
-                className="btn-outline"
-                aria-pressed={isSaved}
-                disabled={toggleSaved.isPending}
-                onClick={() => toggleSaved.mutate({ courseId, saved: isSaved })}
-              >
-                {isSaved ? "♥ 저장됨" : "♡ 저장함에 담기"}
-              </button>
-            )}
-          </div>
         </div>
         <div>
           <div className="mini-dial-wrap">
@@ -202,7 +270,7 @@ export default function DetailPage() {
       </header>
 
       <div className="main-detail wrap">
-        <div className="detail-timeline-panel">
+        <div className="detail-timeline-header">
           <div className="section-label">TIMELINE</div>
           <div className="section-title serif">시간 순서대로 보는 코스</div>
 
@@ -213,32 +281,56 @@ export default function DetailPage() {
               : "방문지 없음"}
           </div>
 
-          {course.days.length > 1 && (
-            <div className="day-tabs day-tabs-full">
-              {course.days.map((d, i) => (
+          <div className="day-tabs-row">
+            {course.days.length > 1 && (
+              <div className="day-tabs day-tabs-full">
+                {course.days.map((d, i) => (
+                  <button
+                    key={d.day_index}
+                    type="button"
+                    className={`day-tab${i === dayIdx ? " active" : ""}`}
+                    aria-pressed={i === dayIdx}
+                    onClick={() => setDayIdx(i)}
+                  >
+                    <span className="day-tab-case">{dayCaseLabel(d.day_case)}</span>
+                    <span className="day-tab-main">DAY {d.day_index}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="actions">
+              <Link className="btn-primary" to={`/trip/${id}/map`}>
+                지도에서 열기
+              </Link>
+              {user && (
                 <button
-                  key={d.day_index}
                   type="button"
-                  className={`day-tab${i === dayIdx ? " active" : ""}`}
-                  aria-pressed={i === dayIdx}
-                  onClick={() => setDayIdx(i)}
+                  className="btn-outline"
+                  aria-pressed={isSaved}
+                  disabled={toggleSaved.isPending}
+                  onClick={() => toggleSaved.mutate({ courseId, saved: isSaved })}
                 >
-                  <span className="day-tab-case">{dayCaseLabel(d.day_case)}</span>
-                  <span className="day-tab-main">DAY {d.day_index}</span>
+                  {isSaved ? "♥ 저장됨" : "♡ 저장함에 담기"}
                 </button>
-              ))}
+              )}
             </div>
-          )}
+          </div>
 
           <div className="day-subheading mono">
             가용 {day.avail_hours}시간 · 목표 {day.target_slots}곳
           </div>
-          {day.items.length === 0 && (
-            <div className="day-subheading mono">
-              이 조건에 맞는 장소를 더 찾지 못했어요. 권역을 넓혀보세요.
-            </div>
-          )}
-          <div className="timeline">
+        </div>
+
+        <div className="detail-timeline-panel">
+            {day.items.length === 0 && (
+              <div className="day-subheading mono">
+                이 조건에 맞는 장소를 더 찾지 못했어요. 권역을 넓혀보세요.
+              </div>
+            )}
+            {(reorderItems.isError || deleteItem.isError) && (
+              <p className="lodging-warn">방금 요청이 실패했어요. 잠시 후 다시 시도해 주세요.</p>
+            )}
+            <div className="timeline">
             {airport.depart && (
               <div className="tl-item">
                 <TlDot time={hhmm(airport.depart)} />
@@ -297,6 +389,29 @@ export default function DetailPage() {
                   <div className="tl-desc">
                     {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
                   </div>
+                </div>
+                <div className="edit-item-actions" style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    disabled={idx === 0 || reorderItems.isPending}
+                    onClick={() => moveItem(idx, -1)}
+                  >
+                    ↑ 위로
+                  </button>
+                  <button
+                    type="button"
+                    disabled={idx === day.items.length - 1 || reorderItems.isPending}
+                    onClick={() => moveItem(idx, 1)}
+                  >
+                    ↓ 아래로
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleteItem.isPending}
+                    onClick={() => removeItem(item.id)}
+                  >
+                    ✕ 삭제
+                  </button>
                 </div>
                 {idx < day.items.length - 1 ? (
                   <div className="tl-transit">
@@ -364,6 +479,15 @@ export default function DetailPage() {
               </div>
             )}
           </div>
+
+            <button
+              type="button"
+              className="btn-outline"
+              style={{ marginTop: 16 }}
+              onClick={() => setAddPlaceOpen(true)}
+            >
+              + 이 날에 장소 추가
+            </button>
         </div>
 
         <aside>
@@ -390,6 +514,9 @@ export default function DetailPage() {
       </div>
 
       {selectedPlace && <PlaceDetailSheet place={selectedPlace} onClose={() => setSelectedPlace(null)} />}
+      {addPlaceOpen && (
+        <AddPlaceModal courseId={courseId} day={day} onClose={() => setAddPlaceOpen(false)} />
+      )}
     </div>
   );
 }

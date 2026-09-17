@@ -1,7 +1,10 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  addCourseItem,
+  deleteCourseItem,
   getCourse,
   getCourseLodgingOptions,
+  reorderCourseDayItems,
   selectCourse,
   selectCourseLodging,
 } from "../api/courses";
@@ -85,6 +88,56 @@ export function useSelectCourseLodging() {
       // 숙소를 바꾸면 각 Day의 lodging이 갱신되므로 상세를 다시 받는다.
       qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
       qc.invalidateQueries({ queryKey: ["course-lodging-options", String(courseId)] });
+    },
+  });
+}
+
+/** 응답 형태가 미확인이라 반환값을 쓰지 않고, 성공하면 코스 상세를 재조회해서 최신 타임라인을 받는다. */
+export function useReorderCourseItems() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      courseId,
+      dayIndex,
+      itemIds,
+    }: {
+      courseId: number | string;
+      dayIndex: number;
+      itemIds: number[];
+    }) => reorderCourseDayItems(courseId, dayIndex, itemIds),
+    onSuccess: (_res, { courseId }) => {
+      qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
+    },
+  });
+}
+
+export function useAddCourseItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      courseId,
+      dayIndex,
+      contentId,
+      order,
+    }: {
+      courseId: number | string;
+      dayIndex: number;
+      contentId: string;
+      order: number;
+    }) => addCourseItem(courseId, dayIndex, contentId, order),
+    onSuccess: (_res, { courseId }) => {
+      qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
+    },
+  });
+}
+
+export function useDeleteCourseItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, itemId }: { courseId: number | string; itemId: number }) =>
+      deleteCourseItem(courseId, itemId),
+    onSuccess: (_res, { courseId }) => {
+      qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
     },
   });
 }

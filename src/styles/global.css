@@ -365,9 +365,11 @@ h1.result-title{font-family:'Song Myung',serif; font-size:clamp(26px,3.8vw,42px)
 .mini-center .t{font-family:'Song Myung',serif; font-size:15px;}
 .mini-center .s{font-family:'Space Mono',monospace; font-size:10px; color:var(--ink-soft); margin-top:2px;}
 
-.main-detail{padding:70px 32px; display:grid; grid-template-columns:1.5fr 0.9fr; gap:52px;}
+.main-detail{padding:70px 32px; display:grid; grid-template-columns:1.5fr 0.9fr; gap:10px 52px;}
 @media (max-width:960px){ .main-detail{grid-template-columns:1fr;} }
 @media (max-width:640px){ .main-detail{padding:40px 18px 20px; gap:0;} }
+/* 헤더는 전체 폭을 차지해서, 흰 타임라인 패널과 지도 카드가 같은 줄에서 시작하게 한다. */
+.detail-timeline-header{grid-column:1 / -1;}
 .section-label{font-family:'Space Mono',monospace; font-size:12px; letter-spacing:2px; color:var(--sunset); text-transform:uppercase; margin-bottom:8px;}
 .timeline{position:relative; padding-left:96px; margin-top:36px;}
 @media (max-width:640px){ .timeline{padding-left:74px;} }
@@ -575,6 +577,10 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .modal-close:hover{color:var(--ink);}
 .modal-body{font-size:13.5px; color:var(--ink-soft); line-height:1.7;}
 
+/* 일자 탭 줄의 오른쪽 끝에 지도·저장 액션을 함께 둔다. */
+.day-tabs-row{display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;}
+.day-tabs-row .day-tabs{margin-bottom:0;}
+.day-tabs-row .actions{margin-left:auto;}
 .day-tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;}
 .day-tab{font-family:'Space Mono',monospace; font-size:12.5px; padding:9px 16px; border-radius:999px; border:1px solid var(--line); background:var(--paper);}
 .day-tab.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
