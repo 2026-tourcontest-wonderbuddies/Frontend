@@ -27,7 +27,7 @@ export function courseTitle(course: CourseDetail): string {
   const items = courseItems(course);
   const first = items[0]?.place.title ?? "";
   const last = items[items.length - 1]?.place.title ?? "";
-  if (last && first !== last) return `${first} → ${last}`;
+  if (last && first !== last) return `${first}에서 ${last}까지`;
   return first || PRIORITY_LABELS[course.mode];
 }
 

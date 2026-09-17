@@ -1,8 +1,20 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useCourseDetails, useSelectCourse, useTripCourses } from "../hooks/useCourses";
 import LoadingChecklist from "../components/LoadingChecklist";
-import { PRIORITY_LABELS, type CourseDetail } from "../api/types";
+import { PRIORITY_LABELS, type CoursePriority, type CourseDetail } from "../api/types";
 import { courseStats } from "../utils/course";
+
+const MODE_TITLE: Record<CoursePriority, string> = {
+  dist: "시간을 아껴 걷는 제주",
+  pref: "끌리는 곳부터 걷는 제주",
+  relax: "쉬어가며 걷는, 느린 제주",
+};
+
+const MODE_DESC: Record<CoursePriority, string> = {
+  dist: "이동 시간을 최소화해서 알차게 도는 코스예요.",
+  pref: "선호하는 장소 위주로 골라 짠 코스예요.",
+  relax: "여유 시간을 넉넉히 남겨 느긋하게 도는 코스예요.",
+};
 
 function fmtMin(min: number): string {
   const h = Math.floor(min / 60);
@@ -98,17 +110,10 @@ export default function CoursesPage() {
           const stats = courseStats(c);
           return (
             <div className="candidate-card" key={c.id}>
-              <div className="candidate-head">
-                <div className="candidate-label">{PRIORITY_LABELS[c.mode]}</div>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => handleSelect(c)}
-                  disabled={selectCourse.isPending}
-                >
-                  {hasLodging ? "선택하고 숙소 고르기" : "선택"}
-                </button>
-              </div>
+              <div className="candidate-mode mono">{PRIORITY_LABELS[c.mode]}</div>
+              <div className="candidate-label">{MODE_TITLE[c.mode]}</div>
+
+              <p className="candidate-desc">{MODE_DESC[c.mode]}</p>
 
               <div className="candidate-stats">
                 <div className="candidate-stat">
@@ -139,6 +144,16 @@ export default function CoursesPage() {
                   </div>
                 ))}
               </div>
+
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ width: "100%" }}
+                onClick={() => handleSelect(c)}
+                disabled={selectCourse.isPending}
+              >
+                {hasLodging ? "선택하고 숙소 고르기" : "선택"}
+              </button>
             </div>
           );
         })}

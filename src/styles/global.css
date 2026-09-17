@@ -510,7 +510,7 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .lodging-card-photo{height:160px; margin:-26px -26px 0; border-radius:20px 20px 0 0; background:linear-gradient(135deg,var(--dawn),var(--sunset));}
 .lodging-select-btn{padding:8px 16px; border-radius:10px; font-size:12.5px; flex-shrink:0;}
 .candidate-head{display:flex; justify-content:space-between; align-items:center; gap:8px;}
-.candidate-label{font-family:'Song Myung',serif; font-size:18px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.candidate-label{font-family:'Song Myung',serif; font-size:18px; font-weight:700; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .candidate-stats{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 .candidate-stat .k{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.5px;}
 .candidate-stat .v{font-family:'Space Mono',monospace; font-size:15px; font-weight:700; margin-top:2px; height:32px;}
@@ -522,6 +522,10 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .candidate-desc{font-size:12.5px; color:var(--ink-soft); line-height:1.7; height:3.4em; padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--line); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;}
 .candidate-badges{display:flex; flex-wrap:wrap; gap:6px;}
 .candidate-badge{font-family:'Space Mono',monospace; font-size:10.5px; background:var(--paper-deep); padding:5px 9px; border-radius:999px; color:var(--ink-soft);}
+.candidate-mode{font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:0.5px; color:var(--ink-soft); text-transform:uppercase;}
+.candidate-day-list{display:flex; flex-direction:column; gap:6px; padding-top:12px; border-top:1px solid var(--line);}
+.candidate-day-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft);}
+.candidate-day-row>span:first-child{color:var(--ink); font-weight:600;}
 
 /* ---------------- LODGING PICK ---------------- */
 .lodging-meta{font-size:11.5px; color:var(--ink-soft); margin-top:-6px; line-height:1.5; height:3em; padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--line); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;}
