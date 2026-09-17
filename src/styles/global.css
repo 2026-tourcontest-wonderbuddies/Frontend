@@ -59,6 +59,7 @@ nav{
 .btn-outline:hover{border-color:var(--ink);}
 .badge{font-family:'Space Mono',monospace; font-size:10px; background:rgba(255,255,255,0.92); color:var(--ink); padding:5px 9px; border-radius:999px; height:fit-content;}
 .meta-chip{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft); border:1px solid var(--line); padding:4px 9px; border-radius:999px;}
+.meta-chip.lodging-type-chip{font-size:9.5px; padding:3px 7px;}
 
 /* shared course card (used in HOME + LIST) */
 .course-card{background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; transition:transform .22s ease, box-shadow .22s ease; cursor:pointer; display:block; width:100%; text-align:left;}
@@ -444,6 +445,11 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .kakao-pin:hover .kakao-pin-dot, .kakao-pin:focus-visible .kakao-pin-dot{transform:scale(1.25);}
 .kakao-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px; border-radius:999px;}
 .side-note{font-size:12px; color:var(--ink-soft); line-height:1.7;}
+.side-note-break{display:none;}
+@media (max-width:640px){
+  .side-note-break{display:inline;}
+  .side-note.lodging-note{padding-left:1.3em; text-indent:-1.3em;}
+}
 .reco-item{display:flex; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line);}
 .reco-item:first-of-type{border-top:none; padding-top:0;}
 .reco-thumb{width:48px; height:48px; border-radius:10px; flex-shrink:0; background:linear-gradient(135deg,var(--dawn),var(--sunset));}
@@ -509,12 +515,19 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 @media (max-width:640px){ .candidate-grid{grid-template-columns:1fr;} }
 .candidate-card{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:26px; display:flex; flex-direction:column; gap:12px; transition:box-shadow .2s ease, transform .2s ease;}
 .candidate-card:hover{transform:translateY(-4px); box-shadow:0 18px 36px -20px rgba(27,35,64,0.28);}
-.lodging-card-photo{height:160px; margin:-26px -26px 0; border-radius:20px 20px 0 0; background:linear-gradient(135deg,var(--dawn),var(--sunset));}
+.lodging-card-photo{height:160px; margin:-26px -26px 0; border-radius:20px 20px 0 0; background:linear-gradient(135deg,var(--dawn),var(--sunset)); overflow:hidden;}
+.lodging-card-photo img{display:block; width:100%; height:100%; object-fit:cover;}
 .lodging-select-btn{padding:8px 16px; border-radius:10px; font-size:12.5px; flex-shrink:0;}
 .candidate-head{display:flex; justify-content:space-between; align-items:center; gap:8px;}
-.candidate-label{font-family:'Song Myung',serif; font-size:18px; font-weight:700; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.candidate-label{font-family:'Song Myung',serif; font-size:18px; font-weight:700; flex:1; min-width:0; display:flex; align-items:center; gap:8px;}
+.candidate-label-text{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
 .candidate-stats{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.lodging-stats-row{display:grid; grid-template-columns:2fr 1fr; gap:10px;}
+.lodging-stats-group{display:flex; gap:20px; background:transparent; border:1px solid var(--line); border-radius:14px; padding:12px 14px;}
+.lodging-stats-group .candidate-stat{flex:1; min-width:0;}
+.lodging-stats-price{background:rgba(255,111,89,0.08); border-color:rgba(255,111,89,0.28);}
 .candidate-stat .k{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.5px;}
+.lodging-stats-price .k{color:var(--sunset);}
 .candidate-stat .v{font-family:'Space Mono',monospace; font-size:15px; font-weight:700; margin-top:2px; height:32px;}
 .candidate-stat .v-main{display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
 .candidate-stat .v-note{display:block; font-size:11px; font-weight:400; color:var(--ink-soft); overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
@@ -522,6 +535,7 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .candidate-score-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft);}
 .candidate-stars{color:var(--sunset); letter-spacing:1px;}
 .candidate-desc{font-size:12.5px; color:var(--ink-soft); line-height:1.7; height:3.4em; padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--line); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;}
+.candidate-desc.lodging-desc{border-bottom:none; padding-bottom:0; margin-bottom:0; margin-top:8px;}
 .candidate-badges{display:flex; flex-wrap:wrap; gap:6px;}
 .candidate-badge{font-family:'Space Mono',monospace; font-size:10.5px; background:var(--paper-deep); padding:5px 9px; border-radius:999px; color:var(--ink-soft);}
 .candidate-top{display:flex; flex-direction:column; gap:12px; background:var(--paper-deep); margin:-26px -26px 0; padding:26px 26px 0; border-radius:20px 20px 0 0;}
@@ -537,10 +551,6 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .lodging-flag{font-family:'Space Mono',monospace; font-size:11px; padding:5px 10px; border-radius:999px; border:1px dashed var(--line); color:var(--ink-soft);}
 .lodging-flag.on{border-style:solid; border-color:var(--ink); color:var(--ink);}
 .lodging-warn{font-family:'Space Mono',monospace; font-size:11px; color:var(--sunset); margin-top:2px;}
-.lodging-checks{display:flex; flex-direction:column; gap:5px;}
-.lodging-check{display:flex; flex-wrap:wrap; align-items:baseline; gap:5px; font-size:12px; line-height:1.5;}
-.lodging-check b{white-space:nowrap;}
-.lodging-check span{color:var(--ink-soft);}
 .lodging-actions{display:flex; flex-wrap:wrap; gap:12px; margin-top:28px;}
 .tl-card.tl-lodging, .tl-card.tl-airport{border-style:dashed; background:var(--paper-deep);}
 

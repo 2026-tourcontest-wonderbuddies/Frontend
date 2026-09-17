@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useCourse,
@@ -6,14 +7,19 @@ import {
   useSelectCourseLodging,
 } from "../hooks/useCourses";
 import LoadingChecklist from "../components/LoadingChecklist";
-import { PRIORITY_LABELS, type LodgingCard } from "../api/types";
+import { PRIORITY_LABELS } from "../api/types";
 import { TRIP_GUESTS_KEY_PREFIX } from "./BuilderPage";
 
-const CHECK_MARK: Record<LodgingCard["checks"][number]["status"], string> = {
-  yes: "✓",
-  no: "✕",
-  unknown: "?",
-};
+/** 숙소 카드 사진. 목록 응답(card.images)에 이미 들어있는 첫 장을 그대로 쓴다. */
+function LodgingCardPhoto({ src }: { src?: string }) {
+  const [broken, setBroken] = useState(false);
+
+  return (
+    <div className="lodging-card-photo">
+      {src && !broken && <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} />}
+    </div>
+  );
+}
 
 /** "참고가 60,000원~ (실시간 아님)"처럼 끝에 붙는 괄호 설명을 따로 떼어 작게 보여주기 위함. */
 function splitPriceHint(hint: string) {
@@ -108,14 +114,13 @@ export default function LodgingPage() {
           <div className="candidate-grid">
             {cards.map((card) => (
               <div className="candidate-card" key={card.content_id}>
-                <div className="lodging-card-photo" />
+                <LodgingCardPhoto src={card.images?.[0]} />
                 <div className="candidate-head">
                   <div className="candidate-label">
-                    {card.title}
+                    <span className="candidate-label-text">{card.title}</span>
+                    <span className="meta-chip mono lodging-type-chip">{card.category}</span>
                     {card.content_id === currentId && (
-                      <span className="meta-chip mono" style={{ marginLeft: 8 }}>
-                        현재 선택
-                      </span>
+                      <span className="meta-chip mono lodging-type-chip">현재 선택</span>
                     )}
                   </div>
                   <button
@@ -128,57 +133,44 @@ export default function LodgingPage() {
                   </button>
                 </div>
 
-                <div className="lodging-meta mono">
-                  {card.category} · {card.address}
-                </div>
+                <div className="lodging-meta mono">{card.address}</div>
 
-                <div className="candidate-stats">
-                  <div className="candidate-stat">
-                    <div className="k">참고 요금</div>
-                    <div className="v">
-                      {(() => {
-                        const { main, note } = splitPriceHint(card.price_hint || "확인 필요");
-                        return (
-                          <>
-                            <span className="v-main">{main}</span>
-                            {note && <span className="v-note">{note}</span>}
-                          </>
-                        );
-                      })()}
+                <div className="lodging-stats-row">
+                  <div className="lodging-stats-group">
+                    <div className="candidate-stat">
+                      <div className="k">체크인</div>
+                      <div className="v">{card.check_in_time || "—"}</div>
+                    </div>
+                    <div className="candidate-stat">
+                      <div className="k">체크아웃</div>
+                      <div className="v">{card.check_out_time || "—"}</div>
                     </div>
                   </div>
-                  <div className="candidate-stat">
-                    <div className="k">동선에서</div>
-                    <div className="v">{card.travel_min != null ? `${card.travel_min}분` : "—"}</div>
-                  </div>
-                  <div className="candidate-stat">
-                    <div className="k">체크인</div>
-                    <div className="v">{card.check_in_time || "—"}</div>
-                  </div>
-                  <div className="candidate-stat">
-                    <div className="k">체크아웃</div>
-                    <div className="v">{card.check_out_time || "—"}</div>
+                  <div className="lodging-stats-group lodging-stats-price">
+                    <div className="candidate-stat">
+                      <div className="k">참고 요금</div>
+                      <div className="v">
+                        {(() => {
+                          const { main, note } = splitPriceHint(card.price_hint || "확인 필요");
+                          return (
+                            <>
+                              <span className="v-main">{main}</span>
+                              {note && <span className="v-note">{note}</span>}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {card.room_type && (
-                  <p className="candidate-desc">
+                  <p className="candidate-desc lodging-desc">
                     객실 {card.room_type}
                     {card.room_count != null ? ` · ${card.room_count}실` : ""}
                     {card.max_guests != null ? ` · 최대 ${card.max_guests}명` : ""}
                   </p>
                 )}
-
-                <div className="lodging-checks">
-                  {card.checks.map((chk) => (
-                    <div className={`lodging-check ${chk.status}`} key={chk.name}>
-                      <b>
-                        {CHECK_MARK[chk.status]} {chk.name}
-                      </b>
-                      <span>{chk.detail}</span>
-                    </div>
-                  ))}
-                </div>
 
                 {card.needs_check && card.unknown_fields.length > 0 && (
                   <div className="lodging-warn">⚠ 확인 필요: {card.unknown_fields.join(", ")}</div>
@@ -187,28 +179,26 @@ export default function LodgingPage() {
                 {card.tripcom_link && (
                   <a
                     className="btn-outline"
-                    style={{ display: "block", textAlign: "center", marginTop: 12 }}
+                    style={{ display: "block", textAlign: "center", marginTop: "auto" }}
                     href={card.tripcom_link}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    트립닷컴에서 요금 확인 ↗
+                    트립닷컴에서 상세정보 확인 ↗
                   </a>
                 )}
               </div>
             ))}
           </div>
 
-          <p className="side-note" style={{ marginTop: 12 }}>
-            표시된 요금은 참고가이며 실시간 가격이 아니에요. 예약과 결제는 트립닷컴에서 진행됩니다.
+          <p className="side-note lodging-note" style={{ marginTop: 12 }}>
+            ※ 표시된 요금은 참고가이며 실시간 가격이 아니에요.
+            <br className="side-note-break" /> 예약과 결제는 트립닷컴에서 별도로 진행해주세요.
           </p>
 
           <div className="lodging-actions">
             <button className="btn-outline" onClick={() => navigate(`/trips/${tripId}/courses`)}>
               ← 다른 코스 보기
-            </button>
-            <button className="btn-outline" onClick={confirmWithoutChoosing} disabled={selectCourse.isPending}>
-              추천 숙소 그대로 진행
             </button>
           </div>
         </>
