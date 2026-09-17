@@ -98,7 +98,7 @@ export default function CoursesPage() {
       <div className="page-eyebrow">RECOMMENDATION</div>
       <h1 className="page-title">추천 코스 목록</h1>
       <p className="page-sub">
-        조건에 맞는 코스 {courses.length}개를 만들었어요. 마음에 드는 코스를 선택하세요.
+        조건에 맞는 코스 {courses.length}개를 만들었어요.<br className="sub-break" /> 마음에 드는 코스를 선택하세요.
       </p>
       <div className="candidates-summary">
         <span>📅 {totalDays}일 일정</span>

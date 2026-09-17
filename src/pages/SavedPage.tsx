@@ -130,7 +130,7 @@ export default function SavedPage() {
               <div className="saved-row" key={trip.trip_id} style={{ flexWrap: "wrap" }}>
                 <div className="saved-row-link" style={{ minWidth: 180 }}>
                   <div className="saved-row-title">
-                    {periodLabel(trip.start_datetime, trip.end_datetime)}
+                    {periodLabel(trip.start_date, trip.end_date)}
                   </div>
                   <div className="saved-row-sub mono">
                     {trip.courses[0].days_summary.length}일 일정 · {dateLabel(trip.created_at)} 생성

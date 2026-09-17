@@ -80,7 +80,7 @@ export default function LodgingPage() {
     <div className="candidates-page wrap">
       <div className="page-eyebrow">LODGING</div>
       <h1 className="page-title">어디서 묵을까요?</h1>
-      <p className="page-sub">
+      <p className="page-sub lodging-sub">
         {nights}박 일정이에요. 입력하신 숙박 조건과 코스 동선을 함께 보고 골랐어요. 숙소를 고르면 코스가 확정됩니다.
       </p>
       <div className="candidates-summary">
