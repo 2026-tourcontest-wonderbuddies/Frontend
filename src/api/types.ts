@@ -601,6 +601,22 @@ export interface ModifyCourseResponse {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// 코스 수동 편집 (TEAM_SHARE.md "새로 발견" — 명세서엔 없지만 실제로 동작하는 API).
+// 응답 형태가 문서화돼 있지 않아 반환값에 의존하지 않고, 성공하면 코스 상세를 재조회해서 반영한다.
+// ══════════════════════════════════════════════════════════════════════════
+
+/** POST /api/courses/{course_id}/days/{day_index}/reorder/ request body */
+export interface ReorderCourseItemsPayload {
+  item_ids: number[];
+}
+
+/** POST /api/courses/{course_id}/days/{day_index}/items/ request body */
+export interface AddCourseItemPayload {
+  content_id: string;
+  order: number;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // 장소 검색 (daeun 전용 신규 기능, 명세서에는 없음). GET /api/places/search/
 // ══════════════════════════════════════════════════════════════════════════
 
