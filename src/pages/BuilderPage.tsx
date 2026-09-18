@@ -12,6 +12,8 @@ import { useAuth } from "../auth/AuthContext";
 import { addDays, fmtHour, resolveDayHours } from "../utils/date";
 import { defaultBuilderForm, isFoodPurpose, type BuilderForm } from "../types/builderForm";
 import {
+  FOOD_CAFE_BALANCE_LABELS,
+  FOOD_PREF_LABELS,
   PURPOSE_LABELS,
   REGION_CODE_BY_KEY,
   REGION_LABELS,
@@ -221,13 +223,15 @@ export default function BuilderPage() {
   return (
     <div id="screen-builder">
       <section className="builder wrap">
-        <div className="wizard-shell">
+        <div className="builder-head">
           <div className="intro-eyebrow">BUILD YOUR OWN JEJU TIMELINE</div>
           <h1 className="intro-title">조건을 알려주시면 코스를 완성해드려요.</h1>
           <p className="step-sub" style={{ marginLeft: 0 }}>* 모든 이동수단은 차량 기준입니다.</p>
 
           <WizardProgress steps={steps} current={step} maxVisited={maxVisited} onJump={jumpTo} />
+        </div>
 
+        <div className="wizard-shell">
           <div className="wizard-body">
             {currentStep.key === "schedule" && <StepSchedule form={form} patch={patch} />}
             {currentStep.key === "purpose" && <StepPurpose form={form} patch={patch} />}
@@ -294,6 +298,31 @@ export default function BuilderPage() {
                   {form.purposeSub ? ` · ${PURPOSE_LABELS[form.purposeSub]}` : ""}
                 </b>
               </div>
+              <div className="sum-row">
+                <span>선호 음식</span>
+                <b className="mono">
+                  {form.foodPrefs.length ? form.foodPrefs.map((f) => FOOD_PREF_LABELS[f]).join(" · ") : "미선택"}
+                </b>
+              </div>
+              {/* 스텝에서 묻는 조건과 같을 때만 보여준다. 안 물어본 값이 요약에 뜨면 안 된다. */}
+              {isFoodPurpose(form) && (
+                <div className="sum-row">
+                  <span>음식·카페 비중</span>
+                  <b className="mono">{FOOD_CAFE_BALANCE_LABELS[form.foodCafeBalance]}</b>
+                </div>
+              )}
+              {isMultiDay && (
+                <>
+                  <div className="sum-row">
+                    <span>숙소 유형</span>
+                    <b className="mono">{form.lodgingType || "미선택"}</b>
+                  </div>
+                  <div className="sum-row">
+                    <span>취사</span>
+                    <b className="mono">{form.cooking}</b>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </aside>

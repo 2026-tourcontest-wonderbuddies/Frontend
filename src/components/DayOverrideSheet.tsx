@@ -70,22 +70,33 @@ export default function DayOverrideSheet({
 
   return (
     <Modal title="일자별 조건 설정" onClose={onClose} wide>
-      <p style={{ marginBottom: 16 }}>
-        날짜마다 여행 목적·희망 권역·제외 카테고리를 다르게 설정할 수 있어요. 설정하지 않은 날짜는 공통 조건을
-        그대로 씁니다.
-      </p>
+      <div className="day-override-head">
+        <p style={{ marginBottom: 16 }}>
+          날짜마다 여행 목적·희망 권역·제외 카테고리를 다르게 설정할 수 있어요. 설정하지 않은 날짜는 공통 조건을
+          그대로 씁니다.
+        </p>
 
-      <div className="day-tabs">
-        {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
-          <button
-            type="button"
-            key={d}
-            className={`day-tab${activeDay === d ? " active" : ""}${overrides.some((o) => o.day_index === d) ? " customized" : ""}`}
-            onClick={() => setActiveDay(d)}
-          >
-            {d}일차
-          </button>
-        ))}
+        <div className="day-tabs">
+          {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
+            <button
+              type="button"
+              key={d}
+              className={`day-tab${activeDay === d ? " active" : ""}${overrides.some((o) => o.day_index === d) ? " customized" : ""}`}
+              onClick={() => setActiveDay(d)}
+            >
+              {d}일차
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="override-section">
+        <div className="override-label">희망 권역</div>
+        <ChipGroup
+          options={REGION_OPTIONS}
+          value={current?.region_preference ?? commonRegion}
+          onChange={(v) => patchDay({ region_preference: v as RegionKey })}
+        />
       </div>
 
       <div className="override-section">
@@ -103,15 +114,6 @@ export default function DayOverrideSheet({
           options={PURPOSE_OPTIONS.filter((o) => o.value !== purposeMain)}
           value={purposeSub}
           onChange={(v) => patchDay({ purpose_sub: v as PurposeKey })}
-        />
-      </div>
-
-      <div className="override-section">
-        <div className="override-label">희망 권역</div>
-        <ChipGroup
-          options={REGION_OPTIONS}
-          value={current?.region_preference ?? commonRegion}
-          onChange={(v) => patchDay({ region_preference: v as RegionKey })}
         />
       </div>
 
