@@ -68,7 +68,7 @@ nav{
 .save-btn{width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.92); display:flex; align-items:center; justify-content:center; font-size:14px;}
 .course-body{padding:20px;}
 .course-region{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-soft); letter-spacing:0.5px; margin-bottom:6px;}
-.course-title{font-family:'Song Myung',serif; font-size:19px; margin-bottom:10px; line-height:1.35;}
+.course-title{font-family:'Song Myung',serif; font-size:19px; margin-bottom:10px; line-height:1.35; min-height:calc(19px * 1.35 * 2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:keep-all; overflow-wrap:break-word;}
 .course-meta{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
 .course-desc{font-size:12.5px; color:var(--ink-soft); line-height:1.7;}
 
@@ -115,7 +115,7 @@ h1.hero-title .accent{color:var(--sunset);}
 .tod-row{display:grid; grid-template-columns:repeat(5,1fr); gap:12px;}
 @media (max-width:920px){ .tod-row{grid-template-columns:repeat(2,1fr);} }
 @media (max-width:480px){ .tod-row{grid-template-columns:1fr;} }
-.tod-card{border-radius:16px; padding:22px 18px; min-height:170px; display:flex; flex-direction:column; justify-content:space-between; color:var(--paper); position:relative; overflow:hidden; transition:transform .25s ease;}
+.tod-card{border-radius:16px; padding:22px 18px; min-height:170px; display:flex; flex-direction:column; justify-content:space-between; color:var(--paper); position:relative; overflow:hidden; transition:transform .25s ease; filter:saturate(0.78) brightness(1.1);}
 .tod-card:hover{transform:translateY(-6px);}
 .tod-card.dawn{background:linear-gradient(160deg,var(--dawn),#4C4FA8);}
 .tod-card.morning{background:linear-gradient(160deg,var(--morning),#E08A2E); color:var(--ink);}
@@ -159,7 +159,10 @@ h1.hero-title .accent{color:var(--sunset);}
 .curated-dot{width:7px; height:7px; border-radius:50%; background:var(--line);}
 .curated-dot.on{background:var(--sunset);}
 
-.curated-slide{animation-duration:.42s; animation-timing-function:cubic-bezier(.22,.9,.34,1); animation-fill-mode:both;}
+.curated-slide{display:flex; animation-duration:.42s; animation-timing-function:cubic-bezier(.22,.9,.34,1); animation-fill-mode:both;}
+.curated-slide .course-card{display:flex; flex-direction:column; flex:1;}
+.curated-slide .course-body{display:flex; flex-direction:column; flex:1;}
+.curated-slide .course-desc{margin-top:auto;}
 .curated-slide-next{animation-name:curated-in-from-right;}
 .curated-slide-prev{animation-name:curated-in-from-left;}
 @keyframes curated-in-from-right{from{opacity:0; transform:translateX(36px);} to{opacity:1; transform:translateX(0);}}
