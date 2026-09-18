@@ -104,7 +104,3 @@ export function dayLodgingStart(course: CourseDetail, dayIdx: number) {
     travelMin: travelOrNull(rawTravel),
   };
 }
-
-export function dayHasContent(day: CourseDay): boolean {
-  return day.items.length > 0 || Boolean(day.lodging);
-}
