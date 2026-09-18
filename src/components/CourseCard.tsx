@@ -4,13 +4,12 @@ interface CourseCardProps {
   to: string;
   gradient: string;
   badge: string;
-  region: string;
   title: string;
   metaChips: string[];
   desc?: string;
 }
 
-export default function CourseCard({ to, gradient, badge, region, title, metaChips, desc }: CourseCardProps) {
+export default function CourseCard({ to, gradient, badge, title, metaChips, desc }: CourseCardProps) {
   const navigate = useNavigate();
 
   return (
@@ -27,7 +26,6 @@ export default function CourseCard({ to, gradient, badge, region, title, metaChi
         </span>
       </div>
       <div className="course-body">
-        <div className="course-region">{region}</div>
         <div className="course-title">{title}</div>
         <div className="course-meta">
           {metaChips.map((chip) => (
