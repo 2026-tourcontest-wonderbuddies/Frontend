@@ -47,7 +47,7 @@ export default function HomePage() {
 
   return (
     <div id="screen-home">
-      <section className="hero">
+      <section className="hero wrap">
         <div>
           <div className="hero-eyebrow">TIME-BASED JEJU TRAVEL PLATFORM</div>
           <h1 className="hero-title">
