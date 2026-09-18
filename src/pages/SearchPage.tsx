@@ -6,12 +6,13 @@ import ChipGroup from "../components/ChipGroup";
 import { useAuth } from "../auth/AuthContext";
 import { usePlaceSearchResults, usePlaceSuggestions } from "../hooks/usePlaceSearch";
 import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
-import { REGION_CODE_BY_KEY, REGION_LABELS, type RegionKey, type SearchPlace } from "../api/types";
+import { BUILDER_REGION_KEYS, REGION_CODE_BY_KEY, REGION_LABELS, type RegionKey, type SearchPlace } from "../api/types";
 
 const CATEGORY_OPTIONS = ["관광지", "문화시설", "음식점", "쇼핑"].map((v) => ({ value: v, label: v }));
-const REGION_OPTIONS = (Object.entries(REGION_LABELS) as [RegionKey, string][]).map(([value, label]) => ({
-  value,
-  label,
+// 제주시내(원도심)는 제주시서부와 같은 권역(NW)으로 매핑돼 검색 결과가 똑같아서 뺀다.
+const REGION_OPTIONS = BUILDER_REGION_KEYS.map((key) => ({
+  value: key,
+  label: REGION_LABELS[key],
 }));
 
 export default function SearchPage() {

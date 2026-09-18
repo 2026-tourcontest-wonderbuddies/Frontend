@@ -69,7 +69,7 @@ nav{
 /* shared course card (used in HOME + LIST) */
 .course-card{background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; transition:transform .22s ease, box-shadow .22s ease; cursor:pointer; display:block; width:100%; text-align:left;}
 .course-card:hover{transform:translateY(-5px); box-shadow:0 18px 36px -18px rgba(27,35,64,0.28);}
-.course-photo{height:145px; position:relative; display:flex; justify-content:space-between; align-items:flex-start; padding:14px;}
+.course-photo{height:145px; position:relative; display:flex; justify-content:space-between; align-items:flex-start; padding:14px; filter:saturate(0.55) brightness(1.03);}
 .save-btn{width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.92); display:flex; align-items:center; justify-content:center; font-size:14px;}
 .course-body{padding:20px;}
 .course-region{font-family:'Space Mono','Noto Sans KR',monospace; font-size:10.5px; color:var(--ink-soft); letter-spacing:0.5px; margin-bottom:6px;}
@@ -151,6 +151,24 @@ h1.hero-title .accent{color:var(--sunset);}
 
 .course-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:22px;}
 @media (max-width:920px){ .course-grid{grid-template-columns:1fr;} }
+.curated-carousel{position:relative; overflow:hidden;}
+.curated-carousel.has-arrows{padding:0 58px;}
+@media (max-width:640px){ .curated-carousel.has-arrows{padding:0 44px;} }
+.curated-arrow{position:absolute; top:50%; transform:translateY(-50%); width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--card); font-size:16px; cursor:pointer; z-index:2; transition:transform .18s ease, box-shadow .18s ease;}
+.curated-arrow:hover{box-shadow:0 10px 20px -12px rgba(27,35,64,0.28);}
+.curated-arrow-left{left:0;}
+.curated-arrow-left:hover{transform:translateY(-50%) translateX(-3px);}
+.curated-arrow-right{right:0;}
+.curated-arrow-right:hover{transform:translateY(-50%) translateX(3px);}
+.curated-dots{display:flex; justify-content:center; gap:7px; margin-top:22px;}
+.curated-dot{width:7px; height:7px; border-radius:50%; background:var(--line);}
+.curated-dot.on{background:var(--sunset);}
+
+.curated-slide{animation-duration:.42s; animation-timing-function:cubic-bezier(.22,.9,.34,1); animation-fill-mode:both;}
+.curated-slide-next{animation-name:curated-in-from-right;}
+.curated-slide-prev{animation-name:curated-in-from-left;}
+@keyframes curated-in-from-right{from{opacity:0; transform:translateX(36px);} to{opacity:1; transform:translateX(0);}}
+@keyframes curated-in-from-left{from{opacity:0; transform:translateX(-36px);} to{opacity:1; transform:translateX(0);}}
 .mini-timeline{display:flex; align-items:center; gap:4px; margin-top:10px;}
 .mini-dot{width:6px; height:6px; border-radius:50%; background:var(--line);}
 .mini-dot.on{background:var(--sunset);}
