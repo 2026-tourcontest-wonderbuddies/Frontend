@@ -3,8 +3,12 @@ import { useNavigate } from "react-router-dom";
 import TimeDial from "../components/TimeDial";
 import CourseCard from "../components/CourseCard";
 import { useNow, periodFor, type PeriodKey } from "../hooks/useNow";
+import { useCuratedCourses } from "../hooks/useCuratedCourses";
 import { getPeriodPlaces } from "../api/places";
 import type { PeriodPlace } from "../api/types";
+
+/** 성산일출봉+우도 / 함덕·월정·비자림 / 중문 관광단지 — 유명 장소 밀도가 가장 높은 3개. */
+const HOME_FEATURED_CURATED_IDS = [1, 2, 8];
 
 const TIME_PILLS = ["6시간(반나절)", "8~10시간", "1박2일~2박3일", "3박4일", "4박5일"];
 
@@ -31,6 +35,11 @@ export default function HomePage() {
   const [openPeriod, setOpenPeriod] = useState<PeriodKey | null>(null);
   const [places, setPlaces] = useState<Partial<Record<PeriodKey, PeriodPlace[]>>>({});
   const [failed, setFailed] = useState<Partial<Record<PeriodKey, boolean>>>({});
+
+  const { data: curatedCourses } = useCuratedCourses();
+  const featuredCourses = HOME_FEATURED_CURATED_IDS.map((id) =>
+    curatedCourses?.find((c) => c.id === id),
+  ).filter((c) => c !== undefined);
 
   function togglePeriod(period: PeriodKey) {
     if (openPeriod === period) {
@@ -161,36 +170,20 @@ export default function HomePage() {
         <div className="wrap">
           <div className="section-head">
             <div className="section-eyebrow">CURATED BY DURATION</div>
-            <div className="section-title">남은 시간에 맞춘, 제주 추천 코스</div>
+            <div className="section-title">당일치기 제주 추천 코스</div>
           </div>
           <div className="course-grid">
-            <CourseCard
-              to="/list"
-              gradient="linear-gradient(135deg,var(--dawn),var(--morning))"
-              badge="3박 4일"
-              region="제주시 · 조천·구좌·우도"
-              title="제주 동부 3박4일 — 우도에서 함덕까지"
-              metaChips={["숙소 1~2곳", "2권역"]}
-              desc="함덕 숙소를 앵커 삼아 월정리·비자림·우도를 사흘에 걸쳐 도는, 가장 많은 방문객이 택하는 일정 길이."
-            />
-            <CourseCard
-              to="/list"
-              gradient="linear-gradient(135deg,var(--morning),var(--sunset))"
-              badge="1박 2일"
-              region="제주시 · 한림·애월"
-              title="협재 아침 바다에서 애월 밤 카페까지"
-              metaChips={["총 28시간", "숙박 1회"]}
-              desc="첫날 아침 협재 백사장에서 시작해, 다음날 밤 애월 미디어아트 전시에서 마무리."
-            />
-            <CourseCard
-              to="/builder"
-              gradient="linear-gradient(135deg,var(--midday),var(--sunset))"
-              badge="당일코스"
-              region="서귀포시 · 성산·표선"
-              title="성산일출봉 일출에서 매일 올레시장 노을까지"
-              metaChips={["총 12시간", "이동 46km"]}
-              desc="새벽 일출봉의 고요함으로 시작해, 노을 진 재래시장 골목을 걸으며 하루를 닫는 코스."
-            />
+            {featuredCourses.map((c) => (
+              <CourseCard
+                key={c.id}
+                to={`/list/${c.id}`}
+                gradient={c.gradient}
+                badge={c.badge}
+                region={c.region_label}
+                title={c.title}
+                metaChips={c.meta_chips}
+              />
+            ))}
           </div>
         </div>
       </section>
