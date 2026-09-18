@@ -61,16 +61,8 @@ export default function ListPage() {
         <div className="page-eyebrow">BROWSE ALL COURSES</div>
         <h1 className="page-title">제주, 모든 시간의 코스</h1>
         <p className="page-sub">
-          새벽부터 밤까지 — 지금 이 조건에 맞는 제주 코스를 직접 둘러보세요.
+          제주 당일치기 코스 10가지, 지역과 시간대로 골라보세요.
         </p>
-
-        <div className="search-bar">
-          <input className="search-input" type="text" placeholder="지역, 코스명, 키워드로 검색 (예: 노을, 성산, 야시장)" />
-          <select className="sort-select">
-            <option>인기순</option>
-            <option>최신순</option>
-          </select>
-        </div>
       </header>
 
       <div className="layout wrap">
