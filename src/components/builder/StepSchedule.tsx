@@ -17,6 +17,8 @@ const PRESETS = [
   { s: 7, e: 19, label: "12시간" },
 ];
 
+const HEADCOUNT_MAX = 20;
+
 export { TRIP_LENGTH_CHIPS };
 
 interface HourStepperProps {
@@ -55,7 +57,7 @@ function HourStepper({ label, value, min, max, onChange }: HourStepperProps) {
 export default function StepSchedule({ form, patch }: StepProps) {
   const endDate = useMemo(() => addDays(form.startDate, form.nights), [form.startDate, form.nights]);
   const isMultiDay = form.nights > 0;
-  const headcountNum = Math.max(1, Number(form.headcount) || 1);
+  const headcountNum = Math.min(HEADCOUNT_MAX, Math.max(1, Number(form.headcount) || 1));
   const dayHours = useMemo(
     () => resolveDayHours(form.nights, form.startHour, form.endHour, form.dayHours),
     [form.nights, form.startHour, form.endHour, form.dayHours],
@@ -107,7 +109,12 @@ export default function StepSchedule({ form, patch }: StepProps) {
             –
           </button>
           <span className="time-val mono">{headcountNum}</span>
-          <button type="button" className="stepper-btn" onClick={() => patch({ headcount: String(headcountNum + 1) })}>
+          <button
+            type="button"
+            className="stepper-btn"
+            disabled={headcountNum >= HEADCOUNT_MAX}
+            onClick={() => patch({ headcount: String(headcountNum + 1) })}
+          >
             +
           </button>
         </div>
