@@ -57,9 +57,6 @@ export default function ListPage() {
 
   return (
     <div>
-      <div className="crumb">
-        <Link to="/">홈</Link> / 추천 코스
-      </div>
       <header className="page-head wrap">
         <div className="page-eyebrow">BROWSE ALL COURSES</div>
         <h1 className="page-title">제주, 모든 시간의 코스</h1>

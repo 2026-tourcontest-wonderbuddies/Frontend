@@ -55,7 +55,8 @@ export default function SavedPage() {
   const isEmpty = places.length === 0 && courses.length === 0 && madeTrips.length === 0;
 
   return (
-    <div className="wrap" style={{ padding: "40px 32px 90px" }}>
+    <div className="wrap page-pad">
+      <div className="page-eyebrow">SAVED PLACES & COURSES</div>
       <div className="results-head">
         <h1 className="page-title" style={{ marginBottom: 0 }}>
           저장함

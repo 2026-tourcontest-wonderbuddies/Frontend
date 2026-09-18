@@ -56,7 +56,7 @@ export default function SavedMapPage() {
   });
 
   return (
-    <div className="wrap" style={{ padding: "40px 32px 90px" }}>
+    <div className="wrap page-pad">
       <div className="crumb" style={{ padding: 0, marginBottom: 20 }}>
         <Link to="/saved">저장 목록으로 돌아가기</Link>
       </div>

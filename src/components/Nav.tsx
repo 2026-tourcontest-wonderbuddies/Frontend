@@ -12,25 +12,25 @@ export default function Nav() {
         시간여행 제주
       </div>
       <div className="navlinks">
-        <NavLink to="/" end className={({ isActive }) => (isActive ? "on" : "")}>
+        <NavLink to="/" end data-label="홈" className={({ isActive }) => (isActive ? "on" : "")}>
           홈
         </NavLink>
-        <NavLink to="/list" className={({ isActive }) => (isActive ? "on" : "")}>
+        <NavLink to="/list" data-label="추천 코스" className={({ isActive }) => (isActive ? "on" : "")}>
           추천 코스
         </NavLink>
-        <NavLink to="/search" className={({ isActive }) => (isActive ? "on" : "")}>
+        <NavLink to="/search" data-label="장소 검색" className={({ isActive }) => (isActive ? "on" : "")}>
           장소 검색
         </NavLink>
-        <NavLink to="/builder" className={({ isActive }) => (isActive ? "on" : "")}>
+        <NavLink to="/builder" data-label="나만의 코스 만들기" className={({ isActive }) => (isActive ? "on" : "")}>
           나만의 코스 만들기
         </NavLink>
         {user && (
-          <NavLink to="/saved" className={({ isActive }) => (isActive ? "on" : "")}>
+          <NavLink to="/saved" data-label="저장함" className={({ isActive }) => (isActive ? "on" : "")}>
             저장함
           </NavLink>
         )}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div className="nav-account">
         {user ? (
           <div className="account-badge">
             <span className="name">{user.name}</span>
