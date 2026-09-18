@@ -42,7 +42,6 @@ export default function CuratedCourseDetailPage() {
       </div>
 
       <header className="page-head wrap">
-        <div className="page-eyebrow">{course.region_label}</div>
         <h1 className="page-title">{course.title}</h1>
         <div className="meta-row" style={{ marginTop: 12 }}>
           <span className="meta-chip mono">{course.badge}</span>

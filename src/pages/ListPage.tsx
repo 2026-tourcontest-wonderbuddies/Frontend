@@ -172,7 +172,6 @@ export default function ListPage() {
                   </span>
                 </div>
                 <div className="course-body">
-                  <div className="course-region">{c.region_label}</div>
                   <div className="course-title">{c.title}</div>
                   <div className="course-meta">
                     {c.meta_chips.map((m) => (

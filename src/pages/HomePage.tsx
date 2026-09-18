@@ -7,8 +7,7 @@ import { useCuratedCourses } from "../hooks/useCuratedCourses";
 import { getPeriodPlaces } from "../api/places";
 import type { PeriodPlace } from "../api/types";
 
-/** 성산일출봉+우도 / 함덕·월정·비자림 / 중문 관광단지 — 유명 장소 밀도가 가장 높은 3개. */
-const HOME_FEATURED_CURATED_IDS = [1, 2, 8];
+const CURATED_PAGE_SIZE = 3;
 
 const TIME_PILLS = ["6시간(반나절)", "8~10시간", "1박2일~2박3일", "3박4일", "4박5일"];
 
@@ -37,9 +36,20 @@ export default function HomePage() {
   const [failed, setFailed] = useState<Partial<Record<PeriodKey, boolean>>>({});
 
   const { data: curatedCourses } = useCuratedCourses();
-  const featuredCourses = HOME_FEATURED_CURATED_IDS.map((id) =>
-    curatedCourses?.find((c) => c.id === id),
-  ).filter((c) => c !== undefined);
+  const [curatedPage, setCuratedPage] = useState(0);
+  const totalCuratedPages = curatedCourses ? Math.ceil(curatedCourses.length / CURATED_PAGE_SIZE) : 0;
+  const visibleCourses = curatedCourses?.slice(
+    curatedPage * CURATED_PAGE_SIZE,
+    curatedPage * CURATED_PAGE_SIZE + CURATED_PAGE_SIZE,
+  ) ?? [];
+
+  const [curatedSlideDir, setCuratedSlideDir] = useState<"next" | "prev">("next");
+
+  function goCuratedPage(delta: number) {
+    if (totalCuratedPages === 0) return;
+    setCuratedSlideDir(delta > 0 ? "next" : "prev");
+    setCuratedPage((p) => Math.min(Math.max(p + delta, 0), totalCuratedPages - 1));
+  }
 
   function togglePeriod(period: PeriodKey) {
     if (openPeriod === period) {
@@ -172,19 +182,54 @@ export default function HomePage() {
             <div className="section-eyebrow">CURATED BY DURATION</div>
             <div className="section-title">당일치기 제주 추천 코스</div>
           </div>
-          <div className="course-grid">
-            {featuredCourses.map((c) => (
-              <CourseCard
-                key={c.id}
-                to={`/list/${c.id}`}
-                gradient={c.gradient}
-                badge={c.badge}
-                region={c.region_label}
-                title={c.title}
-                metaChips={c.meta_chips}
-              />
-            ))}
+
+          <div className={`curated-carousel${totalCuratedPages > 1 ? " has-arrows" : ""}`}>
+            {curatedPage > 0 && (
+              <button
+                className="curated-arrow curated-arrow-left"
+                onClick={() => goCuratedPage(-1)}
+                aria-label="이전 코스 보기"
+              >
+                ←
+              </button>
+            )}
+
+            <div className="course-grid" key={curatedPage}>
+              {visibleCourses.map((c, i) => (
+                <div
+                  key={c.id}
+                  className={`curated-slide curated-slide-${curatedSlideDir}`}
+                  style={{ animationDelay: `${i * 40}ms` }}
+                >
+                  <CourseCard
+                    to={`/list/${c.id}`}
+                    gradient={c.gradient}
+                    badge={c.badge}
+                    title={c.title}
+                    metaChips={c.meta_chips}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {curatedPage < totalCuratedPages - 1 && (
+              <button
+                className="curated-arrow curated-arrow-right"
+                onClick={() => goCuratedPage(1)}
+                aria-label="다음 코스 보기"
+              >
+                →
+              </button>
+            )}
           </div>
+
+          {totalCuratedPages > 1 && (
+            <div className="curated-dots">
+              {Array.from({ length: totalCuratedPages }).map((_, i) => (
+                <span key={i} className={`curated-dot${i === curatedPage ? " on" : ""}`} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
