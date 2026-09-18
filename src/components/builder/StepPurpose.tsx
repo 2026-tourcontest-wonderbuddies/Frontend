@@ -39,14 +39,16 @@ export default function StepPurpose({ form, patch }: StepProps) {
       />
 
       <div className="wizard-subaction">
+        {/* 문장마다 줄을 바꿔 두 줄로 읽히게 한다. */}
+        <p className="step-sub" style={{ marginTop: 0, marginBottom: 14 }}>
+          날짜별로 여행 목적·희망 권역·제외 카테고리를 다르게 정할 수 있어요.
+          <br />
+          설정하지 않으면 위에서 고른 목적·권역이 모든 날짜에 똑같이 적용돼요.
+        </p>
         <button type="button" className="btn-outline" onClick={() => setShowDayOverrides(true)}>
           일자별 조건 개별 설정
           {form.dayOverrides.length > 0 ? ` (${form.dayOverrides.length}일 맞춤)` : ""}
         </button>
-        <p className="step-sub" style={{ marginTop: 10 }}>
-          날짜별로 여행 목적·희망 권역·제외 카테고리를 다르게 정할 수 있어요. 설정하지 않으면 위에서 고른
-          목적·권역이 모든 날짜에 똑같이 적용돼요.
-        </p>
       </div>
 
       {showDayOverrides && (
