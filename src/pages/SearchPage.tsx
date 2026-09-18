@@ -67,7 +67,7 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="wrap search-page" style={{ padding: "40px 32px 90px" }}>
+    <div className="wrap search-page page-pad">
       <div className="page-eyebrow">EXPLORE</div>
       <h1 className="page-title">장소 검색</h1>
       <p className="page-sub">이름, 관광 유형, 권역으로 제주 장소를 직접 찾아보세요.</p>
