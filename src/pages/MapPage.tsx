@@ -148,7 +148,7 @@ export default function MapPage() {
                           <div className="tl-title">{item.place.title}</div>
                           <div className="tl-stay mono">{hhmm(item.arrive_at)} 도착</div>
                         </div>
-                        <div className="tl-desc">{item.place.overview}</div>
+                        <div className="tl-desc">{item.recommend_reason || item.place.overview}</div>
                       </div>
                       {idx < day.items.length - 1 && (
                         <div className="tl-transit">

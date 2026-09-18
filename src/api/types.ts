@@ -473,6 +473,8 @@ export interface CourseItem {
   hours_uncertain: boolean;
   /** 선호 음식 후보가 5곳 미만이라 태그 조건이 완화되어 뽑힌 항목(소프트 필터 −0.15 감점 대상). */
   is_relaxed_preference?: boolean;
+  /** 이 장소를 뽑은 이유. 서버가 장소 원문(overview) 대신 보여줄 한 줄로 만들어 준다. */
+  recommend_reason?: string | null;
 }
 
 /** 숙소 카드의 조건 충족 표시 한 줄 */

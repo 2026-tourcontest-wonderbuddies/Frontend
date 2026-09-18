@@ -77,6 +77,7 @@ export default function BuilderPage() {
   const [maxVisited, setMaxVisited] = useState(0);
   /** 취소를 눌러 폼으로 돌아왔는지. 뒤늦게 도착한 응답이 화면을 옮기는 걸 막는다. */
   const abandoned = useRef(false);
+  const stickyHeadRef = useRef<HTMLDivElement>(null);
 
   const patch = (p: Partial<BuilderForm>) => setForm((f) => ({ ...f, ...p }));
 
@@ -96,28 +97,46 @@ export default function BuilderPage() {
     setMaxVisited((m) => Math.min(m, last));
   }, [steps.length]);
 
+  // 진행바를 nav 바로 아래에 고정할 top 값을 실제 nav 높이로 맞춘다(폰트·DPI에 따라 추정치와 달라질 수 있어서).
+  useEffect(() => {
+    const navEl = document.querySelector("nav");
+    if (!navEl) return;
+    const sync = () => {
+      document.documentElement.style.setProperty("--nav-height", `${navEl.getBoundingClientRect().height}px`);
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(navEl);
+    return () => ro.disconnect();
+  }, []);
+
   const currentStep = steps[step];
   const currentErrors = stepErrors(form, currentStep.key);
   const isLastStep = step === steps.length - 1;
   const blockedFields = steps.flatMap((s) => stepErrors(form, s.key));
+
+  /** 다음/이전 스텝은 맨 위가 아니라, 고정되는 진행바가 nav 바로 아래로 오는 위치로 스크롤한다. */
+  function scrollToStickyHead() {
+    stickyHeadRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   function goNext() {
     if (currentErrors.length) return;
     const next = Math.min(step + 1, steps.length - 1);
     setStep(next);
     setMaxVisited((m) => Math.max(m, next));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToStickyHead();
   }
 
   function goPrev() {
     setStep((s) => Math.max(0, s - 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToStickyHead();
   }
 
   function jumpTo(index: number) {
     if (index > maxVisited) return;
     setStep(index);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToStickyHead();
   }
 
   function buildPayload(): TripCreateRequest {
@@ -223,15 +242,19 @@ export default function BuilderPage() {
   return (
     <div id="screen-builder">
       <section className="builder wrap">
-        <div className="builder-head">
-          <div className="intro-eyebrow">BUILD YOUR OWN JEJU TIMELINE</div>
-          <h1 className="intro-title">조건을 알려주시면 코스를 완성해드려요.</h1>
-          <p className="step-sub" style={{ marginLeft: 0 }}>* 모든 이동수단은 차량 기준입니다.</p>
-
-          <WizardProgress steps={steps} current={step} maxVisited={maxVisited} onJump={jumpTo} />
-        </div>
+        {step === 0 && (
+          <div className="builder-head">
+            <div className="intro-eyebrow">BUILD YOUR OWN JEJU TIMELINE</div>
+            <h1 className="intro-title">조건을 알려주시면 코스를 완성해드려요.</h1>
+          </div>
+        )}
 
         <div className="wizard-shell">
+          <div className="wizard-sticky-head" ref={stickyHeadRef}>
+            <p className="step-sub" style={{ marginLeft: 0 }}>* 모든 이동수단은 차량 기준입니다.</p>
+            <WizardProgress steps={steps} current={step} maxVisited={maxVisited} onJump={jumpTo} />
+          </div>
+
           <div className="wizard-body">
             {currentStep.key === "schedule" && <StepSchedule form={form} patch={patch} />}
             {currentStep.key === "purpose" && <StepPurpose form={form} patch={patch} />}

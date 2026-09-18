@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TimeDial from "../components/TimeDial";
 import CourseCard from "../components/CourseCard";
@@ -37,10 +37,23 @@ export default function HomePage() {
 
   const { data: curatedCourses } = useCuratedCourses();
   const [curatedPage, setCuratedPage] = useState(0);
-  const totalCuratedPages = curatedCourses ? Math.ceil(curatedCourses.length / CURATED_PAGE_SIZE) : 0;
+  // 모바일(카드 1행 배치)에서는 한 번에 한 장씩, 데스크톱에서는 3장씩 넘긴다.
+  const [curatedPageSize, setCuratedPageSize] = useState(() =>
+    window.matchMedia("(max-width:920px)").matches ? 1 : CURATED_PAGE_SIZE,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width:920px)");
+    const handler = () => {
+      setCuratedPageSize(mq.matches ? 1 : CURATED_PAGE_SIZE);
+      setCuratedPage(0);
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  const totalCuratedPages = curatedCourses ? Math.ceil(curatedCourses.length / curatedPageSize) : 0;
   const visibleCourses = curatedCourses?.slice(
-    curatedPage * CURATED_PAGE_SIZE,
-    curatedPage * CURATED_PAGE_SIZE + CURATED_PAGE_SIZE,
+    curatedPage * curatedPageSize,
+    curatedPage * curatedPageSize + curatedPageSize,
   ) ?? [];
 
   const [curatedSlideDir, setCuratedSlideDir] = useState<"next" | "prev">("next");
@@ -66,7 +79,7 @@ export default function HomePage() {
 
   return (
     <div id="screen-home">
-      <section className="hero">
+      <section className="hero wrap">
         <div>
           <div className="hero-eyebrow">TIME-BASED JEJU TRAVEL PLATFORM</div>
           <h1 className="hero-title">

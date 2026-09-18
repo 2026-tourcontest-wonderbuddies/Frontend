@@ -387,7 +387,9 @@ export default function DetailPage() {
                     <div className="tl-stay mono">체류 {diffMin(item.arrive_at, item.depart_at)}분</div>
                   </div>
                   <div className="tl-desc">
-                    {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
+                    {item.recommend_reason ||
+                      item.place.overview ||
+                      `${item.place.content_type_name} · ${item.place.address}`}
                   </div>
                 </div>
                 <div className="edit-item-actions" style={{ marginTop: 8 }}>
