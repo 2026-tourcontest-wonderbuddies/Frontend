@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 
-const HIDE_ON_MOBILE = ["/list", "/search", "/builder"];
+const HIDE_ON_MOBILE = ["/list", "/search", "/builder", "/saved"];
 
 export default function Footer() {
   const { pathname } = useLocation();
