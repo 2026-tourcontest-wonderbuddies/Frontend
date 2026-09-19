@@ -10,7 +10,9 @@ export default function Footer() {
     <footer className={hideOnMobile ? "footer-hide-mobile" : undefined}>
       시간여행 제주 — 시간 테마 제주 여행코스 추천
       <br />
-      출처 : ⓒ한국관광공사
+      만든 사람들 : 원더버디즈(WonderBuddies) · © 2026
+      <br />
+      출처 : ⓒ한국관광공사 · 지도 ⓒ Kakao
     </footer>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { searchPlaces } from "../api/places";
-import type { RegionCode } from "../api/types";
+import type { PlaceSortKey, RegionCode } from "../api/types";
 
 /** 값이 바뀌고 delayMs 동안 더 안 바뀌면 그 값을 반영한다. */
 function useDebouncedValue<T>(value: T, delayMs: number): T {
@@ -13,12 +13,15 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
-/** 입력창 드롭다운 자동완성. 글자 입력 후 300ms 멈추면 이름으로만 검색해 상위 몇 개를 보여준다. */
-export function usePlaceSuggestions(rawQuery: string) {
+/**
+ * 입력창 드롭다운 자동완성. 글자 입력 후 300ms 멈추면 이름으로만 검색해 상위 몇 개를 보여준다.
+ * 검색 페이지에서는 그 페이지의 정렬 기준을 그대로 넘겨 목록과 순서를 맞춘다.
+ */
+export function usePlaceSuggestions(rawQuery: string, sort: PlaceSortKey = "popular") {
   const q = useDebouncedValue(rawQuery.trim(), 300);
   return useQuery({
-    queryKey: ["place-suggestions", q],
-    queryFn: () => searchPlaces({ q, page: 1, page_size: 6 }),
+    queryKey: ["place-suggestions", q, sort],
+    queryFn: () => searchPlaces({ q, sort, page: 1, page_size: 6 }),
     enabled: q.length > 0,
   });
 }
@@ -27,17 +30,19 @@ interface SearchResultParams {
   q: string;
   category: string;
   region: RegionCode | "";
+  sort: PlaceSortKey;
 }
 
 /** 검색 버튼(또는 자동완성 클릭)으로 확정된 조건의 실제 결과 목록. "더보기"로 다음 페이지를 이어붙인다. */
-export function usePlaceSearchResults({ q, category, region }: SearchResultParams) {
+export function usePlaceSearchResults({ q, category, region, sort }: SearchResultParams) {
   return useInfiniteQuery({
-    queryKey: ["place-search", q, category, region],
+    queryKey: ["place-search", q, category, region, sort],
     queryFn: ({ pageParam }) =>
       searchPlaces({
         q,
         category: category || undefined,
         region: region || undefined,
+        sort,
         page: pageParam,
         page_size: 20,
       }),

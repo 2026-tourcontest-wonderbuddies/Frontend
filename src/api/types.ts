@@ -647,10 +647,15 @@ export interface PlaceSearchResponse {
   has_more: boolean;
 }
 
+/** 검색 결과 정렬 기준. ""=가나다순(기본), "popular"=인기순(popularity_score 내림차순) */
+export type PlaceSortKey = "" | "popular";
+
 export interface PlaceSearchQuery {
   q?: string;
   category?: string;
   region?: RegionCode;
+  /** 정렬 기준. 생략하면 가나다순, "popular"면 인기순. */
+  sort?: PlaceSortKey;
   page?: number;
   page_size?: number;
 }
