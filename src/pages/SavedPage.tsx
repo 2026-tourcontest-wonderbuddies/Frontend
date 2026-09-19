@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Modal from "../components/Modal";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
-import { PRIORITY_LABELS, type CourseDetail, type PlaceSummary, type SearchPlace } from "../api/types";
+import { PRIORITY_LABELS, type CourseDetail, type CuratedCourseSummary, type PlaceSummary, type SearchPlace } from "../api/types";
 import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
 import { useSavedCourses, useToggleSavedCourse } from "../hooks/useSavedCourses";
+import { useSavedCuratedCourses, useToggleSavedCuratedCourse } from "../hooks/useCuratedCourses";
 import { useCourseDetails, useMyTrips } from "../hooks/useCourses";
 import { courseStats, courseTitle } from "../utils/course";
 import { dateLabel, periodLabel } from "../utils/format";
@@ -16,13 +17,17 @@ function courseSummaryText(course: CourseDetail): string {
   return `${stats.visitCount}곳 · 총 ${Math.round(stats.totalMin / 60)}시간`;
 }
 
-type DeleteTarget = { kind: "place"; item: PlaceSummary } | { kind: "course"; item: CourseDetail };
+type DeleteTarget =
+  | { kind: "place"; item: PlaceSummary }
+  | { kind: "course"; item: CourseDetail }
+  | { kind: "curated"; item: CuratedCourseSummary };
 
 /** 장소·코스 모두 계정에 저장된다(GET /api/places/saved/, GET /api/courses/saved/). */
 export default function SavedPage() {
   const { user } = useAuth();
   const { data: places = [] } = useSavedPlaces(Boolean(user));
   const { data: savedCourses = [] } = useSavedCourses(Boolean(user));
+  const { data: savedCurated = [] } = useSavedCuratedCourses(Boolean(user));
   // 목록 응답에는 코스 이름이 없어 상세(명세 4번)로 제목·요약을 만든다(CoursesPage와 같은 방식).
   const { courses } = useCourseDetails(savedCourses.map((c) => c.id));
   // 코스 생성이 실패한 trip 도 행은 남아서(코스 0개) 같이 내려온다. 열어볼 게 없으니 거른다.
@@ -30,12 +35,14 @@ export default function SavedPage() {
   const madeTrips = trips.filter((t) => t.courses.length > 0);
   const toggleSaved = useToggleSavedPlace();
   const toggleSavedCourse = useToggleSavedCourse();
+  const toggleSavedCurated = useToggleSavedCuratedCourse();
   const [target, setTarget] = useState<DeleteTarget | null>(null);
   const [selected, setSelected] = useState<SearchPlace | null>(null);
 
   function confirmDelete() {
     if (!target || !user) return;
     if (target.kind === "place") toggleSaved.mutate({ contentId: target.item.content_id, saved: true });
+    else if (target.kind === "curated") toggleSavedCurated.mutate({ courseId: target.item.id, saved: true });
     else toggleSavedCourse.mutate({ courseId: target.item.id, saved: true });
     setTarget(null);
   }
@@ -52,10 +59,10 @@ export default function SavedPage() {
     );
   }
 
-  const isEmpty = places.length === 0 && courses.length === 0 && madeTrips.length === 0;
+  const isEmpty = places.length === 0 && courses.length === 0 && savedCurated.length === 0 && madeTrips.length === 0;
 
   return (
-    <div className="wrap page-pad">
+    <div className="wrap page-pad saved-page">
       <div className="page-eyebrow">SAVED PLACES & COURSES</div>
       <div className="results-head">
         <h1 className="page-title" style={{ marginBottom: 0 }}>
@@ -76,48 +83,79 @@ export default function SavedPage() {
         </div>
       )}
 
-      {places.length > 0 && (
-        <section style={{ marginTop: 28 }}>
-          <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
-            저장한 장소
-          </h2>
-          <div className="saved-list">
-            {places.map((place) => (
-              <div className="saved-row" key={place.content_id}>
-                <button type="button" className="saved-row-link" onClick={() => setSelected(place)}>
-                  <div className="saved-row-title">{place.title}</div>
-                  <div className="saved-row-sub mono">
-                    {place.content_type_name} · {place.address}
+      {(places.length > 0 || courses.length > 0 || savedCurated.length > 0) && (
+        // 웹: 1열 = 저장한 장소 / 2열 = 위 저장한 추천 코스, 아래 저장한 코스. 모바일은 한 열로 쌓인다.
+        <div className="saved-cols">
+          <div className="saved-col">
+          {places.length > 0 && (
+            <section>
+              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
+                장소
+              </h2>
+              <div className="saved-list">
+                {places.map((place) => (
+                  <div className="saved-row" key={place.content_id}>
+                    <button type="button" className="saved-row-link" onClick={() => setSelected(place)}>
+                      <div className="saved-row-title">{place.title}</div>
+                      <div className="saved-row-sub mono">
+                        {place.content_type_name} · {place.address}
+                      </div>
+                    </button>
+                    <button type="button" className="btn-outline" onClick={() => setTarget({ kind: "place", item: place })}>
+                      삭제
+                    </button>
                   </div>
-                </button>
-                <button type="button" className="btn-outline" onClick={() => setTarget({ kind: "place", item: place })}>
-                  삭제
-                </button>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </section>
+          )}
 
-      {courses.length > 0 && (
-        <section style={{ marginTop: 36 }}>
-          <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
-            저장한 코스
-          </h2>
-          <div className="saved-list">
-            {courses.map((sc) => (
-              <div className="saved-row" key={sc.id}>
-                <Link className="saved-row-link" to={`/trip/${sc.id}`}>
-                  <div className="saved-row-title">{courseTitle(sc)}</div>
-                  <div className="saved-row-sub mono">{courseSummaryText(sc)}</div>
-                </Link>
-                <button type="button" className="btn-outline" onClick={() => setTarget({ kind: "course", item: sc })}>
-                  삭제
-                </button>
-              </div>
-            ))}
           </div>
-        </section>
+          <div className="saved-col">
+          {savedCurated.length > 0 && (
+            <section>
+              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
+                추천 코스
+              </h2>
+              <div className="saved-list">
+                {savedCurated.map((c) => (
+                  <div className="saved-row" key={c.id}>
+                    <Link className="saved-row-link" to={`/list/${c.id}`}>
+                      <div className="saved-row-title">{c.title}</div>
+                      <div className="saved-row-sub mono">{c.badge}</div>
+                    </Link>
+                    <button type="button" className="btn-outline" onClick={() => setTarget({ kind: "curated", item: c })}>
+                      삭제
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {courses.length > 0 && (
+            <section>
+              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
+                생성 코스
+              </h2>
+              <div className="saved-list">
+                {courses.map((sc) => (
+                  <div className="saved-row" key={sc.id}>
+                    <Link className="saved-row-link" to={`/trip/${sc.id}`}>
+                      <div className="saved-row-title">{courseTitle(sc)}</div>
+                      <div className="saved-row-sub mono">{courseSummaryText(sc)}</div>
+                    </Link>
+                    <button type="button" className="btn-outline" onClick={() => setTarget({ kind: "course", item: sc })}>
+                      삭제
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          </div>
+        </div>
       )}
 
       {madeTrips.length > 0 && (
@@ -154,7 +192,7 @@ export default function SavedPage() {
       {target && (
         <Modal title={target.kind === "place" ? "장소 삭제" : "코스 삭제"} onClose={() => setTarget(null)}>
           <p style={{ marginBottom: 20 }}>
-            {target.kind === "place" ? target.item.title : courseTitle(target.item)}을(를) 저장 목록에서
+            {target.kind === "place" ? target.item.title : target.kind === "curated" ? target.item.title : courseTitle(target.item)}을(를) 저장 목록에서
             삭제하시겠습니까?
           </p>
           <div style={{ display: "flex", gap: 10 }}>

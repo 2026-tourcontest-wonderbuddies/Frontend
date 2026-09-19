@@ -5,6 +5,8 @@ interface ModalProps {
   /** 제목 바로 옆에 붙는 짧은 꼬리표. 제목이 짧을 때 한 줄을 같이 쓴다. */
   titleAside?: ReactNode;
   subtitle?: ReactNode;
+  /** 닫기 버튼 왼쪽에 붙는 버튼(예: 저장). */
+  headAction?: ReactNode;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
@@ -12,7 +14,7 @@ interface ModalProps {
 
 type DragPhase = "idle" | "dragging" | "snapping" | "closing";
 
-export default function Modal({ title, titleAside, subtitle, onClose, children, wide }: ModalProps) {
+export default function Modal({ title, titleAside, subtitle, headAction, onClose, children, wide }: ModalProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const startYRef = useRef(0);
   // 연속으로 들어오는 pointer 이벤트 사이에서 React state는 아직 커밋 전일 수 있어(스테일 클로저),
@@ -82,9 +84,12 @@ export default function Modal({ title, titleAside, subtitle, onClose, children, 
             {titleAside && <span className="modal-title-aside">{titleAside}</span>}
             {subtitle && <p className="modal-subtitle">{subtitle}</p>}
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="닫기">
-            ✕
-          </button>
+          <div className="modal-head-actions">
+            {headAction}
+            <button type="button" className="modal-close" onClick={onClose} aria-label="닫기">
+              ✕
+            </button>
+          </div>
         </div>
         <div className="modal-body">{children}</div>
       </div>

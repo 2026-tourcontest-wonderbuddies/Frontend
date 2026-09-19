@@ -1,6 +1,8 @@
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Modal from "./Modal";
+import { useAuth } from "../auth/AuthContext";
+import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
 import { askPlace, getPlaceDetail } from "../api/places";
 import type { AskPlaceResponse, PlaceDetail, SearchPlace } from "../api/types";
 
@@ -55,6 +57,12 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   });
   // 상세엔 menu/featured_menu가 없어 목록에서 받은 값이 그대로 살아남는다.
   const p: SearchPlace & Partial<PlaceDetail> = { ...place, ...detail };
+
+  // 저장은 로그인했을 때만. 검색 목록의 저장 버튼과 같은 훅을 쓴다.
+  const { user } = useAuth();
+  const { data: savedPlaces } = useSavedPlaces(Boolean(user));
+  const toggleSaved = useToggleSavedPlace();
+  const saved = (savedPlaces ?? []).some((s) => s.content_id === p.content_id);
 
   // 원본으로 확대해 보고 있는 사진. 빈 문자열이면 안 띄운다.
   const [zoomed, setZoomed] = useState("");
@@ -130,7 +138,26 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   }, [p.content_id, fields.map((f) => f.value).join("|")]);
 
   return (
-    <Modal title={p.title} titleAside={categoryText} subtitle={headerSubtitle} onClose={onClose} wide>
+    <Modal
+      title={p.title}
+      titleAside={categoryText}
+      subtitle={headerSubtitle}
+      headAction={
+        user && (
+          <button
+            type="button"
+            className="btn-outline"
+            aria-pressed={saved}
+            disabled={toggleSaved.isPending}
+            onClick={() => toggleSaved.mutate({ contentId: p.content_id, saved })}
+          >
+            {saved ? "♥ 저장됨" : "♡ 저장"}
+          </button>
+        )
+      }
+      onClose={onClose}
+      wide
+    >
       <div className="place-detail-sheet">
         {/* 사진 묶음. 데스크톱에서 오른쪽 정보 카드와 같은 높이로 늘어난다. */}
         <div className="place-sheet-media">
@@ -247,10 +274,6 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
           {ask.isError && <p className="lodging-warn">답변을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.</p>}
         </div>
 
-        <div className="auth-error-banner" style={{ background: "var(--paper-deep)", borderColor: "var(--line)" }}>
-          <b style={{ color: "var(--ink)", fontFamily: "'Noto Sans KR', sans-serif", fontWeight: 700 }}>확인 필요 정보</b>
-          <p>데이터 최신성을 보장하지 않습니다. 실제 방문 전 운영 여부를 공식 채널에서 확인하세요.</p>
-        </div>
       </div>
     </Modal>
   );
