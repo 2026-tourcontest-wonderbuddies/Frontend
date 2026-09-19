@@ -1,23 +1,25 @@
 import { useNow } from "../hooks/useNow";
 
-const TICKS = [
-  { label: "00", x: 0, y: -165 },
-  { label: "03", x: 117, y: -117 },
-  { label: "06", x: 165, y: 0 },
-  { label: "09", x: 117, y: 117 },
-  { label: "12", x: 0, y: 165 },
-  { label: "15", x: -117, y: 117 },
-  { label: "18", x: -165, y: 0 },
-  { label: "21", x: -117, y: -117 },
-];
+/** 링 두께 안쪽에 맞춘 반지름(다이얼 폭의 %). 링은 50%(바깥)~41%(dial-face inset 9%) 사이다. */
+const RADIUS = 45.5;
+
+/** 자정을 12시 방향에 두고 시계방향으로 배치. px가 아니라 %라 다이얼 크기를 따라간다.
+ *  링 그라데이션도 같은 기준이라 .dial의 conic은 0deg에서 시작한다. */
+function pos(hour: number) {
+  const a = (hour / 24) * 2 * Math.PI;
+  return { left: `${50 + RADIUS * Math.sin(a)}%`, top: `${50 - RADIUS * Math.cos(a)}%` };
+}
 
 const STOPS = [
-  { label: "06:00 성산일출봉 일출", x: 165, y: 0 },
-  { label: "09:00 섭지코지", x: 117, y: 117 },
-  { label: "12:00 광치기 해변", x: 0, y: 165 },
-  { label: "15:00 표선해수욕장", x: -117, y: 117 },
-  { label: "18:00 서귀포 매일 올레시장", x: -165, y: 0 },
+  { label: "06:00 성산일출봉 일출", hour: 6 },
+  { label: "09:00 섭지코지", hour: 9 },
+  { label: "12:00 광치기 해변", hour: 12 },
+  { label: "15:00 표선해수욕장", hour: 15 },
+  { label: "18:00 서귀포 매일 올레시장", hour: 18 },
 ];
+
+/** 마커가 선 시각은 라벨이 이미 시간을 말해주므로 눈금을 빼고 나머지만 남긴다. */
+const TICKS = [0, 3, 6, 9, 12, 15, 18, 21].filter((h) => !STOPS.some((s) => s.hour === h));
 
 export default function TimeDial() {
   const now = useNow();
@@ -30,21 +32,13 @@ export default function TimeDial() {
         <div className="dial" />
         <div className="dial-face" />
         <div className="dial-layer">
-          {TICKS.map((t) => (
-            <div
-              key={t.label}
-              className="tick"
-              style={{ transform: `translate(-50%,-50%) translate(${t.x}px,${t.y}px)` }}
-            >
-              {t.label}
+          {TICKS.map((hour) => (
+            <div key={hour} className="tick" style={pos(hour)}>
+              {hour.toString().padStart(2, "0")}
             </div>
           ))}
           {STOPS.map((s) => (
-            <div
-              key={s.label}
-              className="stop"
-              style={{ transform: `translate(-50%,-50%) translate(${s.x}px,${s.y}px)` }}
-            >
+            <div key={s.label} className="stop" style={pos(s.hour)}>
               <div className="stop-label">{s.label}</div>
             </div>
           ))}

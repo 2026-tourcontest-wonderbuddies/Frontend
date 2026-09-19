@@ -49,9 +49,6 @@ export default function Nav() {
             로그인
           </NavLink>
         )}
-        <NavLink to="/builder" className="nav-cta">
-          코스 매칭 시작 →
-        </NavLink>
       </div>
     </nav>
   );

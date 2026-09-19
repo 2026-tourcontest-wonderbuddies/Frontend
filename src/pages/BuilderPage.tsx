@@ -98,15 +98,20 @@ export default function BuilderPage() {
   }, [steps.length]);
 
   // 진행바를 nav 바로 아래에 고정할 top 값을 실제 nav 높이로 맞춘다(폰트·DPI에 따라 추정치와 달라질 수 있어서).
+  // 진행바 자체 높이도 같이 재둔다 — 데스크톱에서 오른쪽 명세서 윗선을 진행바 밑줄에 맞추는 데 쓴다.
   useEffect(() => {
     const navEl = document.querySelector("nav");
     if (!navEl) return;
+    const root = document.documentElement;
     const sync = () => {
-      document.documentElement.style.setProperty("--nav-height", `${navEl.getBoundingClientRect().height}px`);
+      root.style.setProperty("--nav-height", `${navEl.getBoundingClientRect().height}px`);
+      const head = stickyHeadRef.current;
+      if (head) root.style.setProperty("--wizard-head-height", `${head.getBoundingClientRect().height}px`);
     };
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(navEl);
+    if (stickyHeadRef.current) ro.observe(stickyHeadRef.current);
     return () => ro.disconnect();
   }, []);
 
@@ -115,9 +120,23 @@ export default function BuilderPage() {
   const isLastStep = step === steps.length - 1;
   const blockedFields = steps.flatMap((s) => stepErrors(form, s.key));
 
-  /** 다음/이전 스텝은 맨 위가 아니라, 고정되는 진행바가 nav 바로 아래로 오는 위치로 스크롤한다. */
-  function scrollToStickyHead() {
-    stickyHeadRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  /** 스텝이 바뀌면 진행바가 nav 바로 아래 오도록 스크롤한다 — 새 스텝의 첫 입력이 그 바로 밑에 온다.
+   *  진행바는 sticky라 이미 붙어 있으면 scrollIntoView가 아무 일도 안 해서, 바깥 wizard-shell을 잡는다.
+   *  렌더 후에 실행되어야 새 본문 높이가 반영된 위치로 간다. */
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    stickyHeadRef.current?.parentElement?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [step]);
+
+  /** 명세서는 지나온 스텝의 행만 쌓는다 — 아직 묻지도 않은 조건이 "미선택"으로 먼저 보이면 안 된다. */
+  function reached(key: StepKey) {
+    const i = steps.findIndex((s) => s.key === key);
+    return i >= 0 && maxVisited >= i;
   }
 
   function goNext() {
@@ -125,18 +144,15 @@ export default function BuilderPage() {
     const next = Math.min(step + 1, steps.length - 1);
     setStep(next);
     setMaxVisited((m) => Math.max(m, next));
-    scrollToStickyHead();
   }
 
   function goPrev() {
     setStep((s) => Math.max(0, s - 1));
-    scrollToStickyHead();
   }
 
   function jumpTo(index: number) {
     if (index > maxVisited) return;
     setStep(index);
-    scrollToStickyHead();
   }
 
   function buildPayload(): TripCreateRequest {
@@ -310,31 +326,39 @@ export default function BuilderPage() {
                 <span>인원 수</span>
                 <b className="mono">{headcountValid ? `${headcountNum}명` : "미입력"}</b>
               </div>
-              <div className="sum-row">
-                <span>희망 지역</span>
-                <b className="mono">{form.region ? REGION_LABELS[form.region] : "전역"}</b>
-              </div>
-              <div className="sum-row">
-                <span>목적</span>
-                <b className="mono">
-                  {form.purposeMain ? PURPOSE_LABELS[form.purposeMain] : "미선택"}
-                  {form.purposeSub ? ` · ${PURPOSE_LABELS[form.purposeSub]}` : ""}
-                </b>
-              </div>
-              <div className="sum-row">
-                <span>선호 음식</span>
-                <b className="mono">
-                  {form.foodPrefs.length ? form.foodPrefs.map((f) => FOOD_PREF_LABELS[f]).join(" · ") : "미선택"}
-                </b>
-              </div>
-              {/* 스텝에서 묻는 조건과 같을 때만 보여준다. 안 물어본 값이 요약에 뜨면 안 된다. */}
-              {isFoodPurpose(form) && (
-                <div className="sum-row">
-                  <span>음식·카페 비중</span>
-                  <b className="mono">{FOOD_CAFE_BALANCE_LABELS[form.foodCafeBalance]}</b>
-                </div>
+              {reached("purpose") && (
+                <>
+                  <div className="sum-row">
+                    <span>희망 지역</span>
+                    <b className="mono">{form.region ? REGION_LABELS[form.region] : "전역"}</b>
+                  </div>
+                  <div className="sum-row">
+                    <span>목적</span>
+                    <b className="mono">
+                      {form.purposeMain ? PURPOSE_LABELS[form.purposeMain] : "미선택"}
+                      {form.purposeSub ? ` · ${PURPOSE_LABELS[form.purposeSub]}` : ""}
+                    </b>
+                  </div>
+                </>
               )}
-              {isMultiDay && (
+              {reached("taste") && (
+                <>
+                  <div className="sum-row">
+                    <span>선호 음식</span>
+                    <b className="mono">
+                      {form.foodPrefs.length ? form.foodPrefs.map((f) => FOOD_PREF_LABELS[f]).join(" · ") : "미선택"}
+                    </b>
+                  </div>
+                  {/* 스텝에서 묻는 조건과 같을 때만 보여준다. 안 물어본 값이 요약에 뜨면 안 된다. */}
+                  {isFoodPurpose(form) && (
+                    <div className="sum-row">
+                      <span>음식·카페 비중</span>
+                      <b className="mono">{FOOD_CAFE_BALANCE_LABELS[form.foodCafeBalance]}</b>
+                    </div>
+                  )}
+                </>
+              )}
+              {isMultiDay && reached("lodging") && (
                 <>
                   <div className="sum-row">
                     <span>숙소 유형</span>

@@ -9,8 +9,6 @@ import type { PeriodPlace } from "../api/types";
 
 const CURATED_PAGE_SIZE = 3;
 
-const TIME_PILLS = ["6시간(반나절)", "8~10시간", "1박2일~2박3일", "3박4일", "4박5일"];
-
 const TOD_CARDS: { period: PeriodKey; time: string; name: string; desc: string; className: string }[] = [
   { period: "dawn", time: "04:00–07:00", name: "새벽", desc: "성판악 입산, 해장국집과 새벽 수산시장", className: "dawn" },
   { period: "morning", time: "07:00–11:00", name: "아침", desc: "국숫집 한 그릇, 갓 문 연 베이글집", className: "morning" },
@@ -27,7 +25,6 @@ function evidenceLabel(p: PeriodPlace) {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [activePill, setActivePill] = useState(3);
   const now = useNow();
   const currentPeriod = periodFor(now.getHours());
 
@@ -81,7 +78,7 @@ export default function HomePage() {
     <div id="screen-home">
       <section className="hero wrap">
         <div>
-          <div className="hero-eyebrow">TIME-BASED JEJU TRAVEL PLATFORM</div>
+          <div className="hero-eyebrow">TIME-BASED JEJU TRAVEL</div>
           <h1 className="hero-title">
             당신에게 주어진
             <br />
@@ -94,26 +91,14 @@ export default function HomePage() {
             설계해드려요.
           </p>
 
-          <div className="time-select-label">TIME AVAILABLE — 이번 제주 여행, 얼마나 시간이 있으세요?</div>
-          <div className="pills">
-            {TIME_PILLS.map((label, i) => (
-              <div
-                key={label}
-                className={`pill${activePill === i ? " active" : ""}`}
-                onClick={() => setActivePill(i)}
-              >
-                {label}
-              </div>
-            ))}
+          <div className="hero-actions">
+            <button className="btn-primary" onClick={() => navigate("/builder")}>
+              내 시간으로 코스 만들기 →
+            </button>
+            <button className="btn-outline" onClick={() => navigate("/list")}>
+              추천 코스 먼저 보기
+            </button>
           </div>
-          <div className="insight-note">
-            💡 제주 여행자의 실제 기록을 보면 3박4일·4박5일이 전체의 <b>67%</b>로 가장 많아요. 반나절 이하
-            코스는 표본이 적어 주로 도민의 짧은 나들이에 해당합니다.
-          </div>
-
-          <button className="btn-primary" onClick={() => navigate("/list")}>
-            이 시간에 맞는 코스 보기 →
-          </button>
         </div>
 
         <TimeDial />
