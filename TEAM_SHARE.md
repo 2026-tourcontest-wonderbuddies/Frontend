@@ -504,3 +504,123 @@ develop 최신(`d9aae8d`, 커밋 `b2b08a2`)의 `RecommendedCourseSerializer.Meta
   `{"content_id": "126435", "order": 7}` (2026-09-17 배포 서버에서 확인, content_id는
   실재하는 장소라 404는 아님). 프론트 쪽 요청 형태는 명세와 동일해서 백엔드 쪽만
   고치면 바로 붙습니다 — 그 전까지는 "+ 장소 추가" 버튼을 누르면 에러 문구만 뜹니다.
+
+### 코스 편집 API 점검 (2026-09-20) — 장소 추가 수정 방법 확정 + 새로 확인한 이슈
+
+위 "후속" 이후 프론트 쪽을 손보면서(서버 오류 문구 표시, 가용시간 초과 경고, 추가 위치 `order` 수정)
+백엔드 코드를 `develop`·`HJ`·`fork/HJ`에서 읽고, 테스트 코스(`course_id=1142`, 로컬 서버 → 공유 DB)로
+순서변경·추가·삭제를 실제로 호출해 확인했습니다. **아래 ①은 코드 3줄이면 풀립니다.**
+
+> 표기: ✅ 실제 호출로 확인 · 🔎 코드를 읽고 추정(실제로는 아직 안 돌려봄)
+
+| # | 우선순위 | 요약 | 확인 |
+|---|---|---|---|
+| ① | 🚨 차단 | 장소 추가 API가 항상 500 — import 3개 누락 (`timedelta`뿐 아니라 `datetime`·`KST`도) | ✅ |
+| ② | 🚨 보안 | 편집 4개 API에 인증·소유자 확인이 없음 | 🔎 |
+| ③ | ⚠ 데이터 | 실패·중간 삽입 시 순번이 반쯤 바뀐 채 남을 수 있음 (트랜잭션 없음) | 🔎 |
+| ④ | ⚠ 버그 | 순서변경 응답의 `over_budget`이 거짓 음성 | ✅ 증상 / 🔎 원인 |
+| ⑤ | ⚠ 정책 | 식사(RESTAURANT) 카드는 순서를 바꿔도 시각이 안 바뀜 | ✅ |
+| ⑥ | 참고 | 재계산하면 입도일 첫 장소 시각이 5분 당겨짐 | ✅ 증상 / 🔎 원인 |
+| ⑦ | 참고 | 입력 검증이 느슨함 · 추가 불가 장소를 미리 알 수 없음 | 🔎 |
+
+#### ① 🚨 장소 추가 — `views.py`에 import가 3개 빠져 있습니다
+
+`CourseItemAddView.post()`(`apps/trips/views.py` 315~318행)가 아래 세 이름을 쓰는데 **파일 어디에도
+import가 없습니다.** 기존 기록은 `timedelta`만 언급했는데, 그것만 고치면 바로 다음 줄에서
+`datetime`으로 같은 `NameError`가 납니다.
+
+```python
+target_date = day.course.trip.start_date + timedelta(days=day.day_index - 1)   # timedelta
+temp_dt = datetime(target_date.year, target_date.month, target_date.day,        # datetime
+                   day.avail_start_min // 60, day.avail_start_min % 60, tzinfo=KST)   # KST
+```
+
+`develop`, `HJ`, `fork/HJ` 세 브랜치 모두 동일합니다(2026-09-20 기준). **수정:**
+
+```python
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+KST = ZoneInfo("Asia/Seoul")     # course_modifier.py 에도 같은 정의가 있어 거기서 import 해도 됩니다
+```
+
+✅ 위 3줄을 **로컬에서 임시로** 넣고 돌려 보니 정상 동작했습니다(테스트 후 `git checkout`으로 원복).
+`POST /api/courses/1142/days/1/items/ {"content_id":"…","order":7}` →
+`200 {"added":true,"day_index":1,"over_budget":true,"message":"장소가 추가되고 … ⚠ 가용시간을 초과했습니다."}`.
+`order`는 **0부터 시작하는 삽입 위치**임을 확인했습니다(끝에 붙이려면 현재 개수). 추가 후 순번은
+0~7로 연속이었고, 삭제하면 `resequence_orders()`가 다시 0부터 채워 원래대로 돌아옵니다.
+프론트는 이 규약에 맞춰 `order = 현재 개수`로 보내도록 고쳐 두었습니다.
+
+노션 명세서의 "장소 추가" 상태가 **완료**로 되어 있는데, 실제로는 한 번도 성공할 수 없는 상태였습니다.
+
+#### ② 🚨 편집 API에 인증·소유자 확인이 없습니다 🔎
+
+`config/settings.py`는 `DEFAULT_AUTHENTICATION_CLASSES`만 있고 **`DEFAULT_PERMISSION_CLASSES`가 없어**
+DRF 기본값(`AllowAny`)이 적용됩니다. `reorder/`·`items/`(추가)·`items/{id}/`(삭제)·`lock/` 뷰는
+`get_object_or_404(course_id=…)`로 찾기만 하고 **`trip.user`와 요청 사용자를 비교하지 않습니다.**
+코스 ID는 순차 정수라, ID만 알면 누구나 남의 코스를 삭제·재배치할 수 있어 보입니다.
+(실제로 인증 없이 호출해 보지는 않았습니다 — 공유 DB에 쓰기가 되므로 코드로만 판단했습니다.)
+제안: `IsAuthenticated` + `course.trip.user == request.user` 확인. 비로그인 사용자의 코스
+(`trip.user=None`)를 어떻게 다룰지는 정책 결정이 필요합니다.
+
+#### ③ ⚠ 트랜잭션이 없어 순번이 반쯤 바뀐 채 남을 수 있습니다 🔎
+
+- **`reorder/`**: `item_ids`를 돌면서 항목마다 `save()`하다가, 목록에 이 Day에 없는 id를 만나면 그
+  시점에 400을 돌려줍니다 — **앞서 처리한 항목의 순번은 이미 저장된 뒤**입니다(248~252행).
+- **추가**: 순번을 뒤로 미는 루프(311~313행)가 항목 생성보다 먼저 돕니다. 지금은 ①의 `NameError`가
+  315행 이후에서 나므로, **중간 삽입(`order < 현재 개수`)이었다면 뒤 항목 순번만 밀리고 새 항목은
+  없는 상태**가 됐을 겁니다. 이번 테스트는 끝에 붙이는 경우라 밀릴 항목이 없어 데이터가
+  바뀌지 않았음을 재조회로 확인했습니다.
+
+제안: 세 뷰(reorder·추가·삭제) 본문을 `transaction.atomic()`으로 감싸기(이미 `transaction`을 import 중).
+
+#### ④ ⚠ 순서변경 응답의 `over_budget`이 거짓 음성입니다 (증상 ✅ / 원인 🔎)
+
+Day 1 마지막 장소가 **21:35(KST)에 도착**해 가용 종료(09:00 + 12h = 21:00)를 넘긴 상태에서
+`reorder/`를 부르면 `{"reordered":true,"over_budget":false}`가 옵니다. 같은 Day에 **추가**를 부른
+응답은 `over_budget:true`로 정확했습니다.
+
+원인 추정: `recalc_timeline_from()`의 식사 분기가 `current_time = item.depart_at`(DB에서 읽은 **UTC** aware
+값)으로 이어받는데, 마지막의 `finish_min = current_time.hour*60 + current_time.minute`은 그 tz를
+그대로 읽습니다. 그러면 `start_order=0`(reorder)일 때 식사 카드 뒤에서는 UTC 시각(KST보다 9시간 이름)으로
+비교돼 항상 `False`가 됩니다. 추가는 `items[start_order-1].depart_at.astimezone(KST)`로 시작해서 KST가
+유지돼 맞는 값이 나옵니다. 제안: 식사 분기도 `item.depart_at.astimezone(KST)`로.
+영향: 프론트가 이 값으로 "가용 시간을 넘었어요" 경고를 띄우는데, 순서변경 후에는 거의 뜨지 않습니다.
+
+#### ⑤ ⚠ 식사 카드는 순서를 바꿔도 시각이 안 바뀝니다 ✅
+
+`recalc_timeline_from()`은 `slot_type == "RESTAURANT"`이면 `arrive_at/depart_at`을 그대로 두고
+이동시간만 갱신합니다(시간대 고정). 재현: 코스 1142 Day 2의 `제주시새우리`(식사, 도착 11:00)를
+2번째 → 1번째로 올리면 **여전히 11:00~13:00**이고, 하루 시작(09:00)과 첫 장소 사이에 2시간이 비며
+다음 장소가 13:10로 밀립니다.
+결정이 필요합니다: (a) 식사 위치가 바뀌면 시각도 다시 잡는다 (b) 식사 카드는 이동을 막는다
+(프론트에서 ↑↓를 비활성화 — 백엔드가 `slot_type`은 이미 내려줌) (c) 지금대로 두고 경고만 띄운다.
+`locked` 필드는 reorder에서 전혀 확인하지 않는 것도 같은 맥락입니다.
+
+#### ⑥ 재계산하면 입도일 첫 장소 시각이 5분 당겨집니다 (증상 ✅ / 원인 🔎)
+
+코스 1142 Day 1의 첫 장소 `용담해안도로`가 원래 **09:10~09:40**이었는데, 순서변경·추가·삭제를 한 번
+거친 뒤에는 (원래대로 되돌려도) **09:05~09:35**입니다. 타임라인의 "차량 10분 이동"도 "5분"으로 바뀝니다.
+Day 2(숙소 출발)는 왕복 후에도 원래와 정확히 같아 Day 1(공항 출발)만 해당합니다.
+추정: 생성 시에는 공항→첫 장소를 라우팅 엔진의 값(10분)으로 잡지만, `recalc_timeline_from(start_order=0)`은
+`estimate_airport_travel_min()` + `snap_travel_time_5min()`(5분)을 씁니다. 위 "그 외 #6"의
+`airport_to_first_travel_min`과 같은 계열이라, 같은 계산으로 통일하면 풀릴 것 같습니다.
+결과적으로 **편집이 멱등이 아닙니다**(올렸다 내려도 원상복구가 안 됨).
+
+#### ⑦ 참고 — 검증·사전 확인
+
+- **`reorder/` 입력 검증**: `item_ids`가 Day의 전체 항목을 덮는지, 중복이 없는지 확인하지 않습니다.
+  일부만 보내면 나머지와 순번이 겹칩니다(프론트는 전체 목록을 보내므로 지금은 무해).
+- **추가 `order` 검증**: 타입·범위 검사가 없습니다(음수, 문자열은 500, 현재 개수보다 크면 순번에 빈 자리).
+  같은 Day에 같은 장소를 두 번 넣는 것도 막지 않으며, 추가된 항목은 항상 `slot_type="GENERAL"`,
+  `recommend_reason` 없음입니다(카드에는 장소 원문 소개가 대신 나옵니다).
+- **추가 불가 장소를 미리 알 수 없습니다**: 이동시간 계산이 안 되는 장소(예: 가파도)는 눌러 봐야
+  `400 {"error":"이 장소(가파도)는 이동시간 계산이 불가능해 추가할 수 없습니다."}`가 옵니다(✅ 확인, 프론트가
+  이 문구를 그대로 보여주도록 반영). `GET /api/places/search/` 결과에 `routable` 같은 플래그가 있으면
+  추가 전에 걸러낼 수 있습니다 — `feat/kakao-routable-precheck` 브랜치가 이 방향이면 참고해 주세요.
+
+#### 프론트에서 이번에 반영한 것 (참고)
+
+- 추가 시 `order`를 `items.length`(0부터)로 전송, 응답 타입 3종(`reordered`/`added`/`deleted`) 정의.
+- 추가 실패 시 서버의 `error` 문구를 그대로 표시, `over_budget:true`면 타임라인 위에 경고 배너.
+- 다음 단계: 삭제 확인을 `Modal`로, 카드별 진행 표시, 낙관적 업데이트, 드래그 정렬.
+  ⑤의 결정에 따라 식사 카드 이동 제한/경고를 프론트에 넣을 수 있습니다.
