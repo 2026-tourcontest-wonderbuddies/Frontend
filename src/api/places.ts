@@ -15,6 +15,7 @@ export function searchPlaces(params: PlaceSearchQuery) {
   if (params.q) query.set("q", params.q);
   if (params.category) query.set("category", params.category);
   if (params.region && params.region !== "ALL") query.set("region", params.region);
+  if (params.sort) query.set("sort", params.sort);
   query.set("page", String(params.page ?? 1));
   query.set("page_size", String(params.page_size ?? 20));
 
