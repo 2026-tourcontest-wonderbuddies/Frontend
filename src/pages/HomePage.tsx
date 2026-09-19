@@ -2,12 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TimeDial from "../components/TimeDial";
 import CourseCard from "../components/CourseCard";
+import PlaceDetailSheet from "../components/PlaceDetailSheet";
 import { useNow, periodFor, type PeriodKey } from "../hooks/useNow";
-import { useCuratedCourses } from "../hooks/useCuratedCourses";
+import { useAuth } from "../auth/AuthContext";
+import { useCuratedCourses, useSavedCuratedCourses, useToggleSavedCuratedCourse } from "../hooks/useCuratedCourses";
 import { getPeriodPlaces } from "../api/places";
 import type { PeriodPlace } from "../api/types";
 
 const CURATED_PAGE_SIZE = 3;
+const PLACE_PAGE_SIZE_WEB = 6; // 3행 × 2열
+const PLACE_PAGE_SIZE_MOBILE = 5; // 한 열. 375×812 기준 스크롤 없이 목록과 넘김 버튼이 한 화면에 들어오는 최대치
+const PLACE_MOBILE_QUERY = "(max-width:720px)"; // .tod-place-list 가 한 열로 바뀌는 지점
 
 const TOD_CARDS: { period: PeriodKey; time: string; name: string; desc: string; className: string }[] = [
   { period: "dawn", time: "04:00–07:00", name: "새벽", desc: "성판악 입산, 해장국집과 새벽 수산시장", className: "dawn" },
@@ -29,10 +34,28 @@ export default function HomePage() {
   const currentPeriod = periodFor(now.getHours());
 
   const [openPeriod, setOpenPeriod] = useState<PeriodKey | null>(null);
+  const [placePage, setPlacePage] = useState(0);
+  // 장소 목록은 웹에서 2열, 모바일에서 1열이라 한 페이지 개수도 화면에 맞춰 바꾼다.
+  const [placeMobile, setPlaceMobile] = useState(() => window.matchMedia(PLACE_MOBILE_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(PLACE_MOBILE_QUERY);
+    const handler = () => {
+      setPlaceMobile(mq.matches);
+      setPlacePage(0);
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  const placePageSize = placeMobile ? PLACE_PAGE_SIZE_MOBILE : PLACE_PAGE_SIZE_WEB;
+  const [selectedPlace, setSelectedPlace] = useState<PeriodPlace | null>(null);
   const [places, setPlaces] = useState<Partial<Record<PeriodKey, PeriodPlace[]>>>({});
   const [failed, setFailed] = useState<Partial<Record<PeriodKey, boolean>>>({});
 
   const { data: curatedCourses } = useCuratedCourses();
+  const { user } = useAuth();
+  const { data: savedCurated } = useSavedCuratedCourses(Boolean(user));
+  const savedCuratedIds = new Set((savedCurated ?? []).map((c) => c.id));
+  const toggleSavedCurated = useToggleSavedCuratedCourse();
   const [curatedPage, setCuratedPage] = useState(0);
   // 모바일(카드 1행 배치)에서는 한 번에 한 장씩, 데스크톱에서는 3장씩 넘긴다.
   const [curatedPageSize, setCuratedPageSize] = useState(() =>
@@ -62,6 +85,7 @@ export default function HomePage() {
   }
 
   function togglePeriod(period: PeriodKey) {
+    setPlacePage(0);
     if (openPeriod === period) {
       setOpenPeriod(null);
       return;
@@ -154,19 +178,44 @@ export default function HomePage() {
                     </span>
                   </div>
                   <ol className="tod-place-list">
-                    {places[openPeriod]!.map((p) => (
+                    {places[openPeriod]!.slice(placePage * placePageSize, (placePage + 1) * placePageSize).map((p) => (
                       <li key={p.content_id} className="tod-place-row">
-                        <div className="tod-place-main">
-                          <span className="tod-place-title">{p.title}</span>
-                          <span className="tod-place-cat">{p.small_category_name}</span>
-                        </div>
-                        <div className="tod-place-meta">
-                          <span className="mono">{evidenceLabel(p)}</span>
-                          <span className="tod-place-addr">{p.address}</span>
-                        </div>
+                        <button type="button" className="tod-place-btn" onClick={() => setSelectedPlace(p)}>
+                          <div className="tod-place-main">
+                            <span className="tod-place-title">{p.title}</span>
+                            <span className="tod-place-cat">{p.small_category_name}</span>
+                          </div>
+                          <div className="tod-place-meta">
+                            <span className="mono">{evidenceLabel(p)}</span>
+                            <span className="tod-place-addr">{p.address}</span>
+                          </div>
+                        </button>
                       </li>
                     ))}
                   </ol>
+                  <div className="tod-foot">
+                  {places[openPeriod]!.length > placePageSize && (
+                    <div className="tod-pager">
+                      <button type="button" aria-label="이전 장소" disabled={placePage === 0} onClick={() => setPlacePage((n) => n - 1)}>
+                        &lt;
+                      </button>
+                      <span className="mono">
+                        {placePage + 1} / {Math.ceil(places[openPeriod]!.length / placePageSize)}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="다음 장소"
+                        disabled={(placePage + 1) * placePageSize >= places[openPeriod]!.length}
+                        onClick={() => setPlacePage((n) => n + 1)}
+                      >
+                        &gt;
+                      </button>
+                    </div>
+                  )}
+                  {places[openPeriod]![0]?.evidence === "arrival" && (
+                    <div className="tod-source">출처: AI Hub 국내 여행로그 데이터(제주도 및 도서지역) (2023)</div>
+                  )}
+                  </div>
                 </>
               )}
             </div>
@@ -205,6 +254,10 @@ export default function HomePage() {
                     badge={c.badge}
                     title={c.title}
                     metaChips={c.meta_chips}
+                    saved={savedCuratedIds.has(c.id)}
+                    onToggleSave={() =>
+                      user ? toggleSavedCurated.mutate({ courseId: c.id, saved: savedCuratedIds.has(c.id) }) : navigate("/login")
+                    }
                   />
                 </div>
               ))}
@@ -230,6 +283,8 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      {selectedPlace && <PlaceDetailSheet place={selectedPlace} onClose={() => setSelectedPlace(null)} />}
 
       <section className="final">
         <div className="section-eyebrow">START MATCHING</div>

@@ -23,7 +23,7 @@ export function searchPlaces(params: PlaceSearchQuery) {
 }
 
 /** GET /api/places/by-period/ — 홈 시간대 카드에 들어갈 장소 */
-export function getPeriodPlaces(period: string, limit = 10) {
+export function getPeriodPlaces(period: string, limit = 30) {
   return apiClient.get<PeriodPlacesResponse>(
     `/places/by-period/?period=${period}&limit=${limit}`,
   );

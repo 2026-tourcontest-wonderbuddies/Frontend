@@ -130,7 +130,9 @@ export default function BuilderPage() {
       firstRender.current = false;
       return;
     }
-    stickyHeadRef.current?.parentElement?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // 첫 스텝은 위쪽 제목(builder-head)까지 보여야 하므로 맨 위로 간다.
+    if (step === 0) window.scrollTo({ top: 0, behavior: "smooth" });
+    else stickyHeadRef.current?.parentElement?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [step]);
 
   /** 명세서는 지나온 스텝의 행만 쌓는다 — 아직 묻지도 않은 조건이 "미선택"으로 먼저 보이면 안 된다. */

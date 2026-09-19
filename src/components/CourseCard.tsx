@@ -7,9 +7,12 @@ interface CourseCardProps {
   title: string;
   metaChips: string[];
   desc?: string;
+  /** 하트가 채워져 있는지. */
+  saved?: boolean;
+  onToggleSave?: () => void;
 }
 
-export default function CourseCard({ to, gradient, badge, title, metaChips, desc }: CourseCardProps) {
+export default function CourseCard({ to, gradient, badge, title, metaChips, desc, saved, onToggleSave }: CourseCardProps) {
   const navigate = useNavigate();
   // 장소 개수는 메타칩에도 나오므로, 카드 상단 배지에서는 "N곳" 부분을 뺀다.
   const badgeLabel = badge.split(" · ")[0];
@@ -18,14 +21,18 @@ export default function CourseCard({ to, gradient, badge, title, metaChips, desc
     <div className="course-card" role="button" tabIndex={0} onClick={() => navigate(to)}>
       <div className="course-photo" style={{ background: gradient }}>
         <span className="badge">{badgeLabel}</span>
-        <span
-          className="save-btn"
+        <button
+          type="button"
+          className={`save-btn${saved ? " on" : ""}`}
+          aria-label={saved ? "저장 취소" : "저장"}
+          aria-pressed={Boolean(saved)}
           onClick={(e) => {
             e.stopPropagation();
+            onToggleSave?.();
           }}
         >
-          ♡
-        </span>
+          {saved ? "♥" : "♡"}
+        </button>
       </div>
       <div className="course-body">
         <div className="course-title">{title}</div>
