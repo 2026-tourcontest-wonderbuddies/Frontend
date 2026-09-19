@@ -113,7 +113,7 @@ h1.hero-title .accent{color:var(--sunset);}
 @media (max-width:920px){ .tod-row{grid-template-columns:repeat(2,1fr);} }
 @media (max-width:480px){ .tod-row{grid-template-columns:1fr;} }
 .tod-card{border-radius:16px; padding:22px 18px; min-height:170px; display:flex; flex-direction:column; justify-content:space-between; color:var(--paper); position:relative; overflow:hidden; transition:transform .25s ease;}
-.tod-card::before{content:''; position:absolute; inset:0; background:inherit; filter:saturate(0.78) brightness(1.1);}
+.tod-card::before{content:''; position:absolute; inset:0; background:inherit; filter:saturate(0.82) brightness(1.02);}
 .tod-card > *{position:relative;}
 .tod-card:hover{transform:translateY(-6px);}
 .tod-card.dawn{background:linear-gradient(160deg,var(--dawn),#4C4FA8 130%);}
