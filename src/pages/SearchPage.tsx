@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
 import ChipGroup from "../components/ChipGroup";
+import Dropdown from "../components/Dropdown";
 import { useAuth } from "../auth/AuthContext";
 import { usePlaceSearchResults, usePlaceSuggestions } from "../hooks/usePlaceSearch";
 import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
@@ -80,7 +81,7 @@ export default function SearchPage() {
       <h1 className="page-title">장소 검색</h1>
       <p className="page-sub">이름, 관광 유형, 권역으로 제주 장소를 직접 찾아보세요.</p>
 
-      <form onSubmit={submitSearch} style={{ marginTop: 24, maxWidth: 480, position: "relative" }} autoComplete="off">
+      <form onSubmit={submitSearch} style={{ marginTop: 18, maxWidth: 720, position: "relative" }} autoComplete="off">
         <div className="search-bar">
           <input
             ref={inputRef}
@@ -116,14 +117,23 @@ export default function SearchPage() {
         )}
       </form>
 
-      <div className="override-section" style={{ marginTop: 20 }}>
+      <div className="override-section" style={{ marginTop: 14 }}>
         <div className="override-label">관광 유형</div>
-        <ChipGroup options={CATEGORY_OPTIONS} value={category} onChange={setCategory} />
+        <ChipGroup options={CATEGORY_OPTIONS} value={category} onChange={(v) => setCategory(v === category ? "" : v)} />
       </div>
 
       <div className="override-section region-chip-grid">
         <div className="override-label">권역</div>
-        <ChipGroup options={REGION_OPTIONS} value={region} onChange={(v) => setRegion(v as RegionKey)} />
+        <ChipGroup options={REGION_OPTIONS} value={region} onChange={(v) => setRegion(v === region ? "" : (v as RegionKey))} />
+        {/* 모바일에서는 칩 5개가 세로로 길어 같은 필터를 드롭다운으로 보여준다(CSS가 칩/드롭다운 중 하나만 보이게 한다). */}
+        <div className="region-dropdown">
+          <Dropdown
+            ariaLabel="권역"
+            options={[{ value: "", label: "권역 전체" }, ...REGION_OPTIONS]}
+            value={region}
+            onChange={(v) => setRegion(v as RegionKey | "")}
+          />
+        </div>
       </div>
 
       {(submittedQ || category || region || sort !== "popular") && (
@@ -132,20 +142,29 @@ export default function SearchPage() {
         </a>
       )}
 
-      <div className="override-section" style={{ marginTop: 20 }}>
-        <div className="override-label">정렬</div>
-        <ChipGroup options={SORT_OPTIONS} value={sort} onChange={(v) => setSort(v as PlaceSortKey)} />
-      </div>
-
       <div className="results-head" style={{ marginTop: 28 }}>
         <div className="result-count">
           총 <b>{total}</b>개 장소
         </div>
-        {user && (
-          <Link className="btn-outline" to="/saved">
-            저장함 보기
-          </Link>
-        )}
+        <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
+          <select
+            className="sort-select"
+            aria-label="정렬"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as PlaceSortKey)}
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          {user && (
+            <Link className="btn-outline" to="/saved">
+              저장함 보기
+            </Link>
+          )}
+        </div>
       </div>
 
       {!user && (
@@ -182,6 +201,7 @@ export default function SearchPage() {
               <button
                 type="button"
                 className="btn-outline"
+                aria-label={savedIds.has(place.content_id) ? "저장됨" : "저장"}
                 aria-pressed={savedIds.has(place.content_id)}
                 disabled={toggleSaved.isPending}
                 onClick={() =>
@@ -191,7 +211,8 @@ export default function SearchPage() {
                   })
                 }
               >
-                {savedIds.has(place.content_id) ? "♥ 저장됨" : "♡ 저장"}
+                {savedIds.has(place.content_id) ? "♥" : "♡"}
+                <span className="save-label">{savedIds.has(place.content_id) ? " 저장됨" : " 저장"}</span>
               </button>
             )}
           </div>

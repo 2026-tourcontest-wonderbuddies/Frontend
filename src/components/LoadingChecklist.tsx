@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 
 const STEPS = ["운영시간 확인", "이동시간 계산", "최적 동선 최적화"];
 const STEP_INTERVAL_MS = 550;
+// 서버가 진행 상황을 주지 않아서 단계와 마찬가지로 연출용 문구다. 기다리는 동안 화면이 멈춘 느낌을 줄인다.
+const TIPS = [
+  "가까운 장소끼리 묶어 이동 시간을 줄이고 있어요",
+  "식사 시간대에 맞는 음식점을 찾고 있어요",
+  "고른 취향에 어울리는 장소를 추리고 있어요",
+  "운영시간에 맞춰 방문 순서를 맞추고 있어요",
+];
+const TIP_INTERVAL_MS = 2600;
 const DEFAULT_NOTE = "여행 조건을 분석하고 있습니다";
 
 function fmtElapsed(sec: number): string {
@@ -22,6 +30,7 @@ export default function LoadingChecklist({
 }: LoadingChecklistProps) {
   const [doneCount, setDoneCount] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [tip, setTip] = useState(0);
 
   // 마지막 단계는 완료로 넘기지 않는다. 전부 ✓가 되면 "끝났는데 안 넘어간다"로 읽혀서다.
   // 서버가 진행 상황을 주지 않으므로 이 체크리스트는 어디까지나 연출이고,
@@ -37,13 +46,20 @@ export default function LoadingChecklist({
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    const id = setInterval(() => setTip((t) => (t + 1) % TIPS.length), TIP_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="state-panel">
-      <div className="spinner" />
       <span className="serif">{title}</span>
       <p>
         {note} · 경과 <b className="mono">{fmtElapsed(elapsed)}</b>
       </p>
+      <div className="loading-bar" aria-hidden="true">
+        <i />
+      </div>
       <ul className="loading-checklist">
         {STEPS.map((step, i) => (
           <li key={step} className={i < doneCount ? "done" : i === doneCount ? "active" : ""}>
@@ -52,6 +68,9 @@ export default function LoadingChecklist({
           </li>
         ))}
       </ul>
+      <p className="loading-tip" key={tip}>
+        {TIPS[tip]}
+      </p>
       {onCancel && (
         <button type="button" className="btn-outline" onClick={onCancel}>
           취소

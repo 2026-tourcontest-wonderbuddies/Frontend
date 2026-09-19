@@ -17,7 +17,7 @@ const COOKING_OPTIONS = [
 
 export default function StepLodging({ form, patch }: StepProps) {
   return (
-    <div className="step">
+    <div className="step step-compact">
       <div className="step-sub">다일 여행이라 숙박 조건도 함께 받을게요</div>
 
       <div className="step-sub" style={{ marginTop: 20 }}>어떤 유형의 숙소가 좋으세요?</div>
@@ -34,11 +34,6 @@ export default function StepLodging({ form, patch }: StepProps) {
         <label>숙소에 대해 더 하고 싶은 말이 있다면 (선택)</label>
         <textarea value={form.lodgingFreeText} onChange={(e) => patch({ lodgingFreeText: e.target.value })} />
       </div>
-
-      <p className="step-sub section-sep">
-        숙소는 코스를 먼저 만든 뒤에 고르실 수 있어요. 동선의 마지막 장소에서 가까운 순으로
-        추천해드리려면 코스가 정해져 있어야 하거든요.
-      </p>
     </div>
   );
 }

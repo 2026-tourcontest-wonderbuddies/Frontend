@@ -22,6 +22,10 @@ interface KakaoMapProps {
   showRoute?: boolean;
   /** 지도 높이(px) */
   height?: number;
+  /** 코스를 화면에 맞출 때 남길 여백(px). 작을수록 더 확대된다. 기본은 BOUNDS_PADDING. */
+  boundsPadding?: number;
+  /** 이 id 의 마커를 강조한다(예: 타임라인 카드에 마우스를 올렸을 때). 지도를 다시 그리지 않는다. */
+  highlightId?: string | null;
   /** 키가 없거나 SDK 로딩에 실패했을 때 대신 보여줄 내용 */
   fallback: ReactNode;
 }
@@ -62,9 +66,18 @@ function createPinElement(point: KakaoMapPoint): HTMLAnchorElement {
  * 마커는 CustomOverlay + <a> 로 만들어서, 클릭하면 그대로 카카오맵 장소 링크로 이동한다.
  * 키가 없거나 SDK가 뜨지 않으면 fallback(기존 미리보기 지도)으로 조용히 내려간다.
  */
-export default function KakaoMap({ points, showRoute = false, height = 420, fallback }: KakaoMapProps) {
+export default function KakaoMap({
+  points,
+  showRoute = false,
+  height = 420,
+  boundsPadding = BOUNDS_PADDING,
+  highlightId = null,
+  fallback,
+}: KakaoMapProps) {
   const status = useKakaoSdk();
   const containerRef = useRef<HTMLDivElement>(null);
+  // 지도를 다시 그리지 않고 마커만 강조하려고, 그린 마커의 DOM·오버레이를 id 로 들고 있는다.
+  const pinsRef = useRef(new Map<string, { el: HTMLAnchorElement; overlay: kakao.maps.CustomOverlay }>());
 
   const plottable = points.filter((p) => hasValidCoords(p.latitude, p.longitude));
 
@@ -82,15 +95,17 @@ export default function KakaoMap({ points, showRoute = false, height = 420, fall
     const map = new maps.Map(container, { center: positions[0], level: 9 });
 
     const overlays = plottable.map((p, i) => {
+      const el = createPinElement(p);
       const overlay = new maps.CustomOverlay({
         position: positions[i],
-        content: createPinElement(p),
+        content: el,
         zIndex: 3,
         // 기본값(false)이면 오버레이 위에서 일어난 이벤트를 지도가 가져간다.
         // 마커가 링크로 동작해야 하므로 오버레이가 이벤트를 갖도록 명시한다.
         clickable: true,
       });
       overlay.setMap(map);
+      pinsRef.current.set(p.id, { el, overlay });
       return overlay;
     });
 
@@ -131,7 +146,7 @@ export default function KakaoMap({ points, showRoute = false, height = 420, fall
       // 배율/중심은 전적으로 setBounds 에 맡긴다.
       // setBounds 직후의 getBounds() 는 아직 이전 화면 값을 돌려주므로(한 틱 늦다),
       // 그 값을 읽어 배율을 다시 계산하려 하면 매번 엉뚱한 판단을 하게 된다.
-      map.setBounds(bounds, BOUNDS_PADDING, BOUNDS_PADDING, BOUNDS_PADDING, BOUNDS_PADDING);
+      map.setBounds(bounds, boundsPadding, boundsPadding, boundsPadding, boundsPadding);
     }
 
     // 최초 1회는 직접 호출한다. ResizeObserver 의 "observe 하면 즉시 한 번 호출"에
@@ -146,12 +161,22 @@ export default function KakaoMap({ points, showRoute = false, height = 420, fall
     return () => {
       resizeObserver.disconnect();
       overlays.forEach((o) => o.setMap(null));
+      pinsRef.current.clear();
       line?.setMap(null);
       // 지도 DOM 은 SDK 가 컨테이너 안에 직접 만든 것이라 리액트가 정리해주지 않는다.
       container.innerHTML = "";
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- pointsKey 가 좌표 변화를 대신 나타낸다
-  }, [status, pointsKey, showRoute]);
+  }, [status, pointsKey, showRoute, boundsPadding]);
+
+  // 강조는 위 이펙트(지도 생성) 다음에 돈다 — 마커가 다시 그려진 뒤에도 현재 강조 대상을 다시 입힌다.
+  useEffect(() => {
+    pinsRef.current.forEach(({ el, overlay }, id) => {
+      const active = id === highlightId;
+      el.classList.toggle("kakao-pin--active", active);
+      overlay.setZIndex(active ? 10 : 3);
+    });
+  }, [highlightId, status, pointsKey, showRoute, boundsPadding]);
 
   if (status === "no-key" || status === "error" || plottable.length === 0) {
     return <>{fallback}</>;

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { useCuratedCourses } from "../hooks/useCuratedCourses";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { useCuratedCourses, useSavedCuratedCourses, useToggleSavedCuratedCourse } from "../hooks/useCuratedCourses";
 import { BUILDER_REGION_KEYS, REGION_CODE_BY_KEY, REGION_LABELS } from "../api/types";
 import type { CuratedCourseSummary, RegionCode } from "../api/types";
 
@@ -27,7 +28,12 @@ function toggle(set: Set<string>, val: string): Set<string> {
 }
 
 export default function ListPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: courses, isLoading, isError } = useCuratedCourses();
+  const { data: savedCurated } = useSavedCuratedCourses(Boolean(user));
+  const savedIds = new Set((savedCurated ?? []).map((c) => c.id));
+  const toggleSaved = useToggleSavedCuratedCourse();
   const [region, setRegion] = useState<Set<string>>(new Set());
   const [duration, setDuration] = useState<Set<string>>(new Set());
   const [time, setTime] = useState<Set<string>>(new Set());
@@ -156,9 +162,19 @@ export default function ListPage() {
               <Link className="course-card" to={`/list/${c.id}`} key={c.id}>
                 <div className="course-photo" style={{ background: c.gradient }}>
                   <span className="badge">{c.badge}</span>
-                  <span className="save-btn" onClick={(e) => e.preventDefault()}>
-                    ♡
-                  </span>
+                  <button
+                    type="button"
+                    className={`save-btn${savedIds.has(c.id) ? " on" : ""}`}
+                    aria-label={savedIds.has(c.id) ? "저장 취소" : "저장"}
+                    aria-pressed={savedIds.has(c.id)}
+                    onClick={(e) => {
+                      e.preventDefault(); // 카드 전체가 링크라 하트를 눌러도 상세로 넘어가지 않게 한다.
+                      if (user) toggleSaved.mutate({ courseId: c.id, saved: savedIds.has(c.id) });
+                      else navigate("/login");
+                    }}
+                  >
+                    {savedIds.has(c.id) ? "♥" : "♡"}
+                  </button>
                 </div>
                 <div className="course-body">
                   <div className="course-title">{c.title}</div>
