@@ -105,7 +105,7 @@ export default function CoursesPage() {
         <span>🎯 총 {courses.length}개 코스 생성됨</span>
       </div>
 
-      <div className="candidate-grid">
+      <div className="candidate-grid compact-grid">
         {courses.map((c) => {
           const stats = courseStats(c);
           return (
