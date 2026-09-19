@@ -1,4 +1,5 @@
 import { PRIORITY_LABELS, type CourseDay, type CourseDetail, type CourseItem, type CourseLodging } from "../api/types";
+import type { KakaoMapPoint } from "../components/KakaoMap";
 
 /** 모든 Day의 방문 항목을 순서대로 펼친다. */
 export function courseItems(course: CourseDetail): CourseItem[] {
@@ -34,6 +35,45 @@ export function courseTitle(course: CourseDetail): string {
 /** 여행 전체에 하나 걸리는 숙소 앵커. Day별로 같은 스냅샷이 들어온다. */
 export function courseLodging(course: CourseDetail) {
   return course.days.find((d) => d.lodging)?.lodging ?? null;
+}
+
+/**
+ * 실제 지도(KakaoMap)에 찍을 점들. 코스 지도 페이지와 코스 상세의 미니 지도가 같이 쓴다.
+ * 번호는 타임라인과 일치시킨다 — 타임라인은 하루 단위로 1부터 다시 세므로,
+ * 여러 날 코스는 "2-3"(Day 2의 3번째)으로 표기한다.
+ * 첫 방문지 = 출발지, 마지막 방문지 = 도착지. 숙소는 여행 전체에 하나뿐이라 따로 붙인다.
+ * dayIndex 를 주면 그 날 장소만 담는다(번호는 그 날 기준 1부터) — 지도가 그 날 동선에 맞게 확대된다.
+ */
+export function courseMapPoints(course: CourseDetail, dayIndex?: number): KakaoMapPoint[] {
+  const days = dayIndex == null ? course.days : course.days.filter((d) => d.day_index === dayIndex);
+  const isMultiDay = days.length > 1;
+  const visitPoints: KakaoMapPoint[] = days.flatMap((day) =>
+    day.items.map((item, idx) => ({
+      id: String(item.id),
+      title: item.place.title,
+      latitude: item.place.latitude,
+      longitude: item.place.longitude,
+      label: isMultiDay ? `${day.day_index}-${idx + 1}` : String(idx + 1),
+      kind: "visit" as const,
+    })),
+  );
+  if (visitPoints.length > 0) {
+    visitPoints[0] = { ...visitPoints[0], kind: "start" };
+    visitPoints[visitPoints.length - 1] = { ...visitPoints[visitPoints.length - 1], kind: "end" };
+  }
+  const lodging = courseLodging(course);
+  if (!lodging) return visitPoints;
+  return [
+    ...visitPoints,
+    {
+      id: `lodging-${lodging.content_id}`,
+      title: lodging.title,
+      latitude: lodging.lat,
+      longitude: lodging.lon,
+      label: "숙소",
+      kind: "lodging",
+    },
+  ];
 }
 
 /** 날짜 라벨용 기준 시각. 첫 방문지의 도착 시각을 쓴다. */

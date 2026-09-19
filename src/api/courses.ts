@@ -1,10 +1,13 @@
 import { apiClient } from "./client";
 import type {
+  AddCourseItemResponse,
   CourseDetail,
   CoursePlacesResponse,
   CourseSummary,
+  DeleteCourseItemResponse,
   LodgingOptionsResponse,
   ModifyCourseResponse,
+  ReorderCourseItemsResponse,
   SavedCourseToggle,
   SelectCourseResponse,
   SelectLodgingResponse,
@@ -62,28 +65,28 @@ export function unsaveCourse(courseId: number | string) {
   return apiClient.del<SavedCourseToggle>(`/courses/${courseId}/save/`);
 }
 
-// ── 코스 수동 편집 (TEAM_SHARE.md "새로 발견") ──────────────────────────────
-// 응답 형태가 미확인이라 반환값은 쓰지 않는다 — 호출부가 성공 후 코스 상세를 재조회한다.
+// ── 코스 수동 편집 (노션 API 명세서) ──────────────────────────────────────────
+// 응답은 바뀐 코스가 아니라 결과 요약이다 — 호출부가 성공 후 코스 상세를 재조회한다.
 
-/** 그 날 안에서 장소 순서를 통째로 재배치한다. 이동시간·시각도 서버가 다시 계산한다. */
+/** 그 날 안에서 장소 순서를 통째로 재배치한다(바꿀 순서대로 전부 나열). 이동시간·시각은 서버가 다시 계산한다. */
 export function reorderCourseDayItems(
   courseId: number | string,
   dayIndex: number,
   itemIds: number[],
 ) {
-  return apiClient.post(`/courses/${courseId}/days/${dayIndex}/reorder/`, {
+  return apiClient.post<ReorderCourseItemsResponse>(`/courses/${courseId}/days/${dayIndex}/reorder/`, {
     item_ids: itemIds,
   });
 }
 
-/** 그 날에 장소를 하나 추가한다. */
+/** 그 날에 장소를 하나 추가한다. order 는 삽입할 위치(0부터, 이후 항목은 한 칸씩 밀린다). */
 export function addCourseItem(
   courseId: number | string,
   dayIndex: number,
   contentId: string,
   order: number,
 ) {
-  return apiClient.post(`/courses/${courseId}/days/${dayIndex}/items/`, {
+  return apiClient.post<AddCourseItemResponse>(`/courses/${courseId}/days/${dayIndex}/items/`, {
     content_id: contentId,
     order,
   });
@@ -91,5 +94,5 @@ export function addCourseItem(
 
 /** 장소를 하나 삭제한다. 뒤 일정은 서버가 재계산한다. */
 export function deleteCourseItem(courseId: number | string, itemId: number) {
-  return apiClient.del(`/courses/${courseId}/items/${itemId}/`);
+  return apiClient.del<DeleteCourseItemResponse>(`/courses/${courseId}/items/${itemId}/`);
 }

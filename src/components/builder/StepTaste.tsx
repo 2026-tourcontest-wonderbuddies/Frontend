@@ -13,15 +13,17 @@ const FOOD_CAFE_BALANCE_OPTIONS = toOptions(FOOD_CAFE_BALANCE_LABELS);
 
 export default function StepTaste({ form, patch }: StepProps) {
   return (
-    <div className="step">
+    <div className="step step-compact">
       <div className="step-sub">선호하는 음식이 있나요? (선택, 최대 2개)</div>
-      <ChipGroup
-        multi
-        max={2}
-        options={FOOD_PREF_OPTIONS}
-        value={form.foodPrefs}
-        onChange={(v) => patch({ foodPrefs: v as FoodPrefKey[] })}
-      />
+      <div className="food-chips">
+        <ChipGroup
+          multi
+          max={2}
+          options={FOOD_PREF_OPTIONS}
+          value={form.foodPrefs}
+          onChange={(v) => patch({ foodPrefs: v as FoodPrefKey[] })}
+        />
+      </div>
 
       {/* 목적에 음식/카페가 있을 때만 묻는다. 아니면 엔진이 이 값을 읽지 않는다. */}
       {isFoodPurpose(form) && (

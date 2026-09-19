@@ -9,9 +9,11 @@ function fmt(h: number): string {
 interface BuilderDialProps {
   start: number;
   end: number;
+  /** 중앙 시간 범위 아래 보조 문구. */
+  caption?: string;
 }
 
-export default function BuilderDial({ start, end }: BuilderDialProps) {
+export default function BuilderDial({ start, end, caption = "선택한 시간 범위" }: BuilderDialProps) {
   let span = end - start;
   if (span <= 0) span += 24;
   const frac = span / 24;
@@ -36,7 +38,7 @@ export default function BuilderDial({ start, end }: BuilderDialProps) {
         <div className="rng mono">
           {fmt(start)}–{end === 24 ? "24:00" : fmt(end)}
         </div>
-        <div className="rng-label">선택한 시간 범위</div>
+        <div className="rng-label">{caption}</div>
       </div>
     </div>
   );

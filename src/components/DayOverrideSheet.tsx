@@ -59,10 +59,6 @@ export default function DayOverrideSheet({
     onChange(overrides.filter((o) => o.day_index !== activeDay));
   }
 
-  function applyCommonToAll() {
-    onChange([]);
-  }
-
   const purposeMain = current?.purpose_main ?? commonPurpose;
   const purposeSub = current?.purpose_sub ?? commonPurposeSub;
   const excludeCategories = current?.exclude_categories ?? [];
@@ -76,6 +72,7 @@ export default function DayOverrideSheet({
           그대로 씁니다.
         </p>
 
+        <div className="day-tabs-row">
         <div className="day-tabs">
           {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
             <button
@@ -88,8 +85,14 @@ export default function DayOverrideSheet({
             </button>
           ))}
         </div>
+        <button type="button" className="day-reset" onClick={resetDay} disabled={!current}>
+          ↺ 초기화
+        </button>
+        </div>
       </div>
 
+      <div className="override-cols">
+      <div className="override-main">
       <div className="override-section">
         <div className="override-label">희망 권역</div>
         <ChipGroup
@@ -124,7 +127,9 @@ export default function DayOverrideSheet({
           onChange={(next) => patchDay({ exclude_categories: next })}
         />
       </div>
+      </div>
 
+      <div className="override-side">
       <div className="override-summary">
         <h4>{activeDay}일차 현재 설정 요약</h4>
         <div className="sum-row">
@@ -155,19 +160,12 @@ export default function DayOverrideSheet({
           <b className="mono">{excludeCategories.length ? `${excludeCategories.length}개` : "없음"}</b>
         </div>
       </div>
-
-      <div className="chip-row" style={{ marginLeft: 0, marginTop: 20 }}>
-        <button type="button" className="chip" onClick={resetDay}>
-          이 날짜만 공통 조건으로 되돌리기
-        </button>
-        <button type="button" className="chip" onClick={applyCommonToAll}>
-          공통 조건을 모든 날짜에 적용
+        <button type="button" className="btn-primary" onClick={onClose}>
+          설정 완료
         </button>
       </div>
+      </div>
 
-      <button type="button" className="btn-primary" style={{ width: "100%", marginTop: 20 }} onClick={onClose}>
-        설정 완료
-      </button>
     </Modal>
   );
 }

@@ -70,7 +70,7 @@ export default function StepSchedule({ form, patch }: StepProps) {
   }
 
   return (
-    <div className="step">
+    <div className="step step-schedule">
       <div className="step-sub">출발일과 며칠 여행인지를 정하면 종료일이 자동으로 계산돼요.</div>
       <div className="date-inputs">
         <div className="date-box">
@@ -79,7 +79,7 @@ export default function StepSchedule({ form, patch }: StepProps) {
         </div>
         <span className="time-arrow">→</span>
         <div className="date-box">
-          <span className="lbl">도착(종료)일</span>
+          <span className="lbl">종료일</span>
           <input type="date" value={endDate} disabled />
         </div>
       </div>
@@ -133,8 +133,9 @@ export default function StepSchedule({ form, patch }: StepProps) {
               return (
                 <div className="day-hours-row" key={d.dayIndex}>
                   <span className="day-hours-label">{d.dayIndex}일차</span>
-                  <div className="day-hours-pair">
+                  <div className={`day-hours-pair${isFirst ? " hint-top" : ""}`}>
                     <div className="day-hours-col">
+                      {isFirst && <span className="day-hours-hint">공항에서 나오는 시각</span>}
                       <HourStepper
                         label="시작"
                         value={d.startHour}
@@ -144,7 +145,6 @@ export default function StepSchedule({ form, patch }: StepProps) {
                           isFirst ? patch({ startHour: v }) : patchDayHours(d.dayIndex, { start_hour: v })
                         }
                       />
-                      {isFirst && <span className="day-hours-hint">공항에서 나오는 시각</span>}
                     </div>
                     <span className="time-arrow">→</span>
                     <div className="day-hours-col">

@@ -8,6 +8,7 @@ import StepPurpose from "../components/builder/StepPurpose";
 import StepTaste from "../components/builder/StepTaste";
 import StepLodging from "../components/builder/StepLodging";
 import { useCreateTrip } from "../hooks/useCreateTrip";
+import { useCandidateCount } from "../hooks/useCandidateCount";
 import { useAuth } from "../auth/AuthContext";
 import { addDays, fmtHour, resolveDayHours } from "../utils/date";
 import { defaultBuilderForm, isFoodPurpose, type BuilderForm } from "../types/builderForm";
@@ -82,6 +83,10 @@ export default function BuilderPage() {
   const patch = (p: Partial<BuilderForm>) => setForm((f) => ({ ...f, ...p }));
 
   const isMultiDay = form.nights > 0;
+  const { candidates, slots } = useCandidateCount(form);
+  const dayHours = resolveDayHours(form.nights, form.startHour, form.endHour, form.dayHours);
+  const activeHours = dayHours.reduce((sum, d) => sum + Math.max(0, d.endHour - d.startHour), 0);
+  const dialCaption = `${isMultiDay ? `총 ${dayHours.length}일` : "당일"} · 활동 ${activeHours}시간`;
   const endDate = useMemo(() => addDays(form.startDate, form.nights), [form.startDate, form.nights]);
 
   // 당일치기면 숙박 관련 스텝이 빠져 3스텝이 된다.
@@ -296,7 +301,7 @@ export default function BuilderPage() {
                 onClick={handleSubmit}
                 disabled={blockedFields.length > 0 || createTrip.isPending}
               >
-                이 조건으로 코스 매칭받기 →
+                코스 매칭 받기 →
               </button>
             ) : (
               <button type="button" className="cta-final" onClick={goNext} disabled={currentErrors.length > 0}>
@@ -317,7 +322,7 @@ export default function BuilderPage() {
 
         <aside className={`preview${isLastStep ? "" : " preview-desktop-only"}`}>
           <div className="preview-card">
-            <BuilderDial start={form.startHour} end={form.endHour} />
+            <BuilderDial start={form.startHour} end={form.endHour} caption={dialCaption} />
             <div className="summary">
               <h4>지금까지 설정한 조건</h4>
               <div className="sum-row">
@@ -328,21 +333,17 @@ export default function BuilderPage() {
                 <span>인원 수</span>
                 <b className="mono">{headcountValid ? `${headcountNum}명` : "미입력"}</b>
               </div>
-              {reached("purpose") && (
-                <>
-                  <div className="sum-row">
-                    <span>희망 지역</span>
-                    <b className="mono">{form.region ? REGION_LABELS[form.region] : "전역"}</b>
-                  </div>
-                  <div className="sum-row">
-                    <span>목적</span>
-                    <b className="mono">
-                      {form.purposeMain ? PURPOSE_LABELS[form.purposeMain] : "미선택"}
-                      {form.purposeSub ? ` · ${PURPOSE_LABELS[form.purposeSub]}` : ""}
-                    </b>
-                  </div>
-                </>
-              )}
+              <div className="sum-row">
+                <span>희망 지역</span>
+                <b className="mono">{form.region ? REGION_LABELS[form.region] : "전역"}</b>
+              </div>
+              <div className="sum-row">
+                <span>목적</span>
+                <b className="mono">
+                  {form.purposeMain ? PURPOSE_LABELS[form.purposeMain] : "미선택"}
+                  {form.purposeSub ? ` · ${PURPOSE_LABELS[form.purposeSub]}` : ""}
+                </b>
+              </div>
               {reached("taste") && (
                 <>
                   <div className="sum-row">
@@ -372,6 +373,9 @@ export default function BuilderPage() {
                   </div>
                 </>
               )}
+              <p className="preview-estimate">
+                조건에 맞는 후보 <b>{candidates === null ? "—" : candidates.toLocaleString()}</b>곳 · 예상 슬롯 <b>{slots}</b>개
+              </p>
             </div>
           </div>
         </aside>

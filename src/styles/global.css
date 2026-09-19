@@ -7,8 +7,6 @@
   --nocon:#D92D20;
   /* 지도 마커 범례(🟢 방문지 / 🔴 도착지)용. 기존 팔레트엔 초록·순적색이 없어서 추가한다. */
   --marker-visit:#2FA84F; --marker-end:#E14B4B;
-  /* 타임라인 카드 hover용 갈색 계열. */
-  --tl-hover:#EFE3D2; --tl-hover-line:#C7AF8C;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth; scrollbar-gutter:stable;}
@@ -62,7 +60,15 @@ nav{
 .btn-outline:hover{border-color:var(--ink);}
 .badge{font-family:'Space Mono','Noto Sans KR',monospace; font-size:10px; background:rgba(255,255,255,0.92); color:var(--ink); padding:5px 9px; border-radius:999px; height:fit-content;}
 .meta-chip{font-family:'Space Mono','Noto Sans KR',monospace; font-size:10.5px; color:var(--ink-soft); border:1px solid var(--line); padding:4px 9px; border-radius:999px;}
-.meta-chip.lodging-type-chip{font-size:9.5px; padding:3px 7px;}
+.meta-chip.lodging-type-chip{font-size:9.5px; font-weight:400; padding:3px 7px;}
+/* 관광 타입 배지: 디자인 시스템 팔레트 기반 — 채움 없이(투명) 테두리 40% + 같은 계열의 진한 글자색. 그 외 타입은 기본 meta-chip. */
+/* 장소명과 배지를 세로 중앙 정렬하고, 배지는 기본 meta-chip보다 한 단계 작게. */
+.tl-title-row{display:flex; align-items:center; flex-wrap:wrap; gap:8px;}
+.type-chip{font-size:10px; padding:2px 8px; line-height:1.5; -webkit-text-stroke:0;}
+.type-chip[data-type="관광지"]{color:#1E6FA0; border-color:rgba(63,169,224,0.4);}
+.type-chip[data-type="음식점"]{color:#C93E2E; border-color:rgba(255,111,89,0.4);}
+.type-chip[data-type="문화시설"]{color:#4C4FA8; border-color:rgba(123,127,224,0.4);}
+.type-chip[data-type="쇼핑"]{color:#9A5B0C; border-color:rgba(224,138,46,0.45);}
 
 /* shared course card (used in HOME + LIST) */
 .course-card{background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; transition:transform .22s ease, box-shadow .22s ease; cursor:pointer; display:block; width:100%; text-align:left;}
@@ -117,7 +123,7 @@ h1.hero-title .accent{color:var(--sunset);}
 @media (max-width:920px){ .tod-row{grid-template-columns:repeat(2,1fr);} }
 @media (max-width:480px){ .tod-row{grid-template-columns:1fr;} }
 .tod-card{border-radius:16px; padding:22px 18px; min-height:170px; display:flex; flex-direction:column; justify-content:space-between; color:var(--paper); position:relative; overflow:hidden; transition:transform .25s ease;}
-.tod-card::before{content:''; position:absolute; inset:0; background:inherit; filter:saturate(0.82) brightness(1.02);}
+.tod-card::before{content:''; position:absolute; inset:0; background:inherit; filter:saturate(0.85) brightness(1.02);}
 .tod-card > *{position:relative;}
 .tod-card:hover{transform:translateY(-6px);}
 .tod-card.dawn{background:linear-gradient(160deg,var(--dawn),#4C4FA8 130%);}
@@ -288,6 +294,7 @@ h1.page-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,36px); 
 .search-page .results-head .btn-outline{padding:9px 14px; font-size:12.5px;}
 .search-page .results-head .btn-outline, .search-page .results-head .sort-select{width:104px; box-sizing:border-box;}
 .saved-page .results-head .btn-outline{white-space:nowrap; padding:12px 28px;}
+.saved-page .results-head{align-items:flex-start;}
 /* 모바일: 정렬 드롭다운을 글자(가나다순)가 들어가는 만큼만 좁힌다. */
 @media (max-width:640px){
   /* 왼쪽 24px: 글자 앞에 공백 3자 정도 여유. 가나다순(46px)이 잘리지 않게 폭을 94px로 둔다. */
@@ -330,7 +337,7 @@ h1.page-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,36px); 
    헤더가 없는 2스텝부터는 진행바가 nav 바로 아래에 뜨지 않고 딱 붙는다. */
 #screen-builder .builder-head{grid-area:1/1/2/2; margin-top:40px;}
 #screen-builder .wizard-shell{grid-area:2/1/3/2; scroll-margin-top:var(--nav-height, 79px); align-self:stretch; display:flex; flex-direction:column;}
-#screen-builder .preview{grid-area:2/2/3/3; margin-top:var(--wizard-head-height, 100px); margin-bottom:40px;}
+#screen-builder .preview{grid-area:2/2/3/3; margin-top:var(--wizard-head-height, 100px); margin-bottom:40px; top:calc(var(--nav-height, 79px) + var(--wizard-head-height, 100px));}
 @media (max-width:960px){
   #screen-builder .builder{grid-template-columns:1fr; row-gap:16px;}
   #screen-builder .builder-head, #screen-builder .wizard-shell, #screen-builder .preview{grid-area:auto;}
@@ -344,6 +351,7 @@ h1.page-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,36px); 
 }
 .intro-eyebrow{font-family:'Space Mono','Noto Sans KR',monospace; font-size:12px; letter-spacing:3px; color:var(--sunset); text-transform:uppercase; margin-bottom:12px;}
 h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px); line-height:1.4; margin-bottom:40px;}
+@media (min-width:961px){ #screen-builder .builder-head h1.intro-title{margin-bottom:12px;} }
 @media (max-width:640px){ h1.intro-title{margin-bottom:28px; font-size:22px;} }
 .step{margin-bottom:48px;}
 .step-head{display:flex; align-items:baseline; gap:14px; margin-bottom:18px;}
@@ -374,8 +382,9 @@ h1.intro-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,38px);
 .day-hours-row{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
 .day-hours-label{font-family:'Space Mono','Noto Sans KR',monospace; font-size:12.5px; font-weight:700; min-width:52px;}
 .day-hours-pair{display:flex; align-items:flex-start; gap:12px;}
+.day-hours-pair.hint-top{align-items:flex-end;}
 .day-hours-col{display:flex; flex-direction:column; gap:4px;}
-.day-hours-hint{font-family:'Space Mono','Noto Sans KR',monospace; font-size:10.5px; font-weight:700; color:var(--sunset);}
+.day-hours-hint{padding-left:7px; font-family:'Space Mono','Noto Sans KR',monospace; font-size:10.5px; font-weight:400; color:var(--sunset);}
 .date-inputs{display:flex; align-items:center; gap:12px; margin-left:40px; margin-top:16px; flex-wrap:wrap;}
 .date-box{display:flex; flex-direction:column; gap:6px;}
 .date-box .lbl{font-family:'Space Mono','Noto Sans KR',monospace; font-size:10.5px; color:var(--ink-soft);}
@@ -455,6 +464,7 @@ svg.arc-svg{position:absolute; inset:0; transform:rotate(-90deg);}
 .wizard-nav .cta-final{padding:12px 24px; font-size:13px;}
 .wizard-nav .cta-final{margin-top:0; margin-left:auto;}
 .wizard-nav .btn-outline:disabled{opacity:0.35; cursor:not-allowed;}
+@media (min-width:1001px){ .wizard-body{padding-bottom:32px;} .wizard-nav{padding-top:10px; padding-bottom:10px;} .wizard-nav .btn-outline{padding:8px 16px;} .wizard-nav .cta-final{padding:10px 22px;} }
 
 @media (max-width:960px){ .preview-desktop-only{display:none;} }
 @media (max-width:640px){
@@ -462,7 +472,7 @@ svg.arc-svg{position:absolute; inset:0; transform:rotate(-90deg);}
   .wizard-body{min-height:0;}
   .wizard-subaction{margin-left:0;}
   .wizard-nav{position:fixed; left:0; right:0; bottom:64px; z-index:82; margin:0; padding:12px 18px calc(12px + env(safe-area-inset-bottom)); background:rgba(247,244,237,0.96); backdrop-filter:blur(10px); border-top:1px solid var(--line);}
-  .wizard-nav .cta-final{padding:12px 22px; font-size:12.5px;}
+  .wizard-nav .cta-final{padding:9px 16px; font-size:12px; white-space:nowrap;}
   .wizard-nav .btn-outline{border-color:transparent;}
   #screen-builder .builder{padding-bottom:100px;}
 }
@@ -486,11 +496,20 @@ h1.result-title{font-family:'Song Myung',serif; font-size:clamp(26px,3.8vw,42px)
 .mini-center .t{font-family:'Song Myung',serif; font-size:15px;}
 .mini-center .s{font-family:'Space Mono','Noto Sans KR',monospace; font-size:10px; color:var(--ink-soft); margin-top:2px;}
 
-.main-detail{padding:70px 32px; display:grid; grid-template-columns:1.5fr 0.9fr; gap:10px 52px;}
-@media (max-width:960px){ .main-detail{grid-template-columns:1fr;} }
+.main-detail{padding:20px 32px 70px; display:grid; grid-template-columns:1.5fr 0.9fr; gap:10px 52px;}
+@media (max-width:960px){ .main-detail{grid-template-columns:1fr;} .main-detail > aside{margin-top:20px;} }
 @media (max-width:640px){ .main-detail{padding:40px 18px 20px; gap:0;} }
 /* 헤더는 전체 폭을 차지해서, 흰 타임라인 패널과 지도 카드가 같은 줄에서 시작하게 한다. */
 .detail-timeline-header{grid-column:1 / -1;}
+/* 날짜 요약 + Day 탭 + 액션 버튼을 nav 아래에 고정. main-detail grid 직속이라 타임라인 끝까지 따라온다. */
+.detail-sticky-head{grid-column:1 / -1; position:sticky; top:var(--nav-height, 79px); z-index:50; background:rgba(247,244,237,0.96); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); padding:8px 0; margin-bottom:6px;}
+/* 고정 영역이 화면을 덜 차지하도록 탭·버튼을 작게 쓴다. */
+.detail-sticky-head .day-tabs-row{margin-bottom:0; gap:8px;}
+.detail-sticky-head .day-tabs-full .day-tab{padding:7px 36px; min-width:104px; border-radius:11px;}
+.detail-sticky-head .day-tab-main{font-size:12.5px;}
+.detail-sticky-head .actions{gap:8px;}
+.detail-sticky-head .btn-primary,.detail-sticky-head .btn-outline{padding:8px 16px; font-size:12.5px;}
+@media (max-width:640px){ .detail-sticky-head .day-tabs{flex:1;} .detail-sticky-head .day-tabs-full .day-tab{padding:7px 4px; min-width:0;} }
 .section-label{font-family:'Space Mono','Noto Sans KR',monospace; font-size:12px; letter-spacing:2px; color:var(--sunset); text-transform:uppercase; margin-bottom:8px;}
 .timeline{position:relative; padding-left:96px; margin-top:36px;}
 @media (max-width:640px){ .timeline{padding-left:74px;} }
@@ -503,15 +522,18 @@ h1.result-title{font-family:'Song Myung',serif; font-size:clamp(26px,3.8vw,42px)
 @media (max-width:640px){ .tl-dot{left:-74px; width:40px; font-size:10px;} .tl-dot::after{left:46.5px;} }
 .tl-card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 22px; transition:transform .2s ease, box-shadow .2s ease;}
 @media (max-width:640px){ .tl-card{padding:14px 16px;} }
-.tl-card:hover{transform:translateX(4px); box-shadow:0 14px 30px -16px rgba(27,35,64,0.25); background:var(--tl-hover); border-color:var(--tl-hover-line);}
+.tl-card:hover{transform:translateX(4px); box-shadow:0 6px 14px -10px rgba(27,35,64,0.18); background:var(--paper);}
 
 /* 타임라인은 흰 패널로 감싼다. 웹 폭에서는 지도가 스크롤을 따라오게 고정한다. */
 .detail-timeline-panel{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:34px 30px;}
 @media (max-width:640px){ .detail-timeline-panel{border-radius:16px; padding:22px 16px;} }
-@media (min-width:961px){ .main-detail > aside{position:sticky; top:88px; align-self:start;} }
+/* top = nav + 고정 헤더(.detail-sticky-head 약 63px + 여백) 아래. 헤더 높이가 바뀌면 80px도 같이 맞춘다. */
+@media (min-width:961px){ .main-detail > aside{position:sticky; top:calc(var(--nav-height, 79px) + 80px); align-self:start;} }
 .tl-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; gap:8px;}
-.tl-title{font-family:'Song Myung',serif; font-size:18px;}
+/* Song Myung 은 400 굵기뿐이라 볼드가 합성돼 획이 번진다. 대신 획을 아주 살짝 보정해 'ㅕ'의 짧은 획(영↔엉)이 읽히게 한다. */
+.tl-title{font-family:'Song Myung',serif; font-size:18px; -webkit-text-stroke:0.2px currentColor;}
 .tl-stay{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; color:var(--ink-soft);}
+.tl-meta{font-size:12px; color:rgba(27,35,64,0.5); margin:-2px 0 12px;}
 .tl-desc{font-size:13px; color:var(--ink-soft); line-height:1.75;}
 .tl-transit{position:relative; display:flex; align-items:center; gap:10px; margin:14px 0 0; font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; color:var(--ink-soft);}
 /* 이동 구간도 가로선 대신 선 위의 작은 빈 원으로 표시한다. */
@@ -525,6 +547,8 @@ h1.result-title{font-family:'Song Myung',serif; font-size:clamp(26px,3.8vw,42px)
 
 .side-card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px; margin-bottom:20px;}
 .side-card h4{font-family:'Song Myung',serif; font-size:16px; margin-bottom:12px;}
+/* 코스 상세의 지도 카드는 배경만 투명하게 — 다른 페이지의 side-card는 그대로. */
+.main-detail > aside .side-card{background:transparent;}
 .map-placeholder{height:190px; border-radius:12px; margin-bottom:12px; background:linear-gradient(rgba(27,35,64,0.06) 1px, transparent 1px) 0 0/24px 24px, linear-gradient(90deg, rgba(27,35,64,0.06) 1px, transparent 1px) 0 0/24px 24px, var(--paper-deep); position:relative; overflow:hidden;}
 .map-pin{position:absolute; width:10px; height:10px; border-radius:50% 50% 50% 0; background:var(--sunset); transform:rotate(-45deg);}
 /* 마커 색상: 🔵 출발지 · 🟢 방문지 · 🟠 숙소 · 🔴 도착지 (지도 범례와 맞춘다) */
@@ -570,6 +594,8 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .kakao-pin:hover .kakao-pin-name, .kakao-pin:focus-visible .kakao-pin-name{opacity:1;}
 .kakao-pin:hover .kakao-pin-dot, .kakao-pin:focus-visible .kakao-pin-dot{transform:scale(1.25);}
 .kakao-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px; border-radius:999px;}
+/* 타임라인 카드에 마우스를 올렸을 때의 강조: 마커만 키운다(이름표·링 없음). */
+.kakao-pin--active .kakao-pin-dot{transform:scale(1.35);}
 .side-note{font-size:12px; color:var(--ink-soft); line-height:1.7;}
 .side-note-break{display:none;}
 @media (max-width:640px){
@@ -665,6 +691,7 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 
 /* ---------------- CANDIDATES ---------------- */
 .candidates-page{padding:40px 32px 90px;}
+@media (min-width:1001px){ .candidates-page{padding-bottom:40px;} }
 .candidates-summary{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:18px 0 8px; font-family:'Space Mono','Noto Sans KR',monospace; font-size:13px; color:var(--ink-soft);}
 .candidate-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; margin-top:28px;}
 @media (max-width:640px){ .candidate-grid{grid-template-columns:1fr;} }
@@ -692,6 +719,8 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .compact-grid .lodging-select-btn{padding:6px 14px; font-size:12px;}
 .compact-grid .lodging-stats-group{padding:10px 12px; gap:14px;}
 .lodging-select-btn{padding:8px 16px; border-radius:10px; font-size:12.5px; flex-shrink:0;}
+.lodging-select-btn:hover{box-shadow:0 3px 8px rgba(27,35,64,0.12);}
+.btn-outline.lodging-link{padding:9px 16px; font-size:12px;}
 .candidate-head{display:flex; justify-content:space-between; align-items:center; gap:8px;}
 .candidate-label{font-family:'Song Myung',serif; font-size:18px; font-weight:700; flex:1; min-width:0; display:flex; align-items:center; gap:8px;}
 .candidate-label-text{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
@@ -704,7 +733,6 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .lodging-stats-price .k{color:var(--sunset);}
 .candidate-stat .v{font-family:'Space Mono','Noto Sans KR',monospace; font-size:15px; font-weight:700; margin-top:2px; height:32px;}
 .candidate-stat .v-main{display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
-.candidate-stat .v-note{display:block; font-size:11px; font-weight:400; color:var(--ink-soft); overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
 .candidate-scores{display:flex; flex-direction:column; gap:6px; padding-top:12px; border-top:1px solid var(--line);}
 .candidate-score-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft);}
 .candidate-stars{color:var(--sunset); letter-spacing:1px;}
@@ -719,14 +747,47 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .candidate-day-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft);}
 .candidate-day-row>span:first-child{color:var(--ink); font-weight:600;}
 
+/* 추천 코스 목록: 모드별 색·아이콘·핵심 지표로 스캔하기 쉽게 */
+.lodging-card{background:rgba(255,255,255,0.8);}
+.lodging-card .candidate-head{margin-top:10px;}
+.lodging-card .lodging-meta{padding-bottom:3px; height:auto; margin-bottom:6px;}
+.lodging-card .lodging-desc{padding-left:13px;}
+.lodging-card .candidate-stat .k{font-family:inherit; letter-spacing:0; text-transform:none;}
+.lodging-card .candidate-stat .v{font-family:'Song Myung',serif; font-size:14px; font-weight:400; margin-top:5px;}
+.lodging-card .lodging-stats-group{align-items:center;}
+.lodging-card .candidate-stat .v{height:auto;}
+.mode-stat{display:flex; flex-direction:column; justify-content:center;}
+.mode-card{gap:14px; background:rgba(255,255,255,0.8);}
+.mode-top{display:flex; flex-direction:column; gap:10px; background:var(--paper-deep); margin:-18px -18px 0; padding:18px; border-radius:15px 15px 0 0;}
+.mode-head{display:flex; align-items:center; gap:12px;}
+.mode-icon{flex:none; width:44px; height:44px; border-radius:14px; display:grid; place-items:center; color:var(--ink-soft);}
+.mode-head-text{min-width:0;}
+.mode-title{font-family:'Song Myung',serif; font-size:clamp(15px,6cqw,18px); font-weight:700; line-height:1.3; margin-top:2px;}
+.mode-desc{font-size:12.5px; line-height:1.6; color:var(--ink-soft); margin:0;}
+.mode-stats{display:grid; grid-template-columns:repeat(2,130px); justify-content:center; gap:0;}
+.mode-head,.mode-desc{width:100%; max-width:266px; margin-inline:auto;}
+.mode-stat{background:transparent; border:0 solid var(--line); border-radius:0; padding:10px 14px; min-width:0;}
+.mode-stat:nth-child(odd){border-right-width:1px;}
+.mode-stat:nth-child(-n+2){border-bottom-width:1px;}
+.mode-stat .k{font-size:10.5px; color:var(--ink-soft); white-space:nowrap;}
+.mode-stat .v{font-family:'Song Myung',serif; font-size:14px; font-weight:400; margin-top:5px; white-space:nowrap;}
+.mode-days{display:flex; flex-direction:column; gap:6px; padding-top:12px; border-top:1px dashed var(--line);}
+.mode-day{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-soft); white-space:nowrap;}
+.mode-day-dot{flex:none; min-width:30px; text-align:center; font-family:'Space Mono',monospace; font-size:11px; font-weight:700; padding:3px 0; color:var(--ink);}
+.mode-day-text{overflow:hidden; text-overflow:ellipsis;}
+.mode-card>.btn-primary{margin-top:auto;}
+
 /* ---------------- LODGING PICK ---------------- */
-.lodging-meta{font-size:11.5px; color:var(--ink-soft); margin-top:-6px; line-height:1.5; height:3em; padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--line); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;}
+.lodging-meta{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11.5px; color:var(--ink-soft); margin-top:-6px; line-height:1.5; height:3em; padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--line); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;}
 .lodging-flags{display:flex; flex-wrap:wrap; gap:8px;}
 .lodging-flag{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; padding:5px 10px; border-radius:999px; border:1px dashed var(--line); color:var(--ink-soft);}
 .lodging-flag.on{border-style:solid; border-color:var(--ink); color:var(--ink);}
 .lodging-warn{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; color:var(--sunset); margin-top:2px;}
 .lodging-actions{display:flex; flex-wrap:wrap; gap:12px; margin-top:28px;}
-.tl-card.tl-lodging, .tl-card.tl-airport{border-style:dashed; background:var(--paper-deep);}
+.tl-card.tl-lodging{border-style:dashed; background:var(--paper-deep);}
+/* 공항 출발·도착, 입도일 이후 날의 숙소는 카드 틀 없이 글자만 — 위 패딩을 없애 글자가 왼쪽 링(top:3px)과 같은 높이에 오게 한다. */
+.tl-card.tl-airport, .tl-card.tl-flat{border:none; background:transparent; padding:0;}
+.tl-card.tl-airport:hover, .tl-card.tl-flat:hover{transform:none; box-shadow:none; background:transparent;}
 
 /* ---------------- MODAL / SHEET ---------------- */
 .modal-backdrop{position:fixed; inset:0; background:rgba(27,35,64,0.45); z-index:120; display:flex; align-items:flex-end; justify-content:center; padding:0;}
@@ -764,7 +825,7 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .modal-subtitle{display:block; flex-basis:100%; font-size:12px; color:var(--ink-soft); margin-top:2px;}
 .modal-close{width:30px; height:30px; border-radius:50%; background:var(--paper-deep); font-size:13px; color:var(--ink-soft); flex:none;}
 .modal-close:hover{color:var(--ink);}
-.modal-body{font-size:13.5px; color:var(--ink-soft); line-height:1.7; overflow-y:auto; min-height:0;}
+.modal-body{font-size:13.5px; color:var(--ink-soft); line-height:1.7; overflow-y:auto; min-height:0; scrollbar-width:thin; scrollbar-color:rgba(27,35,64,0.3) transparent;}
 /* 일자별 조건 설정: 안내문과 일자 탭은 본문이 스크롤돼도 위에 붙여 둔다. */
 .day-override-head{position:sticky; top:0; z-index:2; background:var(--paper); padding-bottom:6px;}
 
@@ -788,22 +849,23 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 }
 .override-section{margin-bottom:20px;}
 .override-label{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; letter-spacing:1px; color:var(--ink-soft); text-transform:uppercase; margin-bottom:10px;}
-.override-summary{background:var(--paper-deep); border-radius:14px; padding:16px; margin-top:18px;}
-.override-summary h4{font-family:'Song Myung',serif; font-size:14px; margin-bottom:10px;}
+.override-summary{background:var(--paper-deep); border-radius:14px; padding:22px 18px; margin-top:18px;}
+.override-summary h4{font-family:'Song Myung',serif; font-size:14px; margin-bottom:14px;}
+.override-summary .sum-row{padding:9px 0;}
 
 /* ---------------- EXCLUDE-CATEGORY ACCORDION ---------------- */
 .cat-picker{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card);}
 .cat-group + .cat-group{border-top:1px solid var(--line);}
-.cat-major-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 14px;}
-.cat-check{display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13.5px; line-height:1.4;}
-.cat-check input{width:15px; height:15px; accent-color:var(--sunset); cursor:pointer; flex:none;}
+.cat-major-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 12px;}
+.cat-check{display:flex; align-items:center; gap:9px; cursor:pointer; font-size:12.5px; line-height:1.4;}
+.cat-check input{width:14px; height:14px; accent-color:var(--sunset); cursor:pointer; flex:none;}
 .cat-major-name{font-weight:700;}
 .cat-count{font-size:11px; color:var(--ink-soft);}
-.cat-caret{flex:none; width:26px; height:26px; border-radius:8px; color:var(--ink-soft); font-size:10px; transition:transform .16s ease, background .16s ease;}
+.cat-caret{flex:none; width:22px; height:22px; border-radius:8px; color:var(--ink-soft); font-size:10px; transition:transform .16s ease, background .16s ease;}
 .cat-caret:hover{background:var(--paper-deep);}
 .cat-caret.open{transform:rotate(180deg);}
 .cat-minor-list{display:flex; flex-direction:column; gap:9px; padding:2px 14px 14px 34px; background:var(--paper-deep);}
-.cat-minor{font-size:13px; color:var(--ink-soft);}
+.cat-minor{font-size:12px; color:var(--ink-soft);}
 
 /* ---------------- PLACE DETAIL SHEET ---------------- */
 .place-sheet-photo{height:160px; border-radius:14px; margin-bottom:16px; background:linear-gradient(135deg,var(--dawn),var(--sunset));}
@@ -940,3 +1002,55 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
   .time-val{font-size:13px; min-width:38px;}
   .day-hours-hint{font-size:9px; line-height:1.4;}
 }
+
+.override-side .btn-primary{width:100%; margin-top:16px;}
+/* 일자별 조건 설정: 웹 화면에선 조건(1열)과 현재 설정 요약(2열)을 나란히 둔다 */
+@media (min-width:1001px){
+  .modal-panel.wide:has(.day-override-head){max-width:1100px;}
+  .modal-panel:has(.day-override-head) .chip-row{margin-left:0; margin-top:0; gap:8px;}
+  .modal-panel:has(.day-override-head) .chip{padding:10px 14px; font-size:12.5px;}
+  .override-cols{display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:28px; align-items:stretch;}
+  .override-cols .override-side{display:flex; flex-direction:column;}
+  .override-cols .override-summary{margin-top:0; position:sticky; top:116px;}
+  .override-cols .override-side .btn-primary{margin-top:auto; position:sticky; bottom:0;}
+}
+@media (min-width:1001px){
+  .override-main .override-section:first-child .chip-row{flex-wrap:nowrap; gap:6px;}
+  .override-main .override-section:first-child .chip{padding:9px 9px; font-size:11px; white-space:nowrap;}
+}
+.modal-panel:has(.day-override-head) .modal-body{padding:0 14px 0 15px;}
+.day-reset{align-self:flex-end; font-family:'Noto Sans KR',sans-serif; font-size:11.5px; padding:5px 10px; border:0; border-radius:999px; color:var(--sunset); background:transparent;}
+.day-reset:hover:not(:disabled){text-decoration:underline;}
+.day-reset:disabled{opacity:0.4; cursor:not-allowed;}
+/* 빌더 단계 버튼의 흰 배경: 흰색 80% */
+.wizard-shell .chip:not(.active), .wizard-shell .wizard-subaction .btn-outline{background:rgba(255,255,255,0.8);}
+.preview-estimate{margin-top:14px; padding-top:14px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-soft);}
+.preview-estimate b{color:var(--sunset); font-weight:400;}
+
+/* 로딩 화면: 진행 상황과 무관하게 옆으로 빠르게 흐르는 진행 띠, 단계별 등장·체크 애니메이션, 순환 문구 */
+.loading-bar{position:relative; width:220px; height:4px; margin:22px auto 0; border-radius:999px; background:var(--line); overflow:hidden;}
+.loading-bar>i{display:block; height:100%; width:40%; border-radius:999px; background:linear-gradient(90deg,var(--dawn),var(--morning),var(--sunset)); animation:loading-slide 1.2s cubic-bezier(.5,0,.3,1) infinite;}
+@keyframes loading-slide{ 0%{transform:translateX(-100%);} 100%{transform:translateX(250%);} }
+.loading-checklist li{animation:loading-rise .45s ease both;}
+.loading-checklist li:nth-child(2){animation-delay:.12s;}
+.loading-checklist li:nth-child(3){animation-delay:.24s;}
+@keyframes loading-rise{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+.loading-checklist li.done .tick{animation:loading-pop .35s cubic-bezier(.2,1.6,.4,1);}
+@keyframes loading-pop{ from{transform:scale(0.3);} to{transform:scale(1);} }
+.loading-checklist li.active .tick{animation:loading-blink 1s ease-in-out infinite;}
+@keyframes loading-blink{ 50%{opacity:0.25;} }
+.loading-tip{margin:0 auto 20px; font-size:12.5px; color:var(--ink-soft); animation:loading-tip-in .5s ease;}
+@keyframes loading-tip-in{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+@media (prefers-reduced-motion:reduce){ .loading-checklist li, .loading-checklist .tick, .loading-tip{animation:none !important;} .loading-bar>i{animation-duration:1.2s !important;} } /* 진행 띠는 '멈춘 게 아니라 로딩 중'이라는 신호라 동작 줄이기에서도 유지한다 */
+/* 빌더 1단계 웹 화면: 기간 칩은 출발/종료일의 보조 선택이라 작게 */
+@media (min-width:961px){ .trip-chip-row .chip{padding:7px 14px; font-size:12px;} }
+/* 빌더 2~4단계 웹 화면: 선택 칩을 한 단계 작게 */
+@media (min-width:961px){ .step-compact .chip{padding:8px 14px; font-size:12px;} .step-compact .chip-row{gap:8px;} }
+/* 빌더 1단계 웹 화면: 인원·시간 조절 버튼과 박스를 칩과 같은 결로 작게 */
+@media (min-width:961px){
+  .step-schedule .time-box{padding:8px 6px; gap:8px;}
+  .step-schedule .stepper-btn{width:24px; height:24px; font-size:13px;}
+  .step-schedule .time-val{font-size:14px; min-width:50px;}
+}
+/* 빌더 3단계 웹 화면: 선호 음식 칩은 첫 줄 5개, 나머지는 둘째 줄 */
+@media (min-width:961px){ .food-chips .chip-row{display:grid; grid-template-columns:repeat(5,max-content);} }

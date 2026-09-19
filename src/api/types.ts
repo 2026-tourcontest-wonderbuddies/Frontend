@@ -603,19 +603,32 @@ export interface ModifyCourseResponse {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// 코스 수동 편집 (TEAM_SHARE.md "새로 발견" — 명세서엔 없지만 실제로 동작하는 API).
-// 응답 형태가 문서화돼 있지 않아 반환값에 의존하지 않고, 성공하면 코스 상세를 재조회해서 반영한다.
+// 코스 수동 편집 (노션 API 명세서 "장소 순서 변경/삭제/추가").
+// 응답은 바뀐 코스를 돌려주지 않는다 — 성공하면 코스 상세를 재조회해서 반영하고,
+// 응답은 가용시간 초과 경고(over_budget)를 읽는 데만 쓴다.
 // ══════════════════════════════════════════════════════════════════════════
 
-/** POST /api/courses/{course_id}/days/{day_index}/reorder/ request body */
-export interface ReorderCourseItemsPayload {
-  item_ids: number[];
+/** POST /api/courses/{course_id}/days/{day_index}/reorder/ 응답. over_budget: 재계산 결과 가용시간 초과. */
+export interface ReorderCourseItemsResponse {
+  day_index: number;
+  reordered: boolean;
+  over_budget: boolean;
+  message: string;
 }
 
-/** POST /api/courses/{course_id}/days/{day_index}/items/ request body */
-export interface AddCourseItemPayload {
-  content_id: string;
-  order: number;
+/** POST /api/courses/{course_id}/days/{day_index}/items/ 응답. 실패 시 400 { error: 사용자용 사유 }. */
+export interface AddCourseItemResponse {
+  added: boolean;
+  day_index: number;
+  over_budget: boolean;
+  message: string;
+}
+
+/** DELETE /api/courses/{course_id}/items/{item_id}/ 응답 */
+export interface DeleteCourseItemResponse {
+  deleted: boolean;
+  day_index: number;
+  message: string;
 }
 
 // ══════════════════════════════════════════════════════════════════════════

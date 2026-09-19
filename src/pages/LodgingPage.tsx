@@ -113,7 +113,7 @@ export default function LodgingPage() {
         <>
           <div className="candidate-grid compact-grid">
             {cards.map((card) => (
-              <div className="candidate-card" key={card.content_id}>
+              <div className="candidate-card lodging-card" key={card.content_id}>
                 <LodgingCardPhoto src={card.images?.[0]} />
                 <div className="candidate-head">
                   <div className="candidate-label">
@@ -150,15 +150,7 @@ export default function LodgingPage() {
                     <div className="candidate-stat">
                       <div className="k">참고 요금</div>
                       <div className="v">
-                        {(() => {
-                          const { main, note } = splitPriceHint(card.price_hint || "확인 필요");
-                          return (
-                            <>
-                              <span className="v-main">{main}</span>
-                              {note && <span className="v-note">{note}</span>}
-                            </>
-                          );
-                        })()}
+                        <span className="v-main">{splitPriceHint(card.price_hint || "확인 필요").main}</span>
                       </div>
                     </div>
                   </div>
@@ -178,7 +170,7 @@ export default function LodgingPage() {
 
                 {card.tripcom_link && (
                   <a
-                    className="btn-outline"
+                    className="btn-outline lodging-link"
                     style={{ display: "block", textAlign: "center", marginTop: "auto" }}
                     href={card.tripcom_link}
                     target="_blank"

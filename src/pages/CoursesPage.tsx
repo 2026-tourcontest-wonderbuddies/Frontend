@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCourseDetails, useSelectCourse, useTripCourses } from "../hooks/useCourses";
 import LoadingChecklist from "../components/LoadingChecklist";
@@ -14,6 +15,17 @@ const MODE_DESC: Record<CoursePriority, string> = {
   dist: "이동 시간을 최소화해서 알차게 도는 코스예요.",
   pref: "선호하는 장소 위주로 골라 짠 코스예요.",
   relax: "여유 시간을 넉넉히 남겨 느긋하게 도는 코스예요.",
+};
+
+const svg = (d: string) => (
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+const MODE_ICON: Record<CoursePriority, ReactElement> = {
+  dist: svg("M5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM19 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM7 17h6a3 3 0 0 0 0-6h-2a3 3 0 0 1 0-6h4"),
+  pref: svg("M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"),
+  relax: svg("M4 9h12v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9ZM16 10h2a2 2 0 0 1 0 4h-2M8 3v2M12 3v2"),
 };
 
 function fmtMin(min: number): string {
@@ -109,37 +121,37 @@ export default function CoursesPage() {
         {courses.map((c) => {
           const stats = courseStats(c);
           return (
-            <div className="candidate-card" key={c.id}>
-              <div className="candidate-top">
-                <div className="candidate-mode mono">{PRIORITY_LABELS[c.mode]}</div>
-                <div className="candidate-label">{MODE_TITLE[c.mode]}</div>
-                <p className="candidate-desc">{MODE_DESC[c.mode]}</p>
+            <div className="candidate-card mode-card" data-mode={c.mode} key={c.id}>
+              <div className="mode-top">
+                <div className="mode-head">
+                  <span className="mode-icon" aria-hidden="true">{MODE_ICON[c.mode]}</span>
+                  <div className="mode-head-text">
+                    <div className="candidate-mode mono">{PRIORITY_LABELS[c.mode]}</div>
+                    <div className="mode-title">{MODE_TITLE[c.mode]}</div>
+                  </div>
+                </div>
+                <p className="mode-desc">{MODE_DESC[c.mode]}</p>
               </div>
 
-              <div className="candidate-stats">
-                <div className="candidate-stat">
-                  <div className="k">방문 장소</div>
-                  <div className="v">{stats.visitCount}곳</div>
-                </div>
-                <div className="candidate-stat">
-                  <div className="k">총 소요시간</div>
-                  <div className="v">{fmtMin(stats.totalMin)}</div>
-                </div>
-                <div className="candidate-stat">
-                  <div className="k">이동시간</div>
-                  <div className="v">{fmtMin(stats.travelMin)}</div>
-                </div>
-                <div className="candidate-stat">
-                  <div className="k">추천 점수</div>
-                  <div className="v">{c.final_score === null ? "—" : c.final_score.toFixed(1)}</div>
-                </div>
+              <div className="mode-stats">
+                {[
+                  { key: "visit", k: "방문 장소", v: `${stats.visitCount}곳` },
+                  { key: "total", k: "총 소요시간", v: fmtMin(stats.totalMin) },
+                  { key: "travel", k: "이동시간", v: fmtMin(stats.travelMin) },
+                  { key: "score", k: "추천 점수", v: c.final_score === null ? "—" : c.final_score.toFixed(1) },
+                ].map((s) => (
+                  <div className="mode-stat" key={s.key}>
+                    <div className="k">{s.k}</div>
+                    <div className="v">{s.v}</div>
+                  </div>
+                ))}
               </div>
 
-              <div className="candidate-day-list">
+              <div className="mode-days">
                 {c.days.map((d) => (
-                  <div className="candidate-day-row" key={d.day_index}>
-                    <span>Day {d.day_index}</span>
-                    <span className="mono">
+                  <div className="mode-day" key={d.day_index}>
+                    <span className="mode-day-dot">D{d.day_index}</span>
+                    <span className="mode-day-text">
                       {d.items.length > 0 ? `${d.items.length}곳 · 가용 ${d.avail_hours}시간` : "일정 없음"}
                     </span>
                   </div>

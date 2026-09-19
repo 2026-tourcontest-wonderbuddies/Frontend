@@ -16,8 +16,16 @@ export default function StepPurpose({ form, patch }: StepProps) {
   const totalDays = form.nights + 1;
 
   return (
-    <div className="step">
-      <div className="step-sub">희망 권역은 하나만 고를 수 있어요 (선택 안 하면 제주 전역에서 추천)</div>
+    <div className="step step-compact">
+      <div className="step-sub">
+        희망 권역은 하나만 고를 수 있어요
+        {totalDays > 1 && (
+          <>
+            <br />
+            <span style={{ color: "#C6402B" }}>※ 선택한 권역을 기준으로 숙소도 추천돼요.</span>
+          </>
+        )}
+      </div>
       <ChipGroup
         options={REGION_CHIP_OPTIONS}
         value={form.region}
