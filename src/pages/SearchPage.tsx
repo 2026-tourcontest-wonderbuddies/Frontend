@@ -6,7 +6,7 @@ import ChipGroup from "../components/ChipGroup";
 import { useAuth } from "../auth/AuthContext";
 import { usePlaceSearchResults, usePlaceSuggestions } from "../hooks/usePlaceSearch";
 import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
-import { BUILDER_REGION_KEYS, REGION_CODE_BY_KEY, REGION_LABELS, type RegionKey, type SearchPlace } from "../api/types";
+import { BUILDER_REGION_KEYS, REGION_CODE_BY_KEY, REGION_LABELS, type PlaceSortKey, type RegionKey, type SearchPlace } from "../api/types";
 
 const CATEGORY_OPTIONS = ["관광지", "문화시설", "음식점", "쇼핑"].map((v) => ({ value: v, label: v }));
 // 제주시내(원도심)는 제주시서부와 같은 권역(NW)으로 매핑돼 검색 결과가 똑같아서 뺀다.
@@ -14,6 +14,10 @@ const REGION_OPTIONS = BUILDER_REGION_KEYS.map((key) => ({
   value: key,
   label: REGION_LABELS[key],
 }));
+const SORT_OPTIONS = [
+  { value: "", label: "가나다순" },
+  { value: "popular", label: "인기순" },
+];
 
 export default function SearchPage() {
   const { user } = useAuth();
@@ -23,12 +27,13 @@ export default function SearchPage() {
   const [submittedQ, setSubmittedQ] = useState("");
   const [category, setCategory] = useState("");
   const [region, setRegion] = useState<RegionKey | "">("");
+  const [sort, setSort] = useState<PlaceSortKey>("popular");
   const [selected, setSelected] = useState<SearchPlace | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const regionCode = region ? REGION_CODE_BY_KEY[region] : "";
 
-  const { data: suggestData } = usePlaceSuggestions(input);
+  const { data: suggestData } = usePlaceSuggestions(input, sort);
   const suggestions = suggestData?.results ?? [];
   const showDropdown = inputFocused && input.trim().length > 0 && suggestions.length > 0;
 
@@ -36,6 +41,7 @@ export default function SearchPage() {
     q: submittedQ,
     category,
     region: regionCode,
+    sort,
   });
   const results = useMemo(() => data?.pages.flatMap((p) => p.results) ?? [], [data]);
   const total = data?.pages[0]?.total ?? 0;
@@ -65,6 +71,7 @@ export default function SearchPage() {
     setSubmittedQ("");
     setCategory("");
     setRegion("");
+    setSort("popular");
   }
 
   return (
@@ -119,11 +126,16 @@ export default function SearchPage() {
         <ChipGroup options={REGION_OPTIONS} value={region} onChange={(v) => setRegion(v as RegionKey)} />
       </div>
 
-      {(submittedQ || category || region) && (
+      {(submittedQ || category || region || sort !== "popular") && (
         <a className="reset-link" onClick={resetFilters}>
           필터 초기화
         </a>
       )}
+
+      <div className="override-section" style={{ marginTop: 20 }}>
+        <div className="override-label">정렬</div>
+        <ChipGroup options={SORT_OPTIONS} value={sort} onChange={(v) => setSort(v as PlaceSortKey)} />
+      </div>
 
       <div className="results-head" style={{ marginTop: 28 }}>
         <div className="result-count">

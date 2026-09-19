@@ -473,6 +473,8 @@ export interface CourseItem {
   hours_uncertain: boolean;
   /** 선호 음식 후보가 5곳 미만이라 태그 조건이 완화되어 뽑힌 항목(소프트 필터 −0.15 감점 대상). */
   is_relaxed_preference?: boolean;
+  /** 이 장소를 뽑은 이유. 서버가 장소 원문(overview) 대신 보여줄 한 줄로 만들어 준다. */
+  recommend_reason?: string | null;
 }
 
 /** 숙소 카드의 조건 충족 표시 한 줄 */
@@ -645,10 +647,15 @@ export interface PlaceSearchResponse {
   has_more: boolean;
 }
 
+/** 검색 결과 정렬 기준. ""=가나다순(기본), "popular"=인기순(popularity_score 내림차순) */
+export type PlaceSortKey = "" | "popular";
+
 export interface PlaceSearchQuery {
   q?: string;
   category?: string;
   region?: RegionCode;
+  /** 정렬 기준. 생략하면 가나다순, "popular"면 인기순. */
+  sort?: PlaceSortKey;
   page?: number;
   page_size?: number;
 }
