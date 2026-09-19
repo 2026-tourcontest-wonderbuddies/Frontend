@@ -89,7 +89,7 @@ export default function SavedPage() {
           <div className="saved-col">
           {places.length > 0 && (
             <section>
-              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
+              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16, WebkitTextStroke: "0" }}>
                 장소
               </h2>
               <div className="saved-list">
@@ -114,7 +114,7 @@ export default function SavedPage() {
           <div className="saved-col">
           {savedCurated.length > 0 && (
             <section>
-              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
+              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16, WebkitTextStroke: "0" }}>
                 추천 코스
               </h2>
               <div className="saved-list">
@@ -135,7 +135,7 @@ export default function SavedPage() {
 
           {courses.length > 0 && (
             <section>
-              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
+              <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16, WebkitTextStroke: "0" }}>
                 생성 코스
               </h2>
               <div className="saved-list">
@@ -160,7 +160,7 @@ export default function SavedPage() {
 
       {madeTrips.length > 0 && (
         <section style={{ marginTop: 36 }}>
-          <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16 }}>
+          <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16, WebkitTextStroke: "0" }}>
             이전에 만든 코스
           </h2>
           <div className="saved-list">
