@@ -23,14 +23,6 @@ export function useMyTrips(enabled: boolean) {
   });
 }
 
-export function useTripCourses(tripId?: string) {
-  return useQuery({
-    queryKey: ["trip-courses", tripId],
-    queryFn: () => getTripCourses(tripId!),
-    enabled: Boolean(tripId),
-  });
-}
-
 /**
  * 외부 링크(트립닷컴)를 다녀오면 탭이 통째로 새로 로드되어 메모리 캐시가 사라진다.
  * 직전 응답을 sessionStorage에 남겨 initialData로 쓰면 로딩 화면 없이 바로 그려지고,
@@ -59,6 +51,14 @@ function persisted<T>(key: string, fetcher: () => Promise<T>) {
   };
 }
 
+export function useTripCourses(tripId?: string) {
+  return useQuery({
+    queryKey: ["trip-courses", tripId],
+    ...persisted(`trip-courses:${tripId}`, () => getTripCourses(tripId!)),
+    enabled: Boolean(tripId),
+  });
+}
+
 export function useCourse(courseId?: string | number) {
   return useQuery({
     queryKey: ["course", String(courseId)],
@@ -75,7 +75,7 @@ export function useCourseDetails(courseIds: number[]) {
   const results = useQueries({
     queries: courseIds.map((id) => ({
       queryKey: ["course", String(id)],
-      queryFn: () => getCourse(id),
+      ...persisted(`course:${id}`, () => getCourse(id)),
     })),
   });
 
@@ -120,7 +120,7 @@ export function useSelectCourseLodging() {
   });
 }
 
-/** 응답 형태가 미확인이라 반환값을 쓰지 않고, 성공하면 코스 상세를 재조회해서 최신 타임라인을 받는다. */
+/** 응답은 결과 요약뿐이라(over_budget 등), 성공하면 코스 상세를 재조회해서 최신 타임라인을 받는다. */
 export function useReorderCourseItems() {
   const qc = useQueryClient();
   return useMutation({
