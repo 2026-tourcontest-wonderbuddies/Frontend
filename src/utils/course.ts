@@ -87,9 +87,13 @@ export const diffMin = (a: string, b: string) =>
 const subMin = (iso: string, min: number) => new Date(new Date(iso).getTime() - min * 60000).toISOString();
 
 /**
- * 백엔드 엔진이 단일 이동 60분 초과를 아예 컷하므로(filters.py) 그보다 큰 값은 이동시간이 아니다.
- * 지금 서버가 2일차 이후 arrive_at/depart_at에 1일차 날짜를 그대로 넣고 있어서
+ * 시각 차이(diffMin)로 "유추한" 이동시간에만 씌우는 안전장치다.
+ * 서버가 2일차 이후 arrive_at/depart_at에 1일차 날짜를 그대로 넣는 경우가 있어,
  * 시각 차이로 계산하면 며칠치(수천 분)가 나온다. 그런 값은 표시하지 않는다.
+ *
+ * 서버가 직접 내려준 값(travel_min_from_prev, return_to_airport_travel_min)에는 쓰지 않는다.
+ * 엔진의 60분 컷은 장소↔장소 구간에만 걸리고, 숙소는 사용자가 나중에 고르는 거라
+ * 반대편 권역이면 65~90분이 정상이다. 그걸 걸러내면 이동시간 줄이 통째로 사라진다.
  */
 const MAX_TRAVEL_MIN = 60;
 const travelOrNull = (min: number) => (min > 0 && min <= MAX_TRAVEL_MIN ? min : null);
@@ -113,13 +117,13 @@ export function dayAirport(course: CourseDetail, day: CourseDay) {
     // ponytail: 엔진이 여유시간을 끼워 넣으면 그만큼 과대 표기된다.
     departTravelMin:
       depart && first
-        ? travelOrNull(first.travel_min_from_prev || diffMin(depart, first.arrive_at))
+        ? first.travel_min_from_prev || travelOrNull(diffMin(depart, first.arrive_at))
         : null,
     // 서버 좌표 기반 추정치(return_to_airport_travel_min)가 있으면 그걸 우선 쓴다.
     // 시각 차이(diffMin)는 여유시간이 끼어있거나 날짜가 어긋나면 부풀거나 깨진다.
     arriveTravelMin:
       arrive && last
-        ? travelOrNull(course.return_to_airport_travel_min ?? diffMin(last.depart_at, arrive))
+        ? course.return_to_airport_travel_min ?? travelOrNull(diffMin(last.depart_at, arrive))
         : null,
   };
 }
@@ -141,6 +145,7 @@ export function dayLodgingStart(course: CourseDetail, dayIdx: number) {
   return {
     lodging: prevLodging,
     time: subMin(first.arrive_at, rawTravel),
-    travelMin: travelOrNull(rawTravel),
+    // 숙소→첫 장소는 서버가 OSRM으로 재계산해 준 값이라 그대로 믿는다.
+    travelMin: rawTravel > 0 ? rawTravel : null,
   };
 }

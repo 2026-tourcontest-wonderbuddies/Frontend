@@ -550,6 +550,9 @@ h1.result-title{font-family:'Song Myung',serif; font-size:clamp(26px,3.8vw,42px)
 .tl-title{font-family:'Song Myung',serif; font-size:18px; -webkit-text-stroke:0.2px currentColor;}
 .tl-stay{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; color:var(--ink-soft);}
 .tl-meta{font-size:12px; color:rgba(27,35,64,0.5); margin:-2px 0 12px;}
+/* 숙소 카드: 객실·체크인 정보를 좌측 끝에 두고 트립닷컴 링크를 같은 줄 오른쪽에 붙인다. */
+.tl-lodging-meta{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+.tl-lodging-meta > .tl-meta{margin:0;}
 .tl-desc{font-size:13px; color:var(--ink-soft); line-height:1.75;}
 .tl-transit{position:relative; display:flex; align-items:center; gap:10px; margin:14px 0 0; font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; color:var(--ink-soft);}
 /* 이동 구간도 가로선 대신 선 위의 작은 빈 원으로 표시한다. */
@@ -701,7 +704,14 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .edit-item-top{display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
 .edit-item-title{font-family:'Song Myung',serif; font-size:16px;}
 .edit-item-actions{display:flex; gap:8px; flex-wrap:wrap;}
-.edit-item-actions button{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; padding:7px 12px; border-radius:999px; border:1px solid var(--line); background:var(--paper);}
+/* 편집 버튼은 카드 아래가 아니라 오른쪽에 세로로 세운다 — 카드가 길어지지 않게. */
+.tl-row{display:flex; align-items:flex-start; gap:10px;}
+.tl-row > .tl-card{flex:1; min-width:0;}
+.tl-row > .edit-item-actions{flex:0 0 76px; flex-direction:column; flex-wrap:nowrap; gap:6px;}
+.tl-row > .edit-item-actions button{width:100%;}
+.tl-row > .edit-item-actions .mono{font-size:10px; line-height:1.35; text-align:center; word-break:keep-all; letter-spacing:0;}
+@media (max-width:640px){ .tl-row{gap:8px;} .tl-row > .edit-item-actions{flex-basis:64px;} }
+.edit-item-actions button{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:var(--paper);}
 .edit-item-actions button:hover:not(:disabled){border-color:var(--ink);}
 .edit-item-actions button:disabled{opacity:0.35; cursor:not-allowed;}
 
@@ -801,6 +811,15 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .lodging-flag{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; padding:5px 10px; border-radius:999px; border:1px dashed var(--line); color:var(--ink-soft);}
 .lodging-flag.on{border-style:solid; border-color:var(--ink); color:var(--ink);}
 .lodging-warn{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; color:var(--sunset); margin-top:2px;}
+
+/* 편집 실패 사유·가용시간 초과를 타임라인 위에 띄우는 배너. */
+.edit-banner{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  margin-bottom:16px; padding:14px 18px; border-radius:14px;
+  border:1px solid var(--sunset); background:rgba(255,111,89,0.07);}
+.edit-banner-text strong{display:block; color:var(--sunset); font-size:13.5px; margin-bottom:4px;}
+.edit-banner-text p{margin:0; font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+.edit-banner-close{flex:0 0 auto; font-size:12px; padding:7px 14px;}
+@media (max-width:640px){ .edit-banner{padding:12px 14px; gap:10px;} }
 .lodging-actions{display:flex; flex-wrap:wrap; gap:12px; margin-top:28px;}
 .tl-card.tl-lodging{border-style:dashed; background:var(--paper-deep);}
 /* 공항 출발·도착, 입도일 이후 날의 숙소는 카드 틀 없이 글자만 — 위 패딩을 없애 글자가 왼쪽 링(top:3px)과 같은 높이에 오게 한다. */
