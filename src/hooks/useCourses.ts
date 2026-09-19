@@ -31,10 +31,38 @@ export function useTripCourses(tripId?: string) {
   });
 }
 
+/**
+ * 외부 링크(트립닷컴)를 다녀오면 탭이 통째로 새로 로드되어 메모리 캐시가 사라진다.
+ * 직전 응답을 sessionStorage에 남겨 initialData로 쓰면 로딩 화면 없이 바로 그려지고,
+ * 뒤에서 재조회가 최신으로 덮어쓴다.
+ */
+function persisted<T>(key: string, fetcher: () => Promise<T>) {
+  const storageKey = `q:${key}`;
+  return {
+    initialData: (): T | undefined => {
+      try {
+        const raw = sessionStorage.getItem(storageKey);
+        return raw ? (JSON.parse(raw) as T) : undefined;
+      } catch {
+        return undefined; // 저장소를 못 읽으면 그냥 새로 받는다.
+      }
+    },
+    queryFn: async () => {
+      const data = await fetcher();
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(data));
+      } catch {
+        // 용량 초과 등은 무시.
+      }
+      return data;
+    },
+  };
+}
+
 export function useCourse(courseId?: string | number) {
   return useQuery({
     queryKey: ["course", String(courseId)],
-    queryFn: () => getCourse(courseId!),
+    ...persisted(`course:${courseId}`, () => getCourse(courseId!)),
     enabled: courseId != null,
   });
 }
@@ -63,7 +91,7 @@ export function useCourseDetails(courseIds: number[]) {
 export function useCourseLodgingOptions(courseId?: string | number) {
   return useQuery({
     queryKey: ["course-lodging-options", String(courseId)],
-    queryFn: () => getCourseLodgingOptions(courseId!),
+    ...persisted(`lodging:${courseId}`, () => getCourseLodgingOptions(courseId!)),
     enabled: courseId != null,
   });
 }

@@ -111,7 +111,7 @@ export default function LodgingPage() {
         </>
       ) : (
         <>
-          <div className="candidate-grid">
+          <div className="candidate-grid compact-grid">
             {cards.map((card) => (
               <div className="candidate-card" key={card.content_id}>
                 <LodgingCardPhoto src={card.images?.[0]} />
