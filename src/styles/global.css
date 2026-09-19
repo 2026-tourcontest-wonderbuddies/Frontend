@@ -19,7 +19,22 @@ button{font-family:inherit; cursor:pointer; border:none; background:none;}
 input, select, textarea{font-family:inherit; color:inherit;}
 .wrap{max-width:1200px; margin:0 auto; padding:0 32px;}
 .mono{font-family:'Space Mono', monospace;}
-.serif{font-family:'Song Myung', serif;}
+/* Song Myung 은 가로획이 헤어라인이라 브라우저 줌 90% 같은 비정수 배율에서 획이 날아간다.
+   ('맞춤 코스 생성 중'의 '코'처럼 가로획만으로 된 글자가 먼저 사라진다.) 획을 아주 살짝 보정한다. */
+.serif{font-family:'Song Myung', serif; -webkit-text-stroke:0.2px currentColor;}
+/* .serif 를 안 거치고 'Song Myung' 을 직접 지정한 곳들도 같은 보정을 받는다.
+   (선언마다 흩뿌리지 않고 한 곳에 모아 둔다. Song Myung 셀렉터를 새로 만들면 여기에도 추가할 것.)
+   35px 이상까지 커지는 h1.hero-title·h1.result-title·.final h2·h1.page-title·h1.intro-title 은 제외한다. */
+.logo, .course-title, .section-title, .tod-name, .tod-panel-head,
+.step-title, .subsection-title, .summary h4,
+.wizard-progress-title, .mini-center .t, .day-heading, .side-card h4,
+.reco-text .rt, .violation-type, .edit-item-title, .candidate-label,
+.lodging-card .candidate-stat .v, .mode-title, .mode-stat .v, .modal-head h3,
+.override-summary h4, .auth-title, .auth-error-banner b{
+  -webkit-text-stroke:0.2px currentColor;
+}
+/* 위 컨테이너 안에 섞여 있는 Space Mono 자식은 획 보정을 물려받으면 안 된다. (stroke 는 상속된다) */
+.mono, .meta-chip, .tod-panel-head span{-webkit-text-stroke:0;}
 
 /* ================= SHARED NAV ================= */
 nav{
