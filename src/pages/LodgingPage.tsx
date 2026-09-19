@@ -9,6 +9,7 @@ import {
 import LoadingChecklist from "../components/LoadingChecklist";
 import { PRIORITY_LABELS } from "../api/types";
 import { TRIP_GUESTS_KEY_PREFIX } from "./BuilderPage";
+import { priceHintMain } from "../utils/format";
 
 /** 숙소 카드 사진. 목록 응답(card.images)에 이미 들어있는 첫 장을 그대로 쓴다. */
 function LodgingCardPhoto({ src }: { src?: string }) {
@@ -19,12 +20,6 @@ function LodgingCardPhoto({ src }: { src?: string }) {
       {src && !broken && <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} />}
     </div>
   );
-}
-
-/** "참고가 60,000원~ (실시간 아님)"처럼 끝에 붙는 괄호 설명을 따로 떼어 작게 보여주기 위함. */
-function splitPriceHint(hint: string) {
-  const m = hint.match(/^(.*?)\s*(\([^)]*\))\s*$/);
-  return m ? { main: m[1], note: m[2] } : { main: hint, note: null };
 }
 
 export default function LodgingPage() {
@@ -150,7 +145,7 @@ export default function LodgingPage() {
                     <div className="candidate-stat">
                       <div className="k">참고 요금</div>
                       <div className="v">
-                        <span className="v-main">{splitPriceHint(card.price_hint || "확인 필요").main}</span>
+                        <span className="v-main">{priceHintMain(card.price_hint || "확인 필요")}</span>
                       </div>
                     </div>
                   </div>

@@ -12,7 +12,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useSavedCourses, useToggleSavedCourse } from "../hooks/useSavedCourses";
 import { ApiError } from "../api/client";
 import { PRIORITY_LABELS } from "../api/types";
-import { dayCaseLabel, dayDateLabel, hhmm, placeMetaLine } from "../utils/format";
+import { dayCaseLabel, dayDateLabel, hhmm, placeMetaLine, priceHintMain } from "../utils/format";
 import type { CourseDay, CourseItem, PlaceSummary, SearchPlace } from "../api/types";
 import {
   courseItems,
@@ -84,18 +84,36 @@ function serverErrorText(err: unknown, fallback: string): string {
   return typeof text === "string" && text ? text : fallback;
 }
 
+/** 편집이 실패했거나 가용 시간을 넘었을 때 타임라인 위에 띄우는 배너. */
+function EditBanner({ title, detail, onClose }: { title: string; detail: string; onClose: () => void }) {
+  return (
+    <div className="edit-banner" role="status">
+      <div className="edit-banner-text">
+        <strong>{title}</strong>
+        <p>{detail}</p>
+      </div>
+      <button type="button" className="btn-outline edit-banner-close" onClick={onClose}>
+        닫기
+      </button>
+    </div>
+  );
+}
+
 /** 검색 자동완성(usePlaceSuggestions)에서 고른 장소를 그 날 맨 끝에 추가한다. */
 function AddPlaceModal({
   courseId,
   day,
   onClose,
   onAdded,
+  onFailed,
 }: {
   courseId: number;
   day: CourseDay;
   onClose: () => void;
   /** 추가에 성공했을 때, 서버가 알려준 가용시간 초과 여부와 함께 부른다. */
   onAdded: (overBudget: boolean) => void;
+  /** 추가에 실패했을 때, 사용자에게 보여줄 사유와 함께 부른다. */
+  onFailed: (reason: string) => void;
 }) {
   const [q, setQ] = useState("");
   const { data } = usePlaceSuggestions(q);
@@ -109,6 +127,10 @@ function AddPlaceModal({
       {
         onSuccess: (res) => {
           onAdded(res.over_budget);
+          onClose();
+        },
+        onError: (err) => {
+          onFailed(serverErrorText(err, "장소를 추가하지 못했어요. 잠시 후 다시 시도해 주세요."));
           onClose();
         },
       },
@@ -127,11 +149,6 @@ function AddPlaceModal({
         />
       </div>
       {addItem.isPending && <p className="mono" style={{ color: "var(--ink-soft)" }}>추가하는 중…</p>}
-      {addItem.isError && (
-        <p className="lodging-warn">
-          {serverErrorText(addItem.error, "추가하지 못했어요. 잠시 후 다시 시도해 주세요.")}
-        </p>
-      )}
       <div className="saved-list">
         {suggestions.map((place) => (
           <div className="saved-row" key={place.content_id}>
@@ -180,6 +197,8 @@ export default function DetailPage() {
   const [deleteTarget, setDeleteTarget] = useState<CourseItem | null>(null);
   // 지금 편집 요청이 걸려 있는 카드. 그 카드에만 진행 표시를 띄우고, 그동안 다른 카드 버튼은 막는다.
   const [busyItemId, setBusyItemId] = useState<number | null>(null);
+  // 편집이 실패한 이유. 타임라인 위 배너로 보여준다.
+  const [editError, setEditError] = useState<string | null>(null);
   const reorderItems = useReorderCourseItems();
   const deleteItem = useDeleteCourseItem();
 
@@ -230,7 +249,11 @@ export default function DetailPage() {
     reorderItems.mutate(
       { courseId, dayIndex: day.day_index, itemIds: ids },
       {
-        onSuccess: (res) => setOverBudgetDay(res.over_budget ? day.day_index : null),
+        onSuccess: (res) => {
+          setEditError(null);
+          setOverBudgetDay(res.over_budget ? day.day_index : null);
+        },
+        onError: (err) => setEditError(serverErrorText(err, "순서를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.")),
         onSettled: () => setBusyItemId(null),
       },
     );
@@ -242,7 +265,14 @@ export default function DetailPage() {
     // 장소가 줄면 시간이 늘지 않으므로 초과 경고는 걷는다.
     deleteItem.mutate(
       { courseId, itemId: item.id },
-      { onSuccess: () => setOverBudgetDay(null), onSettled: () => setBusyItemId(null) },
+      {
+        onSuccess: () => {
+          setEditError(null);
+          setOverBudgetDay(null);
+        },
+        onError: (err) => setEditError(serverErrorText(err, "장소를 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.")),
+        onSettled: () => setBusyItemId(null),
+      },
     );
   }
 
@@ -362,6 +392,7 @@ export default function DetailPage() {
                     onClick={() => {
                       setDayIdx(i);
                       setOverBudgetDay(null);
+                      setEditError(null);
                     }}
                   >
                     <span className="day-tab-case">{dayCaseLabel(d.day_case)}</span>
@@ -410,19 +441,19 @@ export default function DetailPage() {
                 이 조건에 맞는 장소를 더 찾지 못했어요. 권역을 넓혀보세요.
               </div>
             )}
-            {(reorderItems.isError || deleteItem.isError) && (
-              <p className="lodging-warn">
-                {serverErrorText(
-                  reorderItems.error ?? deleteItem.error,
-                  "방금 요청이 실패했어요. 잠시 후 다시 시도해 주세요.",
-                )}
-              </p>
-            )}
-            {overBudgetDay === day.day_index && (
-              <p className="lodging-warn" role="status" style={{ fontSize: 12.5, marginBottom: 8 }}>
-                ⚠ DAY {day.day_index} 일정이 가용 시간({day.avail_hours}시간)을 넘었어요. 장소를 줄이거나 순서를 바꿔 보세요.
-              </p>
-            )}
+            {editError ? (
+              <EditBanner
+                title="코스를 수정하지 못했어요"
+                detail={editError}
+                onClose={() => setEditError(null)}
+              />
+            ) : overBudgetDay === day.day_index ? (
+              <EditBanner
+                title={`DAY ${day.day_index} 일정이 가용 시간을 넘쳤어요`}
+                detail={`가용 ${day.avail_hours}시간을 넘었어요. 장소를 빼거나 체류가 짧은 곳으로 바꾸면 맞출 수 있어요.`}
+                onClose={() => setOverBudgetDay(null)}
+              />
+            ) : null}
             <div className="timeline">
             {airport.depart && (
               <div className="tl-item">
@@ -563,9 +594,18 @@ export default function DetailPage() {
                         {day.lodging.category}
                       </span>
                     </div>
-                    <div className="tl-stay mono">{day.lodging.price_hint}</div>
+                    <div className="tl-stay mono">{priceHintMain(day.lodging.price_hint)}</div>
                   </div>
                   <div className="tl-lodging-meta">
+                    <div className="tl-meta">
+                      {[
+                        day.lodging.room_type,
+                        day.lodging.check_in_time && `체크인 ${day.lodging.check_in_time}부터`,
+                        day.lodging.check_out_time && `체크아웃 ${day.lodging.check_out_time}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </div>
                     {day.lodging.tripcom_link && (
                       <a
                         href={day.lodging.tripcom_link}
@@ -577,15 +617,6 @@ export default function DetailPage() {
                         트립닷컴에서 요금 확인 ↗
                       </a>
                     )}
-                    <div className="tl-meta">
-                      {[
-                        day.lodging.room_type,
-                        day.lodging.check_in_time && `체크인 ${day.lodging.check_in_time}부터`,
-                        day.lodging.check_out_time && `체크아웃 ${day.lodging.check_out_time}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -636,7 +667,11 @@ export default function DetailPage() {
           courseId={courseId}
           day={day}
           onClose={() => setAddPlaceOpen(false)}
-          onAdded={(overBudget) => setOverBudgetDay(overBudget ? day.day_index : null)}
+          onAdded={(overBudget) => {
+            setEditError(null);
+            setOverBudgetDay(overBudget ? day.day_index : null);
+          }}
+          onFailed={setEditError}
         />
       )}
       {deleteTarget && (

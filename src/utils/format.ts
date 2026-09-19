@@ -65,3 +65,8 @@ const DAY_CASE_LABELS: Record<string, string> = {
 export function dayCaseLabel(dayCase: string): string {
   return DAY_CASE_LABELS[dayCase] ?? dayCase;
 }
+
+/** "참고가 150,000원~ (실시간 아님)"처럼 끝에 붙는 괄호 설명을 뗀다. */
+export function priceHintMain(hint: string): string {
+  return hint.replace(/\s*\([^)]*\)\s*$/, "");
+}
