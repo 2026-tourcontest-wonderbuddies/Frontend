@@ -126,6 +126,7 @@ export interface PlaceDTO {
   overview?: string;
   content_type_name: string;
   small_category_name?: string;
+  food_role?: string;
   quadrant: Quadrant;
   satisfaction_score?: number | null;
 }
@@ -641,6 +642,7 @@ export interface SearchPlace {
   title: string;
   content_type_name: string;
   small_category_name: string;
+  food_role?: string;
   address: string;
   latitude: number;
   longitude: number;

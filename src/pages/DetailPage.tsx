@@ -12,7 +12,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useSavedCourses, useToggleSavedCourse } from "../hooks/useSavedCourses";
 import { ApiError } from "../api/client";
 import { PRIORITY_LABELS } from "../api/types";
-import { dayCaseLabel, dayDateLabel, hhmm, placeMetaLine, priceHintMain } from "../utils/format";
+import { dayCaseLabel, dayDateLabel, hhmm, placeMetaLine, placeTypeLabel, priceHintMain } from "../utils/format";
 import type { CourseDay, CourseItem, PlaceSummary, SearchPlace } from "../api/types";
 import {
   courseItems,
@@ -503,7 +503,12 @@ export default function DetailPage() {
                       {item.place.title}
                       {item.place.content_type_name && (
                         <span className="meta-chip type-chip mono" data-type={item.place.content_type_name}>
-                          {item.place.content_type_name}
+                          {placeTypeLabel(item.place)}
+                        </span>
+                      )}
+                      {item.is_relaxed_preference && (
+                        <span className="meta-chip mono" style={{ marginLeft: 8 }}>
+                          ⚠ 선호 음식과 완전히 일치하지 않음(후보 부족으로 완화됨)
                         </span>
                       )}
                     </div>
@@ -513,7 +518,7 @@ export default function DetailPage() {
                   <div className="tl-desc">
                     {item.recommend_reason ||
                       item.place.overview ||
-                      `${item.place.content_type_name} · ${item.place.address}`}
+                      `${placeTypeLabel(item.place)} · ${item.place.address}`}
                   </div>
                 </div>
                 {editing && (

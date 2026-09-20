@@ -55,6 +55,12 @@ export function placeMetaLine(place: { small_category_name?: string; hours_raw?:
   return [place.small_category_name, hoursLabel(place.hours_raw)].filter(Boolean).join(" · ");
 }
 
+/** 장소 유형 뱃지 텍스트: 카페만 "카페"로, 나머지 음식점은 그대로 "음식점". */
+export function placeTypeLabel(place: { content_type_name?: string; food_role?: string }): string {
+  if (place.food_role === "CAFE") return "카페";
+  return place.content_type_name ?? "";
+}
+
 const DAY_CASE_LABELS: Record<string, string> = {
   A: "입도일",
   B: "중간일차",
