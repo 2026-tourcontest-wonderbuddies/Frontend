@@ -4,6 +4,7 @@ import {
   deleteCourseItem,
   getCourse,
   getCourseLodgingOptions,
+  modifyCourse,
   reorderCourseDayItems,
   selectCourse,
   selectCourseLodging,
@@ -134,6 +135,21 @@ export function useReorderCourseItems() {
       itemIds: number[];
     }) => reorderCourseDayItems(courseId, dayIndex, itemIds),
     onSuccess: (_res, { courseId }) => {
+      qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
+    },
+  });
+}
+
+/**
+ * 명세 8번. 자연어 수정 요청 — 응답은 설명 문구뿐이라 코스 상세를 재조회한다.
+ * 실패해도 재조회한다: 서버가 장소를 지운 뒤 재계산에서 터지면 500이면서도 코스는 이미 바뀐다.
+ */
+export function useModifyCourse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, rawMessage }: { courseId: number | string; rawMessage: string }) =>
+      modifyCourse(courseId, rawMessage),
+    onSettled: (_res, _err, { courseId }) => {
       qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
     },
   });
