@@ -254,8 +254,8 @@ h1.page-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,36px); 
 /* 웹 화면: 필터 라벨을 칩 왼쪽에 인라인으로 두고 칩·여백을 줄여 첫 화면에서 목록이 더 보이게 한다. */
 @media (min-width:761px){
   .search-page .search-bar{margin-top:0;}
-  .search-page .override-section{display:flex; align-items:center; gap:14px; margin:0 0 10px;}
-  .search-page .override-section .override-label{flex:none; width:64px; margin-bottom:0;}
+  .search-page .search-filter-row{display:flex; align-items:center; gap:14px; margin:0 0 10px;}
+  .search-page .search-filter-row .override-label{flex:none; width:64px; margin-bottom:0;}
   .search-page .chip-row{margin-top:0;}
   .search-page .chip{padding:7px 15px; font-size:12.5px;}
   .search-page .results-head{margin-top:16px !important; margin-bottom:12px;}
