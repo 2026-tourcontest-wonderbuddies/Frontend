@@ -180,7 +180,7 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
               ))}
             </div>
           ) : (
-            <div className="place-sheet-photo" />
+            <div className="place-sheet-photo">이미지 없음</div>
           )}
 
           {zoomed && (
