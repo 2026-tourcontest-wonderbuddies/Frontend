@@ -599,6 +599,8 @@ export interface SelectLodgingResponse {
 export interface ModifyCourseResponse {
   log_id: number;
   parsed_delta: unknown;
+  /** 실제로 다시 계산된 Day 번호들. 비어 있으면 요청이 코스를 바꾸지 못했다는 뜻이다. */
+  affected_days: number[];
   message: string;
 }
 

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   useAddCourseItem,
   useCourse,
   useDeleteCourseItem,
+  useModifyCourse,
   useReorderCourseItems,
 } from "../hooks/useCourses";
 import { usePlaceSuggestions } from "../hooks/usePlaceSearch";
@@ -50,24 +50,57 @@ const PIN_POSITIONS = [
   { top: "80%", left: "55%" },
 ];
 
-/** 도착 시각대에 따라 타임라인 링 색을 고른다(핸드오프 시안 기준). */
-function hourColor(time: string) {
-  const h = Number(time.slice(0, 2));
-  if (!Number.isFinite(h)) return "var(--morning)";
-  if (h < 7) return "var(--night)";
-  if (h < 9) return "var(--dawn)";
-  if (h < 12) return "var(--morning)";
-  if (h < 16) return "var(--midday)";
-  if (h < 19) return "var(--sunset)";
-  return "var(--night)";
+/**
+ * .timeline::before 의 그라데이션 정지점. CSS와 같은 값이어야 한다 —
+ * 한쪽만 바꾸면 링이 선과 다른 색이 된다.
+ */
+const LINE_STOPS: [number, string][] = [
+  [0, "--morning"],
+  [0.38, "--midday"],
+  [0.72, "--sunset"],
+  [1, "--night"],
+];
+
+type Rgb = [number, number, number];
+
+function hexToRgb(hex: string): Rgb {
+  const h = hex.trim().replace("#", "");
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as Rgb;
+}
+
+/** 선의 세로 비율 t(0~1) 지점 색. 브라우저가 선을 섞는 방식(정지점 사이 선형 보간) 그대로다. */
+function lineColorAt(t: number, stops: [number, Rgb][]): string {
+  const x = Math.min(1, Math.max(0, t));
+  let i = 1;
+  while (i < stops.length - 1 && x > stops[i][0]) i++;
+  const [p0, c0] = stops[i - 1];
+  const [p1, c1] = stops[i];
+  const k = p1 === p0 ? 0 : (x - p0) / (p1 - p0);
+  return `rgb(${c0.map((c, j) => Math.round(c + (c1[j] - c) * k)).join(",")})`;
+}
+
+/**
+ * 각 링 색을 그 높이의 선 색으로 맞춘다. 선은 타임라인 전체 높이에 걸친
+ * 그라데이션이라, 카드 높이가 달라지면 같은 장소라도 색이 달라진다 — 그래서
+ * 시각(hour)으로 고르지 않고 실제 위치를 재서 뽑는다.
+ */
+function paintTimelineDots(el: HTMLElement | null) {
+  if (!el) return;
+  const root = getComputedStyle(document.documentElement);
+  const stops = LINE_STOPS.map(([at, name]) => [at, hexToRgb(root.getPropertyValue(name))] as [number, Rgb]);
+  const box = el.getBoundingClientRect();
+  // 선은 위아래로 6px씩 들여서 그린다(.timeline::before의 top/bottom).
+  const lineTop = box.top + 6;
+  const lineHeight = box.height - 12;
+  if (lineHeight <= 0) return;
+  el.querySelectorAll<HTMLElement>(".tl-dot").forEach((dot) => {
+    const r = dot.getBoundingClientRect();
+    dot.style.setProperty("--dot", lineColorAt((r.top + r.height / 2 - lineTop) / lineHeight, stops));
+  });
 }
 
 function TlDot({ time }: { time: string }) {
-  return (
-    <div className="tl-dot mono" style={{ "--dot": hourColor(time) } as CSSProperties}>
-      {time}
-    </div>
-  );
+  return <div className="tl-dot mono">{time}</div>;
 }
 
 /**
@@ -174,6 +207,111 @@ function AddPlaceModal({
   );
 }
 
+/**
+ * 자연어로 코스 수정을 요청하는 대화 패널(명세 8번). 응답은 결과 설명 문구뿐이라,
+ * 훅이 코스 상세를 재조회해서 옆 타임라인이 알아서 바뀐다.
+ */
+function ChatModifyPanel({ courseId, day, onClose }: { courseId: number; day: CourseDay; onClose: () => void }) {
+  const [log, setLog] = useState<{ me: boolean; text: string }[]>([]);
+  const [draft, setDraft] = useState("");
+  const logRef = useRef<HTMLDivElement | null>(null);
+  const modify = useModifyCourse();
+
+  // 서버는 장소를 이름으로 찾는다(정확히 일치해야 한다). 칩이 그 날의 실제 이름을
+  // 그대로 넣어 보내므로, 사용자가 이름을 잘못 적어 조용히 무시되는 일이 없다.
+  const places = day.items.map((it) => it.place.title);
+  const suggestions = [
+    { label: "처음부터 다시", message: "처음부터 다시 추천해줘" },
+    ...places.map((title) => ({ label: `${title} 빼기`, message: `${title} 빼줘` })),
+  ];
+
+  // 모바일은 이 패널이 타임라인 아래에 붙어서, 열어도 화면 밖이라 아무 일도 안 난 것처럼 보인다.
+  useEffect(() => {
+    if (window.matchMedia("(max-width:960px)").matches) {
+      logRef.current?.closest(".chat-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, []);
+
+  // 새 말풍선이 접힌 채로 남지 않게 항상 마지막까지 내린다.
+  useEffect(() => {
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
+  }, [log.length, modify.isPending]);
+
+  function send(text: string) {
+    const raw = text.trim();
+    if (!raw || modify.isPending) return;
+    setLog((l) => [...l, { me: true, text: raw }]);
+    setDraft("");
+    modify.mutate(
+      { courseId, rawMessage: raw },
+      {
+        onSuccess: (res) => setLog((l) => [...l, { me: false, text: res.message }]),
+        onError: (err) =>
+          setLog((l) => [
+            ...l,
+            { me: false, text: serverErrorText(err, "수정 요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.") },
+          ]),
+      },
+    );
+  }
+
+  return (
+    <div className="side-card chat-panel">
+      <div className="chat-panel-head">
+        <h4>코스에 요청하기</h4>
+        <button type="button" className="chat-panel-close" onClick={onClose} aria-label="닫기">
+          ✕
+        </button>
+      </div>
+
+      <div className="chat-log" ref={logRef}>
+        <div className="chat-bubble">
+          DAY {day.day_index}에 {places.length}곳이 있어요. 뺄 곳을 고르면 다른 곳으로 바꿔드려요.
+        </div>
+        {log.map((line, i) => (
+          <div key={i} className={`chat-bubble${line.me ? " me" : ""}`}>
+            {line.text}
+          </div>
+        ))}
+        {modify.isPending && <div className="chat-bubble pending">코스를 다시 짜는 중이에요…</div>}
+      </div>
+
+      <div className="chat-chips">
+        {suggestions.map(({ label, message }) => (
+          <button
+            key={label}
+            type="button"
+            className="chip"
+            disabled={modify.isPending}
+            onClick={() => send(message)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="chat-input-row">
+        <input
+          value={draft}
+          disabled={modify.isPending}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && send(draft)}
+          placeholder={places[0] ? `${places[0]} 그대로 둬` : "바꾸고 싶은 점을 적어주세요"}
+        />
+        <button
+          type="button"
+          className="chat-send"
+          disabled={modify.isPending || !draft.trim()}
+          onClick={() => send(draft)}
+          aria-label="요청 보내기"
+        >
+          ↑
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** 라우트의 :id 는 명세 4번의 course_id 다. */
 export default function DetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -187,6 +325,10 @@ export default function DetailPage() {
   const [selectedPlace, setSelectedPlace] = useState<PlaceSummary | null>(null);
   const [dayIdx, setDayIdx] = useState(0);
   const [addPlaceOpen, setAddPlaceOpen] = useState(false);
+  const [chatModifyOpen, setChatModifyOpen] = useState(false);
+  // 모바일에서 편집·챗봇을 담는 하단 펼침 버튼. 웹에서는 .fab-actions가 아예 숨겨진다.
+  const [fabOpen, setFabOpen] = useState(false);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
   // 편집 모드. 꺼져 있으면 순서변경·삭제·추가 버튼을 아예 감춘다.
   const [editing, setEditing] = useState(false);
   // 마우스를 올린 타임라인 카드의 item.id. 우측 지도에서 그 장소 마커를 강조한다.
@@ -201,6 +343,18 @@ export default function DetailPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const reorderItems = useReorderCourseItems();
   const deleteItem = useDeleteCourseItem();
+
+  // 링 위치가 바뀌는 조건마다 다시 칠한다. hover 같은 잦은 렌더까지 물면
+  // 마우스를 움직일 때마다 레이아웃을 재는 꼴이라, 높이가 변하는 것만 넣는다.
+  // 글꼴 로딩처럼 렌더 뒤에 늦게 변하는 높이는 ResizeObserver가 맡는다.
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) return;
+    paintTimelineDots(el);
+    const ro = new ResizeObserver(() => paintTimelineDots(el));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [course, dayIdx, editing, busyItemId]);
 
   // sticky 헤더를 nav 바로 아래에 붙이려면 실제 nav 높이가 필요하다(BuilderPage와 같은 방식).
   useEffect(() => {
@@ -308,6 +462,56 @@ export default function DetailPage() {
   const titleFirst = allItems[0]?.place.title ?? "";
   const titleLast = allItems[allItems.length - 1]?.place.title ?? "";
 
+  // 같은 버튼이 웹에서는 Day 탭 오른쪽 한 줄에, 모바일에서는 Day 탭 위(지도·저장)와
+  // 하단 펼침 버튼(편집·챗봇)으로 나뉘어 들어간다. 보이는 자리는 CSS가 고른다.
+  const editBtn = (
+    <button
+      type="button"
+      className="btn-outline"
+      aria-pressed={editing}
+      style={{ color: "var(--sunset)", borderColor: "var(--sunset)" }}
+      onClick={() => {
+        setEditing((v) => !v);
+        setFabOpen(false);
+      }}
+    >
+      {editing ? "✓ 편집 완료" : "✎ 코스 편집"}
+    </button>
+  );
+  const chatBtn = (
+    <button
+      type="button"
+      className="btn-outline"
+      aria-pressed={chatModifyOpen}
+      onClick={() => {
+        setChatModifyOpen((v) => !v);
+        setFabOpen(false);
+      }}
+    >
+      ✦ 챗봇 수정
+    </button>
+  );
+  // compact는 모바일 줄. 폭이 좁아 글자를 떼고 테두리만 남긴다.
+  const mapBtn = (compact: boolean) => (
+    <Link className={compact ? "btn-outline" : "btn-primary"} to={`/trip/${id}/map`}>
+      {compact ? "지도" : "지도에서 열기"}
+    </Link>
+  );
+  const saveBtn = (compact: boolean) =>
+    user ? (
+      <button
+        type="button"
+        className="btn-outline"
+        aria-pressed={isSaved}
+        // 글자가 "저장함"(또는 하트뿐)이라 무슨 동작인지 읽어줄 말이 없다.
+        aria-label="저장함에 담기"
+        disabled={toggleSaved.isPending}
+        onClick={() => toggleSaved.mutate({ courseId, saved: isSaved })}
+      >
+        {compact ? (isSaved ? "♥" : "♡") : isSaved ? "♥ 저장됨" : "♡ 저장함"}
+      </button>
+    ) : null;
+
   return (
     <div>
       <div className="crumb">
@@ -379,6 +583,12 @@ export default function DetailPage() {
         </div>
 
         {/* 타임라인을 스크롤해도 Day 탭·버튼이 nav 아래에 남도록 grid 직속 자식으로 둔다(sticky는 부모 안에서만 고정됨). */}
+        {/* 고정 헤더 바깥이라 스크롤하면 Day 탭만 남고 이 줄은 같이 올라간다. */}
+        <div className="head-actions-mobile">
+          {mapBtn(true)}
+          {saveBtn(true)}
+        </div>
+
         <div className="detail-sticky-head">
           <div className="day-tabs-row">
             {course.days.length > 1 && (
@@ -402,29 +612,10 @@ export default function DetailPage() {
               </div>
             )}
             <div className="actions">
-              <button
-                type="button"
-                className="btn-outline"
-                aria-pressed={editing}
-                style={{ color: "var(--sunset)", borderColor: "var(--sunset)" }}
-                onClick={() => setEditing((v) => !v)}
-              >
-                {editing ? "✓ 편집 완료" : "✎ 코스 편집"}
-              </button>
-              <Link className="btn-primary" to={`/trip/${id}/map`}>
-                지도에서 열기
-              </Link>
-              {user && (
-                <button
-                  type="button"
-                  className="btn-outline"
-                  aria-pressed={isSaved}
-                  disabled={toggleSaved.isPending}
-                  onClick={() => toggleSaved.mutate({ courseId, saved: isSaved })}
-                >
-                  {isSaved ? "♥ 저장됨" : "♡ 저장함에 담기"}
-                </button>
-              )}
+              {editBtn}
+              {chatBtn}
+              {mapBtn(false)}
+              {saveBtn(false)}
             </div>
           </div>
         </div>
@@ -454,7 +645,7 @@ export default function DetailPage() {
                 onClose={() => setOverBudgetDay(null)}
               />
             ) : null}
-            <div className="timeline">
+            <div className="timeline" ref={timelineRef}>
             {airport.depart && (
               <div className="tl-item">
                 <TlDot time={hhmm(airport.depart)} />
@@ -578,7 +769,7 @@ export default function DetailPage() {
               <div className="tl-item">
                 <TlDot time={hhmm(airport.arrive)} />
                 <div className="tl-card tl-airport">
-                  <div className="tl-title">🛫 제주공항 도착 (탑승 수속)</div>
+                  <div className="tl-title">🛫 제주공항 도착 (탑승 수속 준비)</div>
                 </div>
               </div>
             )}
@@ -636,8 +827,17 @@ export default function DetailPage() {
         </div>
 
         <aside>
+          {chatModifyOpen && (
+            <ChatModifyPanel courseId={courseId} day={day} onClose={() => setChatModifyOpen(false)} />
+          )}
           <div className="side-card">
-            <h4>코스 지도</h4>
+            <div className="side-card-head">
+              <h4>코스 지도</h4>
+              <div className="side-note">
+                DAY {day.day_index} · {day.items.length}개 스팟 ·{" "}
+                <Link to={`/trip/${id}/map`}>전체 지도 보기 →</Link>
+              </div>
+            </div>
             <KakaoMap
               points={courseMapPoints(course, day.day_index)}
               showRoute
@@ -654,11 +854,27 @@ export default function DetailPage() {
                 </Link>
               }
             />
-            <div className="side-note">
-              DAY {day.day_index} · {day.items.length}개 스팟 · <Link to={`/trip/${id}/map`}>전체 지도 보기 →</Link>
-            </div>
           </div>
         </aside>
+      </div>
+
+      {fabOpen && <div className="fab-backdrop" onClick={() => setFabOpen(false)} />}
+      <div className="fab-actions">
+        {fabOpen && (
+          <div className="fab-menu">
+            {editBtn}
+            {chatBtn}
+          </div>
+        )}
+        <button
+          type="button"
+          className="fab-toggle"
+          aria-expanded={fabOpen}
+          aria-label="코스 수정 메뉴"
+          onClick={() => setFabOpen((v) => !v)}
+        >
+          {fabOpen ? "✕" : "✎"}
+        </button>
       </div>
 
       {selectedPlace && <PlaceDetailSheet place={selectedPlace} onClose={() => setSelectedPlace(null)} />}

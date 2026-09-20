@@ -639,10 +639,9 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .spinner{width:34px; height:34px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--ink); margin:0 auto 20px; animation:spin 0.9s linear infinite;}
 @keyframes spin{ to{ transform:rotate(360deg); } }
 .loading-checklist{list-style:none; max-width:280px; margin:24px auto; text-align:left; display:flex; flex-direction:column; gap:10px;}
-.loading-checklist li{display:flex; align-items:center; gap:10px; font-family:'Space Mono','Noto Sans KR',monospace; font-size:13px; color:var(--line); transition:color .3s ease;}
+.loading-checklist li{display:flex; align-items:center; justify-content:center; gap:10px; font-family:'Space Mono','Noto Sans KR',monospace; font-size:13px; color:var(--line); transition:color .3s ease;}
 .loading-checklist li.active{color:var(--ink-soft);}
 .loading-checklist li.done{color:var(--ink);}
-.loading-checklist .tick{width:18px; text-align:center; flex-shrink:0;}
 
 /* ---------------- MAP PAGE ---------------- */
 .map-legend{display:flex; gap:16px; flex-wrap:wrap; font-family:'Space Mono','Noto Sans KR',monospace; font-size:12px; color:var(--ink-soft); margin-bottom:14px;}
@@ -710,7 +709,13 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .tl-row > .edit-item-actions{flex:0 0 76px; flex-direction:column; flex-wrap:nowrap; gap:6px;}
 .tl-row > .edit-item-actions button{width:100%;}
 .tl-row > .edit-item-actions .mono{font-size:10px; line-height:1.35; text-align:center; word-break:keep-all; letter-spacing:0;}
-@media (max-width:640px){ .tl-row{gap:8px;} .tl-row > .edit-item-actions{flex-basis:64px;} }
+/* 모바일은 가로가 좁아 옆에 세우면 글자가 깨진다 — 카드 아래 한 줄로 내린다. */
+@media (max-width:640px){
+  .tl-row{flex-direction:column; gap:8px;}
+  .tl-row > .edit-item-actions{flex:0 0 auto; flex-direction:row; flex-wrap:wrap; gap:6px;}
+  .tl-row > .edit-item-actions button{width:auto; font-size:12px; padding:8px 14px;}
+  .tl-row > .edit-item-actions .mono{font-size:11px; text-align:left; align-self:center;}
+}
 .edit-item-actions button{font-family:'Space Mono','Noto Sans KR',monospace; font-size:11px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:var(--paper);}
 .edit-item-actions button:hover:not(:disabled){border-color:var(--ink);}
 .edit-item-actions button:disabled{opacity:0.35; cursor:not-allowed;}
@@ -1072,13 +1077,9 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .loading-checklist li:nth-child(2){animation-delay:.12s;}
 .loading-checklist li:nth-child(3){animation-delay:.24s;}
 @keyframes loading-rise{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
-.loading-checklist li.done .tick{animation:loading-pop .35s cubic-bezier(.2,1.6,.4,1);}
-@keyframes loading-pop{ from{transform:scale(0.3);} to{transform:scale(1);} }
-.loading-checklist li.active .tick{animation:loading-blink 1s ease-in-out infinite;}
-@keyframes loading-blink{ 50%{opacity:0.25;} }
 .loading-tip{margin:0 auto 20px; font-size:12.5px; color:var(--ink-soft); animation:loading-tip-in .5s ease;}
 @keyframes loading-tip-in{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
-@media (prefers-reduced-motion:reduce){ .loading-checklist li, .loading-checklist .tick, .loading-tip{animation:none !important;} .loading-bar>i{animation-duration:1.2s !important;} } /* 진행 띠는 '멈춘 게 아니라 로딩 중'이라는 신호라 동작 줄이기에서도 유지한다 */
+@media (prefers-reduced-motion:reduce){ .loading-checklist li, .loading-tip{animation:none !important;} .loading-bar>i{animation-duration:1.2s !important;} } /* 진행 띠는 '멈춘 게 아니라 로딩 중'이라는 신호라 동작 줄이기에서도 유지한다 */
 /* 빌더 1단계 웹 화면: 기간 칩은 출발/종료일의 보조 선택이라 작게 */
 @media (min-width:961px){ .trip-chip-row .chip{padding:7px 14px; font-size:12px;} }
 /* 빌더 2~4단계 웹 화면: 선택 칩을 한 단계 작게 */
@@ -1091,3 +1092,41 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 }
 /* 빌더 3단계 웹 화면: 선호 음식 칩은 첫 줄 5개, 나머지는 둘째 줄 */
 @media (min-width:961px){ .food-chips .chip-row{display:grid; grid-template-columns:repeat(5,max-content);} }
+
+/* 챗봇 수정 패널. 웹에서는 사이드(2열) 맨 위에 들어가고 코스 지도가 그 아래로 내려간다. */
+.chat-panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+.chat-panel-head h4{margin-bottom:0;}
+.chat-panel-close{font-size:15px; line-height:1; color:var(--ink-soft); padding:2px 4px;}
+.chat-panel-close:hover{color:var(--ink);}
+.chat-log{display:flex; flex-direction:column; gap:12px; max-height:44vh; overflow-y:auto; margin-bottom:14px;}
+.chat-bubble{max-width:82%; align-self:flex-start; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 15px; font-size:13.5px; line-height:1.65;}
+.chat-bubble.me{align-self:flex-end; background:var(--ink); border-color:var(--ink); color:var(--paper); font-weight:500;}
+.chat-bubble.pending{color:var(--ink-soft);}
+/* 칩이 그 날의 장소 이름이라 개수도 길이도 제각각이다 — 접지 않고 한 줄로 두고 가로 스크롤한다. */
+.chat-chips{display:flex; flex-wrap:nowrap; gap:5px; margin-bottom:14px; overflow-x:auto; scrollbar-width:thin; padding-bottom:4px;}
+.chat-chips .chip{flex-shrink:0; font-size:11px; padding:7px 9px; letter-spacing:-0.2px;}
+.chat-input-row{display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px 6px 6px 18px;}
+.chat-input-row input{flex:1; min-width:0; background:transparent; border:0; outline:none; font-size:13px;}
+.chat-input-row input::placeholder{color:var(--ink-soft);}
+.chat-send{flex-shrink:0; width:38px; height:38px; border-radius:50%; background:var(--ink); color:var(--paper); font-size:15px; display:flex; align-items:center; justify-content:center;}
+.chat-send:disabled{opacity:.35;}
+
+/* 모바일 전용 액션 배치. 웹(641px~)은 기존 .actions 한 줄 그대로다. */
+.head-actions-mobile{display:none;}
+.fab-actions{display:none;}
+@media (max-width:640px){
+  /* 지도·저장은 접지 않고 Day 탭 위에 항상 띄운다. */
+  .head-actions-mobile{display:flex; grid-column:1 / -1; justify-content:flex-end; gap:6px; margin-bottom:8px;}
+  .head-actions-mobile > *{display:inline-flex; align-items:center; justify-content:center; padding:6px 14px; min-height:32px; font-size:12px;}
+  /* 편집·챗봇은 탭바(.tabbar, 64px) 위에 뜨는 펼침 버튼으로. */
+  .fab-actions{display:flex; flex-direction:column; align-items:flex-end; gap:10px; position:fixed; right:16px; bottom:80px; z-index:84;}
+  .fab-menu{display:flex; flex-direction:column; align-items:flex-end; gap:8px;}
+  .fab-menu .btn-outline{background:var(--card); white-space:nowrap; box-shadow:0 6px 18px -8px rgba(27,35,64,0.45);}
+  .fab-toggle{width:52px; height:52px; border-radius:50%; background:var(--ink); color:var(--paper); font-size:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -6px rgba(27,35,64,0.55);}
+  .fab-backdrop{position:fixed; inset:0; z-index:83;}
+}
+
+/* 코스 지도 카드: 제목과 요약 문구를 한 줄에 두고 문구는 오른쪽 끝으로. */
+.side-card-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px;}
+.side-card-head h4{margin-bottom:0;}
+.side-card-head .side-note{text-align:right;}

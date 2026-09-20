@@ -24,7 +24,7 @@ function dayDate(tripStartIso: string, dayIndex: number): Date {
 
 export function dayDateLabel(tripStartIso: string, dayIndex: number): string {
   const d = dayDate(tripStartIso, dayIndex);
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAYS[d.getDay()]}`;
+  return `${d.getMonth() + 1}월 ${d.getDate()}일(${WEEKDAYS[d.getDay()]})`;
 }
 
 const SLOT_LABELS: Record<string, string> = {
