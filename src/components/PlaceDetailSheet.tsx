@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
 import { askPlace, getPlaceDetail } from "../api/places";
 import type { AskPlaceResponse, PlaceDetail, SearchPlace } from "../api/types";
+import { summarizeOverview } from "../utils/format";
 
 interface PlaceDetailSheetProps {
   /** 코스 상세(PlaceSummary)에서 열 때는 stay_time_minutes(권장 체류시간)도 같이 온다. */
@@ -23,20 +24,6 @@ function hoursLines(raw: string): string[] {
     .split(/\s*\/\s*/)
     .map((line) => line.trim())
     .filter(Boolean);
-}
-
-/** 장소 소개는 문장(온점) 단위로 최대 3문장, 대략 100자 내로 줄여서 보여준다. */
-function summarizeOverview(overview: string): string {
-  if (!overview) return "";
-  const sentences = overview
-    .split(".")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-  let text = sentences.join(". ");
-  if (text && !/[.!?]$/.test(text)) text += ".";
-  if (text.length > 100) text = `${text.slice(0, 100).trim()}…`;
-  return text;
 }
 
 interface FactField {
