@@ -55,6 +55,20 @@ export function placeMetaLine(place: { small_category_name?: string; hours_raw?:
   return [place.small_category_name, hoursLabel(place.hours_raw)].filter(Boolean).join(" · ");
 }
 
+/** 장소 소개는 문장(온점) 단위로 최대 3문장, 대략 100자 내로 줄여서 보여준다. */
+export function summarizeOverview(overview: string): string {
+  if (!overview) return "";
+  const sentences = overview
+    .split(".")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  let text = sentences.join(". ");
+  if (text && !/[.!?]$/.test(text)) text += ".";
+  if (text.length > 100) text = `${text.slice(0, 100).trim()}…`;
+  return text;
+}
+
 /** 장소 유형 뱃지 텍스트: 카페만 "카페"로, 나머지 음식점은 그대로 "음식점". */
 export function placeTypeLabel(place: { content_type_name?: string; food_role?: string }): string {
   if (place.food_role === "CAFE") return "카페";
