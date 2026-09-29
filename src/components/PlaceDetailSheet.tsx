@@ -17,40 +17,73 @@ function hasValue(v: string): boolean {
   return Boolean(v) && v.trim().toLowerCase() !== "unknown";
 }
 
-/** "10:30" 같은 순수 시각뿐인 조각. 공연 시간표처럼 " / "로 여러 시각을 나열한 것인지 판단하는 데 쓴다. */
-const BARE_TIME = /^\d{1,2}:\d{2}$/;
+/** "[개인]"처럼 대괄호 안 글자뿐인 조각. "[개인] / - 어른 1,000원"처럼 뒤에 오는 첫 항목의 소제목일 뿐이라 혼자 줄을 차지하면 안 된다. */
+const BRACKET_ONLY = /^\[[^[\]]*\]$/;
 
 /**
- * 운영시간·이용요금 원문은 " / "(양옆에 공백 있음)로, 또는(공공데이터포털 원문 그대로일 때) "<br>"/줄바꿈으로
- * 여러 줄이 이어져 온다. "/" 앞뒤 공백을 필수로 두는 이유는 "[3월/4월/9월/10월]"처럼 월 목록에도
- * "/"가 붙어 나오는데, 공백 없이도 갈라지면 그 목록까지 줄바꿈되어 잘게 쪼개진다.
- * "※" 안내문구는 구분자 없이 바로 앞 문장에 붙어 오는 경우가 흔해서("09:00~18:00※ 자세한 사항...")
- * <br>/줄바꿈 경계 안에서 ※ 앞을 한 번 더 끊어 새 줄로 띄운다.
- * 대신 ※ 뒤 문장은 그 안에 " / "가 섞여 있어도("※ 무료 : 국빈 및 그 수행자 / 공무수행자") 더 쪼개지 않고
- * 다음 ※(또는 <br>/줄바꿈)가 나오기 전까지 통째로 한 줄로 둔다 — ※가 아닌 구간만 " / "로 계속 나눈다.
- * " / " 뒤 조각이 순수 시각뿐이면("10:30 / 15:00 / 17:00") 같은 목록의 다른 시간일 뿐이라 줄을 새로 띄우지
- * 않고 앞줄에 그대로 이어붙인다 — 공연 시간표처럼 시각만 나열한 곳에서 시각마다 줄이 갈라지는 걸 막는다.
+ * 운영시간·이용요금 원문은 " / "(양옆에 공백 있음), "<br>", 줄바꿈을 뒤섞어서 여러 줄을 이어붙인다 — 같은
+ * 장소라도 어느 날은 " / "로, 어느 날은 "<br>"로 오기도 해서 셋을 전부 같은 급의 구분자로 취급한다.
+ * "/" 앞뒤 공백을 필수로 두는 이유는 "[3월/4월/9월/10월]"처럼 월 목록에도 "/"가 붙어 나오는데, 공백
+ * 없이도 갈라지면 그 목록까지 줄바꿈되어 잘게 쪼개지기 때문이다.
+ *
+ * 조각을 만들고 나면 하나씩 훑으며 세 가지를 다시 합친다:
+ * - "※"로 시작하는 조각을 만나면, 다음 "※"(또는 끝)가 나올 때까지 뒤따르는 조각을 전부 그 뒤에 이어붙여
+ *   한 줄로 둔다 — 안내문 안에 " / "나 "<br>"가 섞여 있어도 문장이 잘리지 않게.
+ * - "[개인]"처럼 대괄호뿐인 조각을 만나면, 다음 대괄호(또는 ※·끝)가 나올 때까지의 항목을 전부 그 소제목
+ *   밑으로 묶어 "[개인] 어른 1,000원 · 청소년 500원 · 어린이 300원"처럼 한 줄로 압축한다 — 같은 소제목
+ *   아래 나이대별 요금처럼 성격이 같은 항목이라 줄마다 나눌 필요가 없다. 대괄호가 없는 목록은 이 규칙이
+ *   적용 안 되므로 항목마다 한 줄씩 그대로 유지된다.
+ * - 그 외 조각은 "-"로 시작하지 않고 "["도 없으면(예: "10:30", "장애인", "군경") 새로 시작하는 항목이
+ *   아니라 앞 내용에 딸린 나열일 뿐이라 새 줄 대신 앞줄에 이어붙인다 — 공연 시간표처럼 시각만 나열한 곳이나
+ *   "[2000원 할인]- 제주도민 / 단체 10명 이상 / 장애인 / 군경"처럼 "-" 없이 자격 목록만 나열한 곳에서
+ *   조각마다 줄이 갈라지는 걸 막는다. "["가 있으면 대괄호로 시작하는 새 구간일 수 있어 제외한다.
  */
 function splitLines(raw: string): string[] {
-  return raw
-    .split(/\s*<br\s*\/?>\s*|\r?\n/i)
-    .flatMap((block) =>
-      block.split(/(?=※)/).flatMap((part) => {
-        if (part.trim().startsWith("※")) return [part];
-        const pieces = part.split(/\s+\/\s+/);
-        const lines: string[] = [];
-        for (const piece of pieces) {
-          if (lines.length > 0 && BARE_TIME.test(piece.trim())) {
-            lines[lines.length - 1] += ` / ${piece.trim()}`;
-          } else {
-            lines.push(piece);
-          }
-        }
-        return lines;
-      }),
-    )
-    .map((line) => line.trim().replace(/\s*\/\s*$/, ""))
+  const pieces = raw
+    .split(/(?=※)/)
+    .flatMap((chunk) => chunk.split(/\s*<br\s*\/?>\s*|\r?\n|\s+\/\s+/i))
+    .map((p) => p.trim())
     .filter(Boolean);
+
+  const lines: string[] = [];
+  let heading = "";
+  let groupItems: string[] = [];
+  let starLine = "";
+
+  const flushGroup = () => {
+    if (heading || groupItems.length > 0) {
+      lines.push([heading, groupItems.join(" · ")].filter(Boolean).join(" "));
+    }
+    heading = "";
+    groupItems = [];
+  };
+  const flushStar = () => {
+    if (starLine) lines.push(starLine);
+    starLine = "";
+  };
+
+  for (const piece of pieces) {
+    if (piece.startsWith("※")) {
+      flushGroup();
+      flushStar();
+      starLine = piece;
+    } else if (starLine) {
+      starLine += ` / ${piece}`;
+    } else if (BRACKET_ONLY.test(piece)) {
+      flushGroup();
+      heading = piece;
+    } else if (heading) {
+      groupItems.push(piece.replace(/^-\s*/, ""));
+    } else if (lines.length > 0 && !piece.startsWith("-") && !piece.includes("[")) {
+      lines[lines.length - 1] += ` / ${piece}`;
+    } else {
+      lines.push(piece);
+    }
+  }
+  flushGroup();
+  flushStar();
+
+  return lines.map((line) => line.trim().replace(/\s*\/\s*$/, "")).filter(Boolean);
 }
 
 /** 주차·연락처·휴무일처럼 항상 한 줄로 보여주는 항목은, 줄이 여러 개면 그냥 이어붙여 <br> 태그가 그대로 찍히지 않게 한다. */
