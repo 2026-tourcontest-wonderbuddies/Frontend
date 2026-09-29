@@ -17,12 +17,45 @@ function hasValue(v: string): boolean {
   return Boolean(v) && v.trim().toLowerCase() !== "unknown";
 }
 
-/** 운영시간 원문은 " / " 로 여러 줄이 이어져 오므로 줄 단위로 끊어 보여준다. */
-function hoursLines(raw: string): string[] {
+/** "10:30" 같은 순수 시각뿐인 조각. 공연 시간표처럼 " / "로 여러 시각을 나열한 것인지 판단하는 데 쓴다. */
+const BARE_TIME = /^\d{1,2}:\d{2}$/;
+
+/**
+ * 운영시간·이용요금 원문은 " / "(양옆에 공백 있음)로, 또는(공공데이터포털 원문 그대로일 때) "<br>"/줄바꿈으로
+ * 여러 줄이 이어져 온다. "/" 앞뒤 공백을 필수로 두는 이유는 "[3월/4월/9월/10월]"처럼 월 목록에도
+ * "/"가 붙어 나오는데, 공백 없이도 갈라지면 그 목록까지 줄바꿈되어 잘게 쪼개진다.
+ * "※" 안내문구는 구분자 없이 바로 앞 문장에 붙어 오는 경우가 흔해서("09:00~18:00※ 자세한 사항...")
+ * <br>/줄바꿈 경계 안에서 ※ 앞을 한 번 더 끊어 새 줄로 띄운다.
+ * 대신 ※ 뒤 문장은 그 안에 " / "가 섞여 있어도("※ 무료 : 국빈 및 그 수행자 / 공무수행자") 더 쪼개지 않고
+ * 다음 ※(또는 <br>/줄바꿈)가 나오기 전까지 통째로 한 줄로 둔다 — ※가 아닌 구간만 " / "로 계속 나눈다.
+ * " / " 뒤 조각이 순수 시각뿐이면("10:30 / 15:00 / 17:00") 같은 목록의 다른 시간일 뿐이라 줄을 새로 띄우지
+ * 않고 앞줄에 그대로 이어붙인다 — 공연 시간표처럼 시각만 나열한 곳에서 시각마다 줄이 갈라지는 걸 막는다.
+ */
+function splitLines(raw: string): string[] {
   return raw
-    .split(/\s*\/\s*/)
-    .map((line) => line.trim())
+    .split(/\s*<br\s*\/?>\s*|\r?\n/i)
+    .flatMap((block) =>
+      block.split(/(?=※)/).flatMap((part) => {
+        if (part.trim().startsWith("※")) return [part];
+        const pieces = part.split(/\s+\/\s+/);
+        const lines: string[] = [];
+        for (const piece of pieces) {
+          if (lines.length > 0 && BARE_TIME.test(piece.trim())) {
+            lines[lines.length - 1] += ` / ${piece.trim()}`;
+          } else {
+            lines.push(piece);
+          }
+        }
+        return lines;
+      }),
+    )
+    .map((line) => line.trim().replace(/\s*\/\s*$/, ""))
     .filter(Boolean);
+}
+
+/** 주차·연락처·휴무일처럼 항상 한 줄로 보여주는 항목은, 줄이 여러 개면 그냥 이어붙여 <br> 태그가 그대로 찍히지 않게 한다. */
+function joinLines(raw: string): string {
+  return splitLines(raw).join(", ");
 }
 
 /** 장소 소개는 문장(온점) 단위로 최대 3문장, 대략 100자 내로 줄여서 보여준다. */
@@ -81,22 +114,25 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   // 서버가 같은 사진 URL을 두 번씩 담아 보내서 중복을 걷어낸다. 사진이 없는 장소는 빈 배열이다.
   const photos = [...new Set(p.images ?? [])];
 
-  const hours = hasValue(p.hours_raw) ? hoursLines(p.hours_raw) : [];
+  const hours = hasValue(p.hours_raw) ? splitLines(p.hours_raw) : [];
+  const fees = hasValue(p.fees) ? splitLines(p.fees) : [];
   const isRestaurant = p.content_type_name === "음식점";
   const menu = hasValue(p.menu) ? p.menu : "";
   const featuredMenu = hasValue(p.featured_menu) ? p.featured_menu : "";
 
-  // 운영시간이 한 줄뿐이면(예: "상시 개방") 다른 항목처럼 측정 대상에 넣어 짧으면 같이 짝지어준다.
+  // 운영시간·이용요금이 한 줄뿐이면(예: "상시 개방") 다른 항목처럼 측정 대상에 넣어 짧으면 같이 짝지어준다.
   // 두 줄 이상(시설별로 따로 안내되는 경우)이면 가독성을 위해 항상 한 행 전체를 쓴다.
   const singleLineHours = hours.length === 1 ? hours[0] : "";
   const multiLineHours = hours.length > 1 ? hours : [];
+  const singleLineFees = fees.length === 1 ? fees[0] : "";
+  const multiLineFees = fees.length > 1 ? fees : [];
 
   const fields: FactField[] = [
-    { key: "parking", icon: "🅿️", label: "주차", value: hasValue(p.parking) ? p.parking : "" },
-    { key: "contact", icon: "📞", label: "연락처", value: hasValue(p.contact) ? p.contact : "" },
+    { key: "parking", icon: "🅿️", label: "주차", value: hasValue(p.parking) ? joinLines(p.parking) : "" },
+    { key: "contact", icon: "📞", label: "연락처", value: hasValue(p.contact) ? joinLines(p.contact) : "" },
     { key: "hours", icon: "🕐", label: "운영시간", value: singleLineHours },
-    { key: "closed", icon: "🚫", label: "휴무일", value: hasValue(p.closed_days_raw) ? p.closed_days_raw : "" },
-    { key: "fees", icon: "💰", label: "이용요금", value: hasValue(p.fees) ? p.fees : "" },
+    { key: "closed", icon: "🚫", label: "휴무일", value: hasValue(p.closed_days_raw) ? joinLines(p.closed_days_raw) : "" },
+    { key: "fees", icon: "💰", label: "이용요금", value: singleLineFees },
     {
       key: "stay",
       icon: "⏱️",
@@ -157,6 +193,7 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
       }
       onClose={onClose}
       wide
+      swipeBodyToClose
     >
       <div className="place-detail-sheet">
         {/* 사진 묶음. 데스크톱에서 오른쪽 정보 카드와 같은 높이로 늘어난다. */}
@@ -213,9 +250,22 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
           {multiLineHours.length > 0 && (
             <div className="fact-item fact-span-2 fact-item-multiline">
               <div className="override-label">🕐 운영시간</div>
-              {multiLineHours.map((line) => (
-                <p key={line}>{line}</p>
-              ))}
+              <div>
+                {multiLineHours.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {multiLineFees.length > 0 && (
+            <div className="fact-item fact-span-2 fact-item-multiline">
+              <div className="override-label">💰 이용요금</div>
+              <div>
+                {multiLineFees.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -264,7 +314,7 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
               className="search-input"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="예: 여기 주차 가능한가요?"
+              placeholder="예: 여기 화장실있나요?"
             />
             <button type="submit" className="btn-primary" disabled={ask.isPending || !question.trim()}>
               질문

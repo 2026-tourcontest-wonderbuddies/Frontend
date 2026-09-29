@@ -115,7 +115,13 @@ export function useSelectCourseLodging() {
       selectCourseLodging(courseId, contentId),
     onSuccess: (_res, { courseId }) => {
       // 숙소를 바꾸면 각 Day의 lodging이 갱신되므로 상세를 다시 받는다.
-      qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
+      // sessionStorage엔 숙소 고르기 전(day.lodging=null) 스냅샷이 남아있어, 지우지 않으면
+      // DetailPage가 그 옛 스냅샷을 initialData로 먼저 그려서 숙소 앵커가 뒤늦게 나타난다.
+      sessionStorage.removeItem(`q:course:${courseId}`);
+      // invalidateQueries는 새로 받아오는 동안에도 옛 캐시(숙소 고르기 전 값)를 계속 보여준다 —
+      // LodgingPage 자신이 이미 그 courseId로 useCourse를 한 번 불러서 메모리 캐시에 옛 값이 남아있다.
+      // removeQueries로 캐시째 지워야 DetailPage가 마운트될 때 옛 값 없이 새로 받아온다.
+      qc.removeQueries({ queryKey: ["course", String(courseId)] });
       qc.invalidateQueries({ queryKey: ["course-lodging-options", String(courseId)] });
     },
   });
