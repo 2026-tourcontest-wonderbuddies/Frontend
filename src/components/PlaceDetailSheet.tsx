@@ -18,12 +18,78 @@ function hasValue(v: string): boolean {
   return Boolean(v) && v.trim().toLowerCase() !== "unknown";
 }
 
-/** 운영시간 원문은 " / " 로 여러 줄이 이어져 오므로 줄 단위로 끊어 보여준다. */
-function hoursLines(raw: string): string[] {
-  return raw
-    .split(/\s*\/\s*/)
-    .map((line) => line.trim())
+/** "[개인]"처럼 대괄호 안 글자뿐인 조각. "[개인] / - 어른 1,000원"처럼 뒤에 오는 첫 항목의 소제목일 뿐이라 혼자 줄을 차지하면 안 된다. */
+const BRACKET_ONLY = /^\[[^[\]]*\]$/;
+
+/**
+ * 운영시간·이용요금 원문은 " / "(양옆에 공백 있음), "<br>", 줄바꿈을 뒤섞어서 여러 줄을 이어붙인다 — 같은
+ * 장소라도 어느 날은 " / "로, 어느 날은 "<br>"로 오기도 해서 셋을 전부 같은 급의 구분자로 취급한다.
+ * "/" 앞뒤 공백을 필수로 두는 이유는 "[3월/4월/9월/10월]"처럼 월 목록에도 "/"가 붙어 나오는데, 공백
+ * 없이도 갈라지면 그 목록까지 줄바꿈되어 잘게 쪼개지기 때문이다.
+ *
+ * 조각을 만들고 나면 하나씩 훑으며 세 가지를 다시 합친다:
+ * - "※"로 시작하는 조각을 만나면, 다음 "※"(또는 끝)가 나올 때까지 뒤따르는 조각을 전부 그 뒤에 이어붙여
+ *   한 줄로 둔다 — 안내문 안에 " / "나 "<br>"가 섞여 있어도 문장이 잘리지 않게.
+ * - "[개인]"처럼 대괄호뿐인 조각을 만나면, 다음 대괄호(또는 ※·끝)가 나올 때까지의 항목을 전부 그 소제목
+ *   밑으로 묶어 "[개인] 어른 1,000원 · 청소년 500원 · 어린이 300원"처럼 한 줄로 압축한다 — 같은 소제목
+ *   아래 나이대별 요금처럼 성격이 같은 항목이라 줄마다 나눌 필요가 없다. 대괄호가 없는 목록은 이 규칙이
+ *   적용 안 되므로 항목마다 한 줄씩 그대로 유지된다.
+ * - 그 외 조각은 "-"로 시작하지 않고 "["도 없으면(예: "10:30", "장애인", "군경") 새로 시작하는 항목이
+ *   아니라 앞 내용에 딸린 나열일 뿐이라 새 줄 대신 앞줄에 이어붙인다 — 공연 시간표처럼 시각만 나열한 곳이나
+ *   "[2000원 할인]- 제주도민 / 단체 10명 이상 / 장애인 / 군경"처럼 "-" 없이 자격 목록만 나열한 곳에서
+ *   조각마다 줄이 갈라지는 걸 막는다. "["가 있으면 대괄호로 시작하는 새 구간일 수 있어 제외한다.
+ */
+function splitLines(raw: string): string[] {
+  const pieces = raw
+    .split(/(?=※)/)
+    .flatMap((chunk) => chunk.split(/\s*<br\s*\/?>\s*|\r?\n|\s+\/\s+/i))
+    .map((p) => p.trim())
     .filter(Boolean);
+
+  const lines: string[] = [];
+  let heading = "";
+  let groupItems: string[] = [];
+  let starLine = "";
+
+  const flushGroup = () => {
+    if (heading || groupItems.length > 0) {
+      lines.push([heading, groupItems.join(" · ")].filter(Boolean).join(" "));
+    }
+    heading = "";
+    groupItems = [];
+  };
+  const flushStar = () => {
+    if (starLine) lines.push(starLine);
+    starLine = "";
+  };
+
+  for (const piece of pieces) {
+    if (piece.startsWith("※")) {
+      flushGroup();
+      flushStar();
+      starLine = piece;
+    } else if (starLine) {
+      starLine += ` / ${piece}`;
+    } else if (BRACKET_ONLY.test(piece)) {
+      flushGroup();
+      heading = piece;
+    } else if (heading) {
+      groupItems.push(piece.replace(/^-\s*/, ""));
+    } else if (lines.length > 0 && !piece.startsWith("-") && !piece.includes("[")) {
+      lines[lines.length - 1] += ` / ${piece}`;
+    } else {
+      lines.push(piece);
+    }
+  }
+  flushGroup();
+  flushStar();
+
+  return lines.map((line) => line.trim().replace(/\s*\/\s*$/, "")).filter(Boolean);
+}
+
+/** 주차·연락처·휴무일처럼 항상 한 줄로 보여주는 항목은, 줄이 여러 개면 그냥 이어붙여 <br> 태그가 그대로 찍히지 않게 한다. */
+function joinLines(raw: string): string {
+  return splitLines(raw).join(", ");
 }
 
 interface FactField {
@@ -68,22 +134,25 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
   // 서버가 같은 사진 URL을 두 번씩 담아 보내서 중복을 걷어낸다. 사진이 없는 장소는 빈 배열이다.
   const photos = [...new Set(p.images ?? [])];
 
-  const hours = hasValue(p.hours_raw) ? hoursLines(p.hours_raw) : [];
+  const hours = hasValue(p.hours_raw) ? splitLines(p.hours_raw) : [];
+  const fees = hasValue(p.fees) ? splitLines(p.fees) : [];
   const isRestaurant = p.content_type_name === "음식점";
   const menu = hasValue(p.menu) ? p.menu : "";
   const featuredMenu = hasValue(p.featured_menu) ? p.featured_menu : "";
 
-  // 운영시간이 한 줄뿐이면(예: "상시 개방") 다른 항목처럼 측정 대상에 넣어 짧으면 같이 짝지어준다.
+  // 운영시간·이용요금이 한 줄뿐이면(예: "상시 개방") 다른 항목처럼 측정 대상에 넣어 짧으면 같이 짝지어준다.
   // 두 줄 이상(시설별로 따로 안내되는 경우)이면 가독성을 위해 항상 한 행 전체를 쓴다.
   const singleLineHours = hours.length === 1 ? hours[0] : "";
   const multiLineHours = hours.length > 1 ? hours : [];
+  const singleLineFees = fees.length === 1 ? fees[0] : "";
+  const multiLineFees = fees.length > 1 ? fees : [];
 
   const fields: FactField[] = [
-    { key: "parking", icon: "🅿️", label: "주차", value: hasValue(p.parking) ? p.parking : "" },
-    { key: "contact", icon: "📞", label: "연락처", value: hasValue(p.contact) ? p.contact : "" },
+    { key: "parking", icon: "🅿️", label: "주차", value: hasValue(p.parking) ? joinLines(p.parking) : "" },
+    { key: "contact", icon: "📞", label: "연락처", value: hasValue(p.contact) ? joinLines(p.contact) : "" },
     { key: "hours", icon: "🕐", label: "운영시간", value: singleLineHours },
-    { key: "closed", icon: "🚫", label: "휴무일", value: hasValue(p.closed_days_raw) ? p.closed_days_raw : "" },
-    { key: "fees", icon: "💰", label: "이용요금", value: hasValue(p.fees) ? p.fees : "" },
+    { key: "closed", icon: "🚫", label: "휴무일", value: hasValue(p.closed_days_raw) ? joinLines(p.closed_days_raw) : "" },
+    { key: "fees", icon: "💰", label: "이용요금", value: singleLineFees },
     {
       key: "stay",
       icon: "⏱️",
@@ -144,6 +213,7 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
       }
       onClose={onClose}
       wide
+      swipeBodyToClose
     >
       <div className="place-detail-sheet">
         {/* 사진 묶음. 데스크톱에서 오른쪽 정보 카드와 같은 높이로 늘어난다. */}
@@ -200,9 +270,22 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
           {multiLineHours.length > 0 && (
             <div className="fact-item fact-span-2 fact-item-multiline">
               <div className="override-label">🕐 운영시간</div>
-              {multiLineHours.map((line) => (
-                <p key={line}>{line}</p>
-              ))}
+              <div>
+                {multiLineHours.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {multiLineFees.length > 0 && (
+            <div className="fact-item fact-span-2 fact-item-multiline">
+              <div className="override-label">💰 이용요금</div>
+              <div>
+                {multiLineFees.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -251,7 +334,7 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
               className="search-input"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="예: 여기 주차 가능한가요?"
+              placeholder="예: 여기 화장실있나요?"
             />
             <button type="submit" className="btn-primary" disabled={ask.isPending || !question.trim()}>
               질문
