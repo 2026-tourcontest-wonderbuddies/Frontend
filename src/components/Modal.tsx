@@ -28,7 +28,10 @@ export default function Modal({ title, titleAside, subtitle, headAction, onClose
   const [dragY, setDragY] = useState(0);
 
   function handlePointerDown(e: PointerEvent<HTMLDivElement>) {
-    // 데스크톱은 중앙 모달이라 끌어서 닫는 동작이 없다.
+    // 끌어서 닫기는 손가락 제스처다. 마우스로 누르고 끄는 건 닫기가 아니라 그냥 클릭·드래그로 남겨둔다.
+    if (e.pointerType === "mouse") return;
+    // 데스크톱은 중앙 모달이라 끌어서 닫는 동작이 없다. (창 폭만으로 판단하므로 모바일 폭의 창을 열어둔
+    // 데스크톱에서도 손가락이 아니라 창 폭이 좁을 때만 걸린다 — 위 마우스 제외 체크와 함께 써야 안전하다.)
     if (window.matchMedia("(min-width:641px)").matches) return;
     draggingRef.current = true;
     startYRef.current = e.clientY;
@@ -46,6 +49,7 @@ export default function Modal({ title, titleAside, subtitle, headAction, onClose
   // 핸들과 같은 로직을 쓰되, 본문이 맨 위(scrollTop 0)일 때 아래로 끄는 제스처만 가로채 닫기로 넘긴다.
   // 그 전까지는 아무것도 건드리지 않아 평소 스크롤이 그대로 동작한다.
   function handleBodyPointerDown(e: PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse") return; // 마우스 드래그로는 닫히지 않게 — 손가락 제스처 전용.
     if (window.matchMedia("(min-width:641px)").matches) return;
     startYRef.current = e.clientY;
   }
@@ -58,6 +62,7 @@ export default function Modal({ title, titleAside, subtitle, headAction, onClose
       handlePointerMove(e);
       return;
     }
+    if (e.pointerType === "mouse") return;
     if (window.matchMedia("(min-width:641px)").matches) return;
     if ((bodyRef.current?.scrollTop ?? 0) > 0) return;
     const delta = e.clientY - startYRef.current;
