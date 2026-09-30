@@ -3,13 +3,12 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Modal from "../components/Modal";
 import PlaceDetailSheet from "../components/PlaceDetailSheet";
-import { PRIORITY_LABELS, type CourseDetail, type CuratedCourseSummary, type PlaceSummary, type SearchPlace } from "../api/types";
+import { type CourseDetail, type CuratedCourseSummary, type PlaceSummary, type SearchPlace } from "../api/types";
 import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
 import { useSavedCourses, useToggleSavedCourse } from "../hooks/useSavedCourses";
 import { useSavedCuratedCourses, useToggleSavedCuratedCourse } from "../hooks/useCuratedCourses";
-import { useCourseDetails, useMyTrips } from "../hooks/useCourses";
+import { useCourseDetails } from "../hooks/useCourses";
 import { courseStats, courseTitle } from "../utils/course";
-import { dateLabel, periodLabel } from "../utils/format";
 
 /** 저장 코스 요약 줄. 체류+이동을 합쳐 시간 단위로 보여준다. */
 function courseSummaryText(course: CourseDetail): string {
@@ -30,9 +29,6 @@ export default function SavedPage() {
   const { data: savedCurated = [] } = useSavedCuratedCourses(Boolean(user));
   // 목록 응답에는 코스 이름이 없어 상세(명세 4번)로 제목·요약을 만든다(CoursesPage와 같은 방식).
   const { courses } = useCourseDetails(savedCourses.map((c) => c.id));
-  // 코스 생성이 실패한 trip 도 행은 남아서(코스 0개) 같이 내려온다. 열어볼 게 없으니 거른다.
-  const { data: trips = [] } = useMyTrips(Boolean(user));
-  const madeTrips = trips.filter((t) => t.courses.length > 0);
   const toggleSaved = useToggleSavedPlace();
   const toggleSavedCourse = useToggleSavedCourse();
   const toggleSavedCurated = useToggleSavedCuratedCourse();
@@ -59,7 +55,7 @@ export default function SavedPage() {
     );
   }
 
-  const isEmpty = places.length === 0 && courses.length === 0 && savedCurated.length === 0 && madeTrips.length === 0;
+  const isEmpty = places.length === 0 && courses.length === 0 && savedCurated.length === 0;
 
   return (
     <div className="wrap page-pad saved-page">
@@ -156,37 +152,6 @@ export default function SavedPage() {
 
           </div>
         </div>
-      )}
-
-      {madeTrips.length > 0 && (
-        <section style={{ marginTop: 36 }}>
-          <h2 className="section-title serif" style={{ fontSize: 19, marginBottom: 16, WebkitTextStroke: "0" }}>
-            이전에 만든 코스
-          </h2>
-          <div className="saved-list">
-            {madeTrips.map((trip) => (
-              // 코스 칩이 여러 개면 좁은 화면에서 왼쪽 날짜 칸이 찌그러진다. 폭이 모자라면 칩 줄을 아래로 내린다.
-              <div className="saved-row" key={trip.trip_id} style={{ flexWrap: "wrap" }}>
-                <div className="saved-row-link" style={{ minWidth: 180 }}>
-                  <div className="saved-row-title">
-                    {periodLabel(trip.start_date, trip.end_date)}
-                  </div>
-                  <div className="saved-row-sub mono">
-                    {trip.courses[0].days_summary.length}일 일정 · {dateLabel(trip.created_at)} 생성
-                  </div>
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {trip.courses.map((c) => (
-                    <Link className="btn-outline" to={`/trip/${c.id}`} key={c.id}>
-                      {c.is_selected ? "✓ " : ""}
-                      {PRIORITY_LABELS[c.mode]} · {c.place_count}곳
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       )}
 
       {target && (

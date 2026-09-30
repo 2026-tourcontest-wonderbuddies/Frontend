@@ -88,7 +88,8 @@ export default function Modal({ title, titleAside, subtitle, headAction, onClose
     const el = bodyRef.current;
     if (!el) return;
 
-    function onTouchMove(e: TouchEvent) {
+    // function 선언은 호이스팅돼서 위 null 체크가 적용되지 않는다 — 화살표 함수로 둔다.
+    const onTouchMove = (e: TouchEvent) => {
       if (window.matchMedia("(min-width:641px)").matches) return;
       if (draggingRef.current) {
         e.preventDefault();
@@ -98,7 +99,7 @@ export default function Modal({ title, titleAside, subtitle, headAction, onClose
       const touch = e.touches[0];
       if (!touch) return;
       if (touch.clientY - startYRef.current > 0) e.preventDefault();
-    }
+    };
 
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => el.removeEventListener("touchmove", onTouchMove);
