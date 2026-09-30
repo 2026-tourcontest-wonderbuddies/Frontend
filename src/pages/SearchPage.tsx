@@ -212,7 +212,6 @@ export default function SearchPage() {
                 }
               >
                 {savedIds.has(place.content_id) ? "♥" : "♡"}
-                <span className="save-label">{savedIds.has(place.content_id) ? " 저장됨" : " 저장"}</span>
               </button>
             )}
           </div>

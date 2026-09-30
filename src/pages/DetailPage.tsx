@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useMutationState } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  COURSE_EDIT_KEY,
   useAddCourseItem,
   useCourse,
   useDeleteCourseItem,
@@ -119,8 +121,13 @@ function serverErrorText(err: unknown, fallback: string): string {
 
 /** 편집이 실패했거나 가용 시간을 넘었을 때 타임라인 위에 띄우는 배너. */
 function EditBanner({ title, detail, onClose }: { title: string; detail: string; onClose: () => void }) {
+  // 편집 버튼은 타임라인 아래쪽에 있을 수 있어, 배너가 뜨면 화면을 배너로 옮겨 놓치지 않게 한다.
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [title, detail]);
   return (
-    <div className="edit-banner" role="status">
+    <div className="edit-banner" role="status" ref={ref}>
       <div className="edit-banner-text">
         <strong>{title}</strong>
         <p>{detail}</p>
@@ -368,6 +375,21 @@ export default function DetailPage() {
     return () => ro.disconnect();
   }, []);
 
+  // 편집(순서 변경·추가·삭제) 중에는 화면을 멈춘다. 클릭은 투명한 .loading-overlay가 막고, 스크롤·키 입력은 여기서 막는다.
+  // overflow:hidden은 데스크톱에서 스크롤바가 사라지며 화면이 옆으로 튀어서 이벤트를 막는 쪽을 택했다.
+  // 추가 요청은 AddPlaceModal 안에서 걸리므로 isPending 대신 mutationKey로 진행 중인 편집을 찾는다.
+  const pendingEdit = useMutationState({
+    filters: { mutationKey: [COURSE_EDIT_KEY], status: "pending" },
+    select: (m) => m.options.mutationKey?.[1] as "reorder" | "add" | "delete" | undefined,
+  })[0];
+  useEffect(() => {
+    if (!pendingEdit) return;
+    const stop = (e: Event) => e.preventDefault();
+    const events = ["wheel", "touchmove", "keydown"] as const;
+    events.forEach((t) => window.addEventListener(t, stop, { passive: false }));
+    return () => events.forEach((t) => window.removeEventListener(t, stop));
+  }, [pendingEdit]);
+
   if (isLoading) {
     return (
       <div className="state-panel">
@@ -440,11 +462,18 @@ export default function DetailPage() {
     lastItemDepart && day.travel_to_next_min != null
       ? new Date(new Date(lastItemDepart).getTime() + day.travel_to_next_min * 60000).toISOString()
       : lastItemDepart;
+  // "HH:MM" 글자끼리 비교하면 자정을 넘긴 도착(00:30)이 체크인(16:00)보다 이르게 읽힌다.
+  // 체크인을 그날(첫 장소 도착일) 날짜의 시각으로 만들어 실제 시각끼리 비교한다.
+  const checkInMatch = day.lodging?.check_in_time?.match(/(\d{1,2}):(\d{2})/);
+  const checkInAt =
+    checkInMatch && day.items[0]
+      ? new Date(new Date(day.items[0].arrive_at).setHours(Number(checkInMatch[1]), Number(checkInMatch[2]), 0, 0))
+      : null;
   const lodgingArriveAt =
-    lodgingArriveIso && day.lodging?.check_in_time
-      ? hhmm(lodgingArriveIso) > day.lodging.check_in_time
+    lodgingArriveIso && checkInAt
+      ? new Date(lodgingArriveIso) > checkInAt
         ? hhmm(lodgingArriveIso)
-        : day.lodging.check_in_time
+        : day.lodging!.check_in_time!
       : lodgingArriveIso
         ? hhmm(lodgingArriveIso)
         : day.lodging?.check_in_time || "숙박";
@@ -497,20 +526,19 @@ export default function DetailPage() {
       {compact ? "지도" : "지도에서 열기"}
     </Link>
   );
-  const saveBtn = (compact: boolean) =>
-    user ? (
-      <button
-        type="button"
-        className="btn-outline"
-        aria-pressed={isSaved}
-        // 글자가 "저장함"(또는 하트뿐)이라 무슨 동작인지 읽어줄 말이 없다.
-        aria-label="저장함에 담기"
-        disabled={toggleSaved.isPending}
-        onClick={() => toggleSaved.mutate({ courseId, saved: isSaved })}
-      >
-        {compact ? (isSaved ? "♥" : "♡") : isSaved ? "♥ 저장됨" : "♡ 저장함"}
-      </button>
-    ) : null;
+  const saveBtn = user ? (
+    <button
+      type="button"
+      className="btn-outline save-heart"
+      aria-pressed={isSaved}
+      // 글자가 하트뿐이라 무슨 동작인지 읽어줄 말이 없다.
+      aria-label="저장함에 담기"
+      disabled={toggleSaved.isPending}
+      onClick={() => toggleSaved.mutate({ courseId, saved: isSaved })}
+    >
+      {isSaved ? "♥" : "♡"}
+    </button>
+  ) : null;
 
   return (
     <div>
@@ -586,7 +614,7 @@ export default function DetailPage() {
         {/* 고정 헤더 바깥이라 스크롤하면 Day 탭만 남고 이 줄은 같이 올라간다. */}
         <div className="head-actions-mobile">
           {mapBtn(true)}
-          {saveBtn(true)}
+          {saveBtn}
         </div>
 
         <div className="detail-sticky-head">
@@ -615,7 +643,7 @@ export default function DetailPage() {
               {editBtn}
               {chatBtn}
               {mapBtn(false)}
-              {saveBtn(false)}
+              {saveBtn}
             </div>
           </div>
         </div>
@@ -907,6 +935,21 @@ export default function DetailPage() {
             </button>
           </div>
         </Modal>
+      )}
+      {/* 편집은 서버가 도착 시각을 다시 계산해 몇 초 걸린다. 그동안 화면을 멈추고 가운데에 로딩 표시를 띄운다. */}
+      {pendingEdit && (
+        <div className="loading-overlay" role="status">
+          <div className="loading-card">
+            <div className="spinner" />
+            <span className="serif">
+              {pendingEdit === "add"
+                ? "장소를 추가하는 중이에요"
+                : pendingEdit === "delete"
+                  ? "장소를 삭제하는 중이에요"
+                  : "순서를 바꾸는 중이에요"}
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );
