@@ -52,17 +52,26 @@ export default function Modal({ title, titleAside, subtitle, headAction, onClose
 
   function handleBodyPointerMove(e: PointerEvent<HTMLDivElement>) {
     if (draggingRef.current) {
+      // 실기기에서는 여기서 막지 않으면 브라우저가 이 손짓을 여전히 "스크롤 바운스"로도 같이 처리해서,
+      // 우리가 그리는 translateY와 네이티브 바운스가 서로 싸워 실제로는 안 끌리는 것처럼 보인다.
+      e.preventDefault();
       handlePointerMove(e);
       return;
     }
     if (window.matchMedia("(min-width:641px)").matches) return;
     if ((bodyRef.current?.scrollTop ?? 0) > 0) return;
-    if (e.clientY - startYRef.current < 8) return;
+    const delta = e.clientY - startYRef.current;
+    if (delta <= 0) return; // 위로 움직였거나 그대로면 더 스크롤할 여지가 없으니 그냥 둔다(닫기 의도가 아님).
+    // 맨 위에서 아래로 끄는 중 — 여기서부터 막아야 실기기에서 브라우저의 스크롤 바운스가 끼어들지 않는다.
+    // 8px 문턱보다 먼저 막는 이유: 문턱을 넘긴 뒤에 막으면 이미 브라우저가 바운스를 시작해버린 뒤라 늦다.
+    e.preventDefault();
+    if (delta < 8) return;
     draggingRef.current = true;
     startYRef.current = e.clientY; // 여기서 기준점을 다시 잡아 패널이 튀지 않게 한다.
     dragYRef.current = 0;
     setPhase("dragging");
     setDragY(0);
+    e.currentTarget.setPointerCapture(e.pointerId);
   }
 
   function endDrag() {
