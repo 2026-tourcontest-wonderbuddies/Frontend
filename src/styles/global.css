@@ -861,6 +861,9 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 /* 장소 상세(모바일): 저장·닫기 버튼을 장소명과 같은 줄에 두고, 주소는 버튼 아래 전체 폭에서 한 줄로 보인다.
    .modal-head-text 를 display:contents 로 풀어 제목·관광타입·주소가 헤더 격자의 칸이 되게 한다. */
 @media (max-width:640px){
+  /* 내용 길이와 상관없이 항상 화면의 2/3만 차지하게 고정한다. 짧은 장소는 아래가 비고, 긴 장소는
+     modal-body가 그 안에서 스크롤된다(overflow-y:auto가 이미 걸려 있음). */
+  .modal-panel:has(.place-detail-sheet){ height:66.6667vh; max-height:66.6667vh; }
   .modal-panel:has(.place-detail-sheet) .modal-head{display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:12px;}
   .modal-panel:has(.place-detail-sheet) .modal-head-text{display:contents;}
   .modal-panel:has(.place-detail-sheet) .modal-head h3{grid-column:1; grid-row:1;}
