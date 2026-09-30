@@ -116,9 +116,13 @@ export function useSelectCourseLodging() {
 }
 
 /** 응답은 결과 요약뿐이라(over_budget 등), 성공하면 코스 상세를 재조회해서 최신 타임라인을 받는다. */
+/** 코스 상세의 편집(순서 변경·추가·삭제) 요청 키. 상세 화면이 진행 중인 편집을 보고 로딩 표시를 띄운다. */
+export const COURSE_EDIT_KEY = "courseEdit";
+
 export function useReorderCourseItems() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: [COURSE_EDIT_KEY, "reorder"],
     mutationFn: ({
       courseId,
       dayIndex,
@@ -128,9 +132,8 @@ export function useReorderCourseItems() {
       dayIndex: number;
       itemIds: number[];
     }) => reorderCourseDayItems(courseId, dayIndex, itemIds),
-    onSuccess: (_res, { courseId }) => {
-      qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
-    },
+    // 재조회까지 기다려야 isPending이 새 순서가 그려질 때 풀린다(로딩 화면이 옛 순서를 잠깐 드러내지 않게).
+    onSuccess: (_res, { courseId }) => qc.invalidateQueries({ queryKey: ["course", String(courseId)] }),
   });
 }
 
@@ -152,6 +155,7 @@ export function useModifyCourse() {
 export function useAddCourseItem() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: [COURSE_EDIT_KEY, "add"],
     mutationFn: ({
       courseId,
       dayIndex,
@@ -163,19 +167,18 @@ export function useAddCourseItem() {
       contentId: string;
       order: number;
     }) => addCourseItem(courseId, dayIndex, contentId, order),
-    onSuccess: (_res, { courseId }) => {
-      qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
-    },
+    // 재조회까지 기다려 로딩 표시가 새 코스가 그려질 때 풀리게 한다.
+    onSuccess: (_res, { courseId }) => qc.invalidateQueries({ queryKey: ["course", String(courseId)] }),
   });
 }
 
 export function useDeleteCourseItem() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: [COURSE_EDIT_KEY, "delete"],
     mutationFn: ({ courseId, itemId }: { courseId: number | string; itemId: number }) =>
       deleteCourseItem(courseId, itemId),
-    onSuccess: (_res, { courseId }) => {
-      qc.invalidateQueries({ queryKey: ["course", String(courseId)] });
-    },
+    // 재조회까지 기다려 로딩 표시가 새 코스가 그려질 때 풀리게 한다.
+    onSuccess: (_res, { courseId }) => qc.invalidateQueries({ queryKey: ["course", String(courseId)] }),
   });
 }
