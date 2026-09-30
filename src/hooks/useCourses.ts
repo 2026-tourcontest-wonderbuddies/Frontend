@@ -9,20 +9,8 @@ import {
   selectCourse,
   selectCourseLodging,
 } from "../api/courses";
-import { getMyTrips, getTripCourses } from "../api/trips";
+import { getTripCourses } from "../api/trips";
 import type { CourseDetail } from "../api/types";
-
-/**
- * 내가 만든 여행 이력(명세서 "이전 코스 조회").
- * 비로그인이면 빈 배열이 오므로 부를 필요가 없다 — enabled 로 막는다.
- */
-export function useMyTrips(enabled: boolean) {
-  return useQuery({
-    queryKey: ["my-trips"],
-    queryFn: getMyTrips,
-    enabled,
-  });
-}
 
 /**
  * 외부 링크(트립닷컴)를 다녀오면 탭이 통째로 새로 로드되어 메모리 캐시가 사라진다.
