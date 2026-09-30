@@ -117,12 +117,12 @@ export default function SearchPage() {
         )}
       </form>
 
-      <div className="override-section" style={{ marginTop: 14 }}>
+      <div className="override-section search-filter-row" style={{ marginTop: 14 }}>
         <div className="override-label">관광 유형</div>
         <ChipGroup options={CATEGORY_OPTIONS} value={category} onChange={(v) => setCategory(v === category ? "" : v)} />
       </div>
 
-      <div className="override-section region-chip-grid">
+      <div className="override-section search-filter-row region-chip-grid">
         <div className="override-label">권역</div>
         <ChipGroup options={REGION_OPTIONS} value={region} onChange={(v) => setRegion(v === region ? "" : (v as RegionKey))} />
         {/* 모바일에서는 칩 5개가 세로로 길어 같은 필터를 드롭다운으로 보여준다(CSS가 칩/드롭다운 중 하나만 보이게 한다). */}

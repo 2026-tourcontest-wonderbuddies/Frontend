@@ -71,8 +71,9 @@ export default function CuratedCourseDetailPage() {
                   <div className="tl-top">
                     <div className="tl-title">{item.place.title}</div>
                   </div>
-                  <div className="tl-desc">
-                    {item.place.overview || `${item.place.content_type_name} · ${item.place.address}`}
+                  <div className="tl-meta">{item.place.small_category_name}</div>
+                  <div className="tl-meta" style={{ marginBottom: 0 }}>
+                    {item.place.address}
                   </div>
                 </div>
                 {idx < course.items.length - 1 && (

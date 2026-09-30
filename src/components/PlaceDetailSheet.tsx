@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useSavedPlaces, useToggleSavedPlace } from "../hooks/useSavedPlaces";
 import { askPlace, getPlaceDetail } from "../api/places";
 import type { AskPlaceResponse, PlaceDetail, SearchPlace } from "../api/types";
+import { summarizeOverview } from "../utils/format";
 
 interface PlaceDetailSheetProps {
   /** 코스 상세(PlaceSummary)에서 열 때는 stay_time_minutes(권장 체류시간)도 같이 온다. */
@@ -89,20 +90,6 @@ function splitLines(raw: string): string[] {
 /** 주차·연락처·휴무일처럼 항상 한 줄로 보여주는 항목은, 줄이 여러 개면 그냥 이어붙여 <br> 태그가 그대로 찍히지 않게 한다. */
 function joinLines(raw: string): string {
   return splitLines(raw).join(", ");
-}
-
-/** 장소 소개는 문장(온점) 단위로 최대 3문장, 대략 100자 내로 줄여서 보여준다. */
-function summarizeOverview(overview: string): string {
-  if (!overview) return "";
-  const sentences = overview
-    .split(".")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-  let text = sentences.join(". ");
-  if (text && !/[.!?]$/.test(text)) text += ".";
-  if (text.length > 100) text = `${text.slice(0, 100).trim()}…`;
-  return text;
 }
 
 interface FactField {
@@ -250,7 +237,7 @@ export default function PlaceDetailSheet({ place, onClose }: PlaceDetailSheetPro
               ))}
             </div>
           ) : (
-            <div className="place-sheet-photo" />
+            <div className="place-sheet-photo">이미지 없음</div>
           )}
 
           {zoomed && (

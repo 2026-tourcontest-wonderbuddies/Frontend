@@ -95,7 +95,7 @@ nav{
 .save-btn.on{color:var(--sunset);}
 .course-body{padding:20px;}
 .course-region{font-family:'Space Mono','Noto Sans KR',monospace; font-size:10.5px; color:var(--ink-soft); letter-spacing:0.5px; margin-bottom:6px;}
-.course-title{font-family:'Song Myung',serif; font-size:19px; margin-bottom:10px; line-height:1.35;}
+.course-title{font-family:'Song Myung',serif; font-size:19px; margin-bottom:10px; line-height:1.35; min-height:calc(19px * 1.35 * 2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:keep-all; overflow-wrap:break-word;}
 .course-meta{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
 .course-desc{font-size:12.5px; color:var(--ink-soft); line-height:1.7;}
 
@@ -207,7 +207,10 @@ h1.hero-title .accent{color:var(--sunset);}
 .curated-dot{width:7px; height:7px; border-radius:50%; background:var(--line);}
 .curated-dot.on{background:var(--sunset);}
 
-.curated-slide{animation-duration:.42s; animation-timing-function:cubic-bezier(.22,.9,.34,1); animation-fill-mode:both;}
+.curated-slide{display:flex; animation-duration:.42s; animation-timing-function:cubic-bezier(.22,.9,.34,1); animation-fill-mode:both;}
+.curated-slide .course-card{display:flex; flex-direction:column; flex:1;}
+.curated-slide .course-body{display:flex; flex-direction:column; flex:1;}
+.curated-slide .course-desc{margin-top:auto;}
 .curated-slide-next{animation-name:curated-in-from-right;}
 .curated-slide-prev{animation-name:curated-in-from-left;}
 @keyframes curated-in-from-right{from{opacity:0; transform:translateX(36px);} to{opacity:1; transform:translateX(0);}}
@@ -251,16 +254,8 @@ h1.page-title{font-family:'Song Myung',serif; font-size:clamp(24px,3.4vw,36px); 
 /* 웹 화면: 필터 라벨을 칩 왼쪽에 인라인으로 두고 칩·여백을 줄여 첫 화면에서 목록이 더 보이게 한다. */
 @media (min-width:761px){
   .search-page .search-bar{margin-top:0;}
-  .search-page .override-section{display:flex; align-items:center; gap:14px; margin:0 0 10px;}
-  .search-page .override-section .override-label{flex:none; width:64px; margin-bottom:0;}
-  /* 위 필터 줄 스타일은 장소 상세 모달 안 override-section(장소 소개·질문하기 등)까지 새어 들어와
-     라벨이 64px에 눌려 줄바꿈됐다. 모달 안에서는 원래 세로 배치로 되돌린다.
-     margin-top은 안 건드린다 — place-sheet-chat/overview가 위 블록과의 간격을 margin-top으로
-     따로 잡고 있는데, 여기서 0으로 밀어버리면 그 간격까지 같이 사라진다. */
-  .search-page .modal-panel .override-section{display:block; margin-bottom:20px;}
-  .search-page .modal-panel .override-section .override-label{flex:none; width:auto; margin-bottom:10px;}
-  .search-page .modal-panel .place-sheet-chat{margin-top:18px; margin-bottom:0;}
-  .search-page .modal-panel .place-sheet-overview{margin-top:18px; margin-bottom:16px;}
+  .search-page .search-filter-row{display:flex; align-items:center; gap:14px; margin:0 0 10px;}
+  .search-page .search-filter-row .override-label{flex:none; width:64px; margin-bottom:0;}
   .search-page .chip-row{margin-top:0;}
   .search-page .chip{padding:7px 15px; font-size:12.5px;}
   .search-page .results-head{margin-top:16px !important; margin-bottom:12px;}
@@ -920,7 +915,7 @@ a.map-pin:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
 .cat-minor{font-size:12px; color:var(--ink-soft);}
 
 /* ---------------- PLACE DETAIL SHEET ---------------- */
-.place-sheet-photo{height:160px; border-radius:14px; margin-bottom:16px; background:linear-gradient(135deg,var(--dawn),var(--sunset));}
+.place-sheet-photo{height:160px; border-radius:14px; margin-bottom:16px; background:linear-gradient(135deg,var(--paper-deep),#DCD6C6); display:flex; align-items:center; justify-content:center; color:var(--ink-soft); font-size:13px;}
 .place-sheet-photos{display:flex; gap:8px; overflow-x:auto; margin-bottom:16px; scroll-snap-type:x mandatory; scrollbar-width:thin; scrollbar-color:rgba(27,35,64,0.3) transparent;}
 .place-sheet-photos button{flex:0 0 100%; scroll-snap-align:start; padding:0; background:none;}
 /* 상세 시트(z-index 120) 위에 덮는다. */
