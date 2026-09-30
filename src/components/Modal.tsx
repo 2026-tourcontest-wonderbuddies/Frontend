@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent, type ReactNode, type TransitionEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode, type TransitionEvent } from "react";
 
 interface ModalProps {
   title: string;
@@ -78,6 +78,31 @@ export default function Modal({ title, titleAside, subtitle, headAction, onClose
     setDragY(0);
     e.currentTarget.setPointerCapture(e.pointerId);
   }
+
+  // iOS Safari는 pointermove의 preventDefault()로는 스크롤 바운스를 안 막아준다 — 실제 스크롤은
+  // touchmove 쪽에 붙어있어서, {passive:false}로 등록한 진짜 touchmove 리스너에서 막아야 확실하다.
+  // (React의 onTouchMove는 기본이 passive라 preventDefault가 조용히 무시된다 — 그래서 직접 붙인다.)
+  // 판정 로직(언제 끌기로 볼지)은 위 pointer 핸들러와 같지만, 여기서는 오직 "막을지 말지"만 결정한다.
+  useEffect(() => {
+    if (!swipeBodyToClose) return;
+    const el = bodyRef.current;
+    if (!el) return;
+
+    function onTouchMove(e: TouchEvent) {
+      if (window.matchMedia("(min-width:641px)").matches) return;
+      if (draggingRef.current) {
+        e.preventDefault();
+        return;
+      }
+      if (el.scrollTop > 0) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      if (touch.clientY - startYRef.current > 0) e.preventDefault();
+    }
+
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, [swipeBodyToClose]);
 
   function endDrag() {
     if (!draggingRef.current) return;
